@@ -11,3 +11,13 @@ instructions.txt
 # Tauri / Rust
 packages/client/src-tauri/target/
 packages/client/src-tauri/WixTools/
+packages/remote-worker-rs/target/
+
+# Build artifacts
+packages/remote-worker/dist/
+
+# Claude Code
+.claude/
+
+# Yarn
+.yarn/install-state.gz

@@ -59,9 +59,8 @@
 				:fill="commit.hash === 'WORKING_TREE' ? 'none' : getColor(commit.level ?? 0)"
 				:stroke="commit.hash === 'WORKING_TREE' ? getColor(commit.level ?? 0) : '#0d0f11'"
 				:stroke-dasharray="commit.hash === 'WORKING_TREE' ? '3 2' : undefined"
-				:stroke-width="LINE_WIDTH"
+				:stroke-width="0"
 			/>
-
 			<line
 				v-if="commit.references?.length && !commit.isStash"
 				:x1="PADDING_LEFT + (commit.level ?? 0) * X_STEP"
@@ -71,6 +70,19 @@
 				:stroke="getColor(commit.level ?? 0)"
 				:stroke-width="2"
 			/>
+
+			<text
+				v-if="commit.hash !== 'WORKING_TREE' && !commit.isStash && commit.parents.length <= 1"
+				:x="PADDING_LEFT + (commit.level ?? 0) * X_STEP"
+				:y="PADDING_TOP + (commit.index ?? 0) * Y_STEP - ROW_MARGIN"
+				text-anchor="middle"
+				dominant-baseline="central"
+				font-size="10"
+				font-weight="bold"
+				font-family="sans-serif"
+				fill="#0d0f11"
+				style="pointer-events: none; user-select: none;"
+			>{{ getInitials(commit.authorName) }}</text>
 		</g>
 	</svg>
 </template>
@@ -85,7 +97,7 @@ const X_STEP = 20;
 const Y_STEP = 28;
 const PADDING_LEFT = 12;
 const PADDING_TOP = 18;
-const CIRCLE_R = 10;
+const CIRCLE_R = 11;
 const LINE_WIDTH = 3;
 const ROW_MARGIN = 5;
 const CORNER_R = 8;
@@ -111,6 +123,14 @@ const svgWidth = computed(() => {
 });
 
 const svgHeight = computed(() => props.commits.length * Y_STEP + 10);
+
+function getInitials(authorName: string): string {
+	const parts = (authorName ?? '').trim().split(/\s+/);
+	if (parts.length >= 2) {
+		return ((parts[0]![0] ?? '') + (parts[parts.length - 1]![0] ?? '')).toUpperCase();
+	}
+	return (authorName ?? '').slice(0, 2).toUpperCase();
+}
 
 function getColor(level: number): string {
 	return getGraphColor(level);

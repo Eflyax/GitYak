@@ -8,7 +8,7 @@ import {useActivityLog} from '@/composables/useActivityLog';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
 
 const REMOTE_BINARY_PATH = '~/.local/bin/gityak';
-const REMOTE_WORKER_VERSION = '1.0.3';
+const REMOTE_WORKER_VERSION = '2.0.0';
 const FORCE_PROVISION = false;
 
 export class SshTunnelClient implements ITransportClient {

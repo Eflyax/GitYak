@@ -12,7 +12,8 @@
 		"client": "yarn workspace @git-yak/client",
 		"server": "yarn workspace @git-yak/server",
 		"dev": "concurrently \"yarn workspace @git-yak/client dev\" \"yarn workspace @git-yak/server dev\"",
-		"tauri:dev": "yarn workspace @git-yak/remote-worker build:linux && concurrently --kill-others \"yarn workspace @git-yak/server dev\" \"yarn workspace @git-yak/client tauri:dev\"",
+		"build:remote-worker": "cargo zigbuild --manifest-path packages/remote-worker-rs/Cargo.toml --target x86_64-unknown-linux-musl --release && mkdir -p packages/remote-worker/dist && cp packages/remote-worker-rs/target/x86_64-unknown-linux-musl/release/remote-worker-rs packages/remote-worker/dist/remote-worker-linux-x64",
+		"tauri:dev": "yarn build:remote-worker && concurrently --kill-others \"yarn workspace @git-yak/server dev\" \"yarn workspace @git-yak/client tauri:dev\"",
 		"tauri:build": "yarn workspace @git-yak/client tauri:build"
 	},
 	"devDependencies": {
