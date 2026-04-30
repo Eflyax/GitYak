@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "build:linux": "bun build src/index.ts --compile --target bun-linux-x64 --outfile dist/remote-worker-linux-x64",
+    "build:linux-baseline": "bun build src/index.ts --compile --target bun-linux-x64-baseline --outfile dist/remote-worker-linux-x64",
     "build:linux-musl": "bun build src/index.ts --compile --target bun-linux-x64-musl --outfile dist/remote-worker-linux-x64-musl"
   }
 }

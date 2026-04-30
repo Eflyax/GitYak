@@ -8,7 +8,7 @@ import {useActivityLog} from '@/composables/useActivityLog';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
 
 const REMOTE_BINARY_PATH = '~/.local/bin/gityak';
-const REMOTE_WORKER_VERSION = '1.0.0';
+const REMOTE_WORKER_VERSION = '1.0.3';
 const FORCE_PROVISION = false;
 
 export class SshTunnelClient implements ITransportClient {
@@ -53,6 +53,7 @@ export class SshTunnelClient implements ITransportClient {
 			const msg = err instanceof Error ? err.message : String(err);
 			this.log({type: 'ssh', status: 'error', direction: 'response', message: msg});
 			this.cs.setError(msg);
+			this.close();
 			throw err;
 		}
 	}
@@ -72,18 +73,28 @@ export class SshTunnelClient implements ITransportClient {
 			this.log({type: 'ssh', status: 'info', direction: 'request', message: 'Uploading remote worker binary…'});
 			this.cs.setPhase('uploading');
 
+			// Kill any stale process before overwriting — prevents "Text file busy"
+			await this.killRemoteWorker();
+
 			const localSize = await invoke<number>('get_file_size', {path: binaryPath});
 			this.cs.setUploadTotal(localSize);
 			this.cs.setUploadProgress(0);
 
 			await this.runSsh(`mkdir -p ~/.local/bin`);
-			await this.runScpWithProgress(binaryPath, REMOTE_BINARY_PATH, localSize);
-			await this.runSsh(`chmod +x ${REMOTE_BINARY_PATH}`);
+			await this.runScpWithProgress(binaryPath, '/tmp/gityak-upload', localSize);
+
+			// Verify SCP actually created the file (SCP via SFTP can exit 0 without writing)
+			const uploadedSize = await this.runSsh(`stat -c%s /tmp/gityak-upload 2>/dev/null || echo 0`);
+			if (parseInt(uploadedSize.trim()) === 0) {
+				throw new Error('SCP failed: /tmp/gityak-upload missing on remote after transfer');
+			}
+
+			await this.runSsh(`mv /tmp/gityak-upload ${REMOTE_BINARY_PATH} && chmod +x ${REMOTE_BINARY_PATH}`);
 
 			const verifyOutput = await this.runSsh(
-				`${REMOTE_BINARY_PATH} --version 2>&1 || echo EXEC_FAILED`,
+				`test -x ${REMOTE_BINARY_PATH} && file ${REMOTE_BINARY_PATH} | grep -q ELF && echo OK || echo EXEC_FAILED`,
 			);
-			if (verifyOutput.trim() === 'EXEC_FAILED' || verifyOutput.trim() === '') {
+			if (verifyOutput.trim() !== 'OK') {
 				const archInfo = await this.runSsh(`uname -m 2>/dev/null || echo unknown`).catch(() => 'unknown');
 				throw new Error(`Binary not executable on remote (arch: ${archInfo.trim()}). Build the correct binary with: yarn workspace @git-yak/remote-worker build:linux`);
 			}
@@ -96,20 +107,24 @@ export class SshTunnelClient implements ITransportClient {
 		}
 	}
 
-	private startServer(): Promise<number> {
+	private async startServer(): Promise<number> {
 		this.cs.setPhase('starting');
 		this.log({type: 'ssh', status: 'info', direction: 'request', message: `Starting remote worker on ${this.host}`});
+
+		// Kill any stale instance — needed when version matched and upload was skipped
+		await this.killRemoteWorker();
+		await new Promise(r => setTimeout(r, 500));
 
 		return new Promise((resolve, reject) => {
 			let settled = false;
 			const timeoutId = setTimeout(() => {
 				if (!settled) {
 					settled = true;
-					const err = new Error('Server startup timeout (15s)');
+					const err = new Error('Server startup timeout (30s)');
 					this.log({type: 'ssh', status: 'error', direction: 'response', message: err.message});
 					reject(err);
 				}
-			}, 15_000);
+			}, 30_000);
 
 			const cmd = Command.create('ssh', this.buildSshArgs(
 				`ONESHOT=1 PORT=0 ${REMOTE_BINARY_PATH}`,
@@ -123,6 +138,13 @@ export class SshTunnelClient implements ITransportClient {
 					const port = Number(m[1]);
 					this.log({type: 'ssh', status: 'success', direction: 'response', message: `Remote worker ready on port ${port}`});
 					resolve(port);
+				}
+			});
+
+			cmd.stderr.addListener('data', (line: string) => {
+				const trimmed = line.trim();
+				if (trimmed) {
+					this.log({type: 'ssh', status: 'error', direction: 'response', message: `[remote] ${trimmed}`});
 				}
 			});
 
@@ -178,6 +200,15 @@ export class SshTunnelClient implements ITransportClient {
 					reject(err);
 				});
 		});
+	}
+
+	private killRemoteWorker(): Promise<void> {
+		// Kill by PID file — reliable, no dependency on process name matching
+		const cmd = 'pid=$(cat /tmp/gityak.pid 2>/dev/null); [ -n "$pid" ] && kill "$pid" 2>/dev/null; rm -f /tmp/gityak.pid; true';
+		return Command.create('ssh', this.buildSshArgs(cmd))
+			.execute()
+			.then(() => {})
+			.catch(() => {});
 	}
 
 	private startHeartbeat(): void {
