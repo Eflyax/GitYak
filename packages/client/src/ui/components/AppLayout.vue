@@ -102,12 +102,11 @@ if (!selectedHashes.value.length) {
 }
 
 const windowFocus = useWindowFocus();
+const {loadStatus} = useWorkingTree();
 
 onMounted(() => {
 	openLastOpenProject();
-	windowFocus.onFocus(() => {
-		useWorkingTree().loadStatus();
-	});
+	windowFocus.onFocus(loadStatus);
 });
 
 onUnmounted(() => {
