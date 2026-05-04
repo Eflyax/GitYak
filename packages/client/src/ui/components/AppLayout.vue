@@ -106,7 +106,12 @@ const {loadStatus} = useWorkingTree();
 
 onMounted(() => {
 	openLastOpenProject();
-	windowFocus.onFocus(loadStatus);
+	windowFocus.onFocus(() => {
+		if (!currentProject.value || isVisible.value) {
+			return;
+		}
+		loadStatus();
+	});
 });
 
 onUnmounted(() => {
