@@ -62,7 +62,9 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted} from 'vue';
+import {computed, onMounted, onUnmounted} from 'vue';
+import {useWindowFocus} from '@/composables/useWindowFocus';
+import {useWorkingTree} from '@/composables/useWorkingTree';
 import {NDrawer, NDrawerContent} from 'naive-ui';
 import {Splitpanes, Pane} from 'splitpanes';
 import Sidebar from './Sidebar/Sidebar.vue';
@@ -99,8 +101,17 @@ if (!selectedHashes.value.length) {
 	selectCommit('WORKING_TREE');
 }
 
+const windowFocus = useWindowFocus();
+
 onMounted(() => {
 	openLastOpenProject();
+	windowFocus.onFocus(() => {
+		useWorkingTree().loadStatus();
+	});
+});
+
+onUnmounted(() => {
+	windowFocus.destroy();
 });
 </script>
 
