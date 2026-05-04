@@ -22,21 +22,25 @@ function debounce(fn: () => void, ms: number): { call: () => void; cancel: () =>
 }
 
 export const useWindowFocus: () => IUseWindowFocus = () => {
-	let debouncedCallback: ReturnType<typeof debounce> | undefined;
-	let visibilityHandler: (() => void) | undefined;
-	let focusHandler: (() => void) | undefined;
+	let
+		debouncedCallback: ReturnType<typeof debounce> | undefined,
+		visibilityHandler: (() => void) | undefined,
+		focusHandler: (() => void) | undefined;
 
 	function onFocus(callback: () => void, debounceMs = 800): void {
-		debouncedCallback = debounce(callback, debounceMs);
+		destroy();
+
+		const db = debounce(callback, debounceMs);
+		debouncedCallback = db;
 
 		visibilityHandler = () => {
 			if (document.visibilityState === 'visible') {
-				debouncedCallback!.call();
+				db.call();
 			}
 		};
 
 		focusHandler = () => {
-			debouncedCallback!.call();
+			db.call();
 		};
 
 		document.addEventListener('visibilitychange', visibilityHandler);
