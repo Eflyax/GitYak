@@ -117,7 +117,7 @@ onUnmounted(() => {
 watch(
 	() => status.value.staged.length + status.value.unstaged.length,
 	total => {
-		if (total === 0 && isWorkingTreeSelected.value && activePath.value) {
+		if (total === 0 && isWorkingTreeSelected.value && activePath.value && currentProject.value) {
 			activePath.value = null;
 			closeFileDiff();
 		}
