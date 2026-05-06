@@ -156,7 +156,14 @@ onMounted(refresh);
 watch(() => currentProject.value, refresh);
 
 watch(commits, newCommits => {
-	if (!newCommits.length || selectedHashes.value.length) {
+	if (!newCommits.length) {
+		return;
+	}
+
+	const selectionValid = selectedHashes.value.length > 0 &&
+		newCommits.some(c => c.hash === selectedHashes.value[0]);
+
+	if (selectionValid) {
 		return;
 	}
 
