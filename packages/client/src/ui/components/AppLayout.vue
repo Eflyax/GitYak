@@ -62,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted} from 'vue';
+import {computed, onMounted, onUnmounted, watch} from 'vue';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {NDrawer, NDrawerContent} from 'naive-ui';
@@ -98,7 +98,7 @@ const {selectedHashes} = useCommits();
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value);
 
 const windowFocus = useWindowFocus();
-const {loadStatus} = useWorkingTree();
+const {loadStatus, status} = useWorkingTree();
 
 onMounted(() => {
 	openLastOpenProject();
@@ -113,6 +113,16 @@ onMounted(() => {
 onUnmounted(() => {
 	windowFocus.destroy();
 });
+
+watch(
+	() => status.value.staged.length + status.value.unstaged.length,
+	total => {
+		if (total === 0 && isWorkingTreeSelected.value && activePath.value) {
+			activePath.value = null;
+			closeFileDiff();
+		}
+	},
+);
 </script>
 
 <style scoped lang="scss">
