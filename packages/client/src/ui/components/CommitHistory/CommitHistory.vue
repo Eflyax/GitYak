@@ -154,6 +154,16 @@ function onContextMenu(commit: ICommit, event: MouseEvent): void {
 onMounted(refresh);
 
 watch(() => currentProject.value, refresh);
+
+watch(commits, newCommits => {
+	if (!newCommits.length || selectedHashes.value.length) {
+		return;
+	}
+
+	const firstCommit = newCommits.find(c => c.hash !== 'WORKING_TREE' && !c.isStash);
+
+	selectCommit(firstCommit ? firstCommit.hash : 'WORKING_TREE');
+}, {immediate: false});
 </script>
 
 <style scoped lang="scss">

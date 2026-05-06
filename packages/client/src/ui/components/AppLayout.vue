@@ -93,13 +93,9 @@ function handleClose(): void {
 }
 
 const {currentProject, openLastOpenProject} = useProject();
-const {selectedHashes, selectCommit} = useCommits();
+const {selectedHashes} = useCommits();
 
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value);
-
-if (!selectedHashes.value.length) {
-	selectCommit('WORKING_TREE');
-}
 
 const windowFocus = useWindowFocus();
 const {loadStatus} = useWorkingTree();
