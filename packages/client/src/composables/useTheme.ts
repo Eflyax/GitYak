@@ -18,11 +18,13 @@ const STYLE_IDS = {
 const availableThemes = ref<Array<IThemeEntry>>([]);
 const activeTheme = ref<IResolvedTheme | undefined>();
 const themesDir = ref<string>(localStorage.getItem(THEMES_DIR_KEY) ?? DEFAULT_THEMES_DIR);
+const themeVersion = ref(0);
 
 export interface IUseTheme {
     availableThemes: typeof availableThemes;
     activeTheme: typeof activeTheme;
     themesDir: typeof themesDir;
+    themeVersion: typeof themeVersion;
     loadThemes: (dir?: string) => Promise<void>;
     applyTheme: (filePath: string) => Promise<void>;
     naiveUiOverrides: ComputedRef<Record<string, unknown>>;
@@ -152,6 +154,7 @@ async function applyTheme(filePath: string): Promise<void> {
 
         activeTheme.value = resolved;
         applyCssVars(resolved);
+        themeVersion.value++;
         localStorage.setItem(THEME_PATH_KEY, filePath);
     }
     catch (err) {
@@ -172,6 +175,7 @@ export const useTheme: () => IUseTheme = () => {
         availableThemes: readonly(availableThemes) as typeof availableThemes,
         activeTheme: readonly(activeTheme) as typeof activeTheme,
         themesDir,
+        themeVersion: readonly(themeVersion) as typeof themeVersion,
         loadThemes,
         applyTheme,
         naiveUiOverrides,
