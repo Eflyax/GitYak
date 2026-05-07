@@ -20,5 +20,8 @@ packages/remote-worker/dist/
 # Claude Code
 .claude/
 
+# Git worktrees
+.worktrees/
+
 # Yarn
 .yarn/install-state.gz
