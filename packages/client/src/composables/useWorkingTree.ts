@@ -70,7 +70,7 @@ export function useWorkingTree() {
 	const {currentProject} = useProject();
 
 	const hasChanges = computed(
-		() => status.value.staged.length || status.value.unstaged.length,
+		(): boolean => status.value.staged.length > 0 || status.value.unstaged.length > 0,
 	);
 
 	const stagedCount = computed(() => status.value.staged.length);

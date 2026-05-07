@@ -260,8 +260,7 @@ async function handleDblClick(ref: IMergedRef): Promise<void> {
 	}
 	else {
 		await checkout(ref.name);
-		await loadBranches();
-		await loadCommits();
+		await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
 	}
 }
 
