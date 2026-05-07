@@ -78,12 +78,12 @@ export function useBranches() {
 		await loadBranches();
 	}
 
-	async function deleteRemoteBranch(name: string, remote = 'origin'): Promise<void> {
+	async function deleteRemoteBranch(name: string, remote?: string): Promise<void> {
 		await gitDeleteRemoteBranch(name, remote);
 		await loadBranches();
 	}
 
-	async function deleteBranchBoth(name: string, remote = 'origin'): Promise<void> {
+	async function deleteBranchBoth(name: string, remote?: string): Promise<void> {
 		await gitDeleteBranch(name, true);
 		await gitDeleteRemoteBranch(name, remote);
 		await loadBranches();
@@ -94,7 +94,7 @@ export function useBranches() {
 		await loadBranches();
 	}
 
-	async function pushCurrentBranch(remote = 'origin'): Promise<void> {
+	async function pushCurrentBranch(remote?: string): Promise<void> {
 		const name = currentBranch.value?.name;
 
 		if (!name) return;

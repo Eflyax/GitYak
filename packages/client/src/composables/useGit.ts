@@ -69,25 +69,58 @@ export function useGit() {
 
 	// ── Základní Git operace ───────────────────────────────────────────────────
 
-	async function fetch(remote = '--all'): Promise<void> {
-		await callGit('fetch', remote);
+	async function resolveRemote(preferredRemote?: string): Promise<string> {
+		if (preferredRemote) {
+			return preferredRemote;
+		}
+
+		try {
+			const branch = (await callGit('branch', '--show-current')).trim();
+
+			if (branch) {
+				const tracked = (await callGit('config', `branch.${branch}.remote`).catch(() => '')).trim();
+
+				if (tracked) {
+					return tracked;
+				}
+			}
+		}
+		catch {}
+
+		try {
+			const firstRemote = (await callGit('remote')).trim().split('\n')[0];
+
+			if (firstRemote) {
+				return firstRemote;
+			}
+		}
+		catch {}
+
+		return 'origin';
 	}
 
-	async function pull(remote = 'origin', branch?: string): Promise<void> {
-		await callGit('pull', remote, ...(branch ? [branch] : []));
+	async function fetch(remote?: string): Promise<void> {
+		await callGit('fetch', remote ?? '--all');
 	}
 
-	async function push(remote = 'origin', branch?: string, force = false): Promise<void> {
+	async function pull(remote?: string, branch?: string): Promise<void> {
+		const r = await resolveRemote(remote);
+		await callGit('pull', r, ...(branch ? [branch] : []));
+	}
+
+	async function push(remote?: string, branch?: string, force = false): Promise<void> {
+		const r = await resolveRemote(remote);
 		await callGit(
 			'push',
-			remote,
+			r,
 			...(branch ? [branch] : []),
 			...(force ? ['--force-with-lease'] : []),
 		);
 	}
 
-	async function pushBranch(branchName: string, remote = 'origin'): Promise<void> {
-		await callGit('push', '--set-upstream', remote, branchName);
+	async function pushBranch(branchName: string, remote?: string): Promise<void> {
+		const r = await resolveRemote(remote);
+		await callGit('push', '--set-upstream', r, branchName);
 	}
 
 	// ── Checkout ───────────────────────────────────────────────────────────────
@@ -106,8 +139,9 @@ export function useGit() {
 		await callGit('branch', force ? '-D' : '-d', branchName);
 	}
 
-	async function deleteRemoteBranch(branchName: string, remote = 'origin'): Promise<void> {
-		await callGit('push', remote, '--delete', branchName);
+	async function deleteRemoteBranch(branchName: string, remote?: string): Promise<void> {
+		const r = await resolveRemote(remote);
+		await callGit('push', r, '--delete', branchName);
 	}
 
 	async function renameBranch(oldName: string, newName: string): Promise<void> {
@@ -166,8 +200,9 @@ export function useGit() {
 		await callGit('tag', '-d', name);
 	}
 
-	async function deleteRemoteTag(name: string, remote = 'origin'): Promise<void> {
-		await callGit('push', remote, '--delete', `refs/tags/${name}`);
+	async function deleteRemoteTag(name: string, remote?: string): Promise<void> {
+		const r = await resolveRemote(remote);
+		await callGit('push', r, '--delete', `refs/tags/${name}`);
 	}
 
 	// ── Stash ─────────────────────────────────────────────────────────────────
