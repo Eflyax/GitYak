@@ -61,6 +61,17 @@
 			<ActivityLog />
 		</NDrawerContent>
 	</NDrawer>
+
+	<NDrawer
+		v-model:show="showSettings"
+		:width="380"
+		test-id="settings-drawer"
+		placement="right"
+	>
+		<NDrawerContent title="Settings" closable>
+			<Settings />
+		</NDrawerContent>
+	</NDrawer>
 </template>
 
 <script setup lang="ts">
@@ -79,13 +90,14 @@ import Toolbar from './Toolbar.vue';
 import ActivityLog from './ActivityLog/ActivityLog.vue';
 import ConnectionStatus from './ConnectionStatus/ConnectionStatus.vue';
 import ProjectManager from './ProjectManager/ProjectManager.vue';
+import Settings from './Settings/Settings.vue';
 import {useProject} from '@/composables/useProject';
 import {useCommits} from '@/composables/useCommits';
 import {useLayout} from '@/composables/useLayout';
 import {useGit} from '@/composables/useGit';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
 
-const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog} = useLayout();
+const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSettings} = useLayout();
 const {isVisible} = useConnectionStatus();
 const {activePath} = useGit();
 

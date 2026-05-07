@@ -17,6 +17,7 @@
 		"@mdi/js": "^7.4.47",
 		"@tauri-apps/api": "^2.0.0",
 		"@tauri-apps/plugin-shell": "^2.0.0",
+		"chroma-js": "^3.2.0",
 		"lodash-es": "^4.17.23",
 		"monaco-editor": "^0.49.0",
 		"naive-ui": "^2.43.2",
@@ -26,6 +27,7 @@
 	},
 	"devDependencies": {
 		"@tauri-apps/cli": "^2.0.0",
+		"@types/chroma-js": "^3.1.2",
 		"@vitejs/plugin-vue": "^6.0.3",
 		"@vue/tsconfig": "^0.7.0",
 		"sass-embedded": "^1.97.3",

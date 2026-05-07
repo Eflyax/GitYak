@@ -1,0 +1,32 @@
+.settings {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	padding: 8px 0;
+
+	.settings__section {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	.settings__section-title {
+		color: $text-primary;
+		font-size: 13px;
+		font-weight: 600;
+		padding-bottom: 8px;
+		border-bottom: 1px solid $border;
+	}
+
+	.settings__row {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	.settings__label {
+		color: $text-secondary;
+		font-size: 12px;
+		font-weight: 500;
+	}
+}
