@@ -1,0 +1,16 @@
+.theme-selector {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+
+	.theme-selector__label {
+		color: $text-secondary;
+		font-size: 12px;
+		font-weight: 500;
+	}
+
+	.theme-selector__empty {
+		color: $text-muted;
+		font-size: 12px;
+	}
+}

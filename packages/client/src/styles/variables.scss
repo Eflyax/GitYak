@@ -1,44 +1,44 @@
 // ── Backgrounds ───────────────────────────────────────────────────────────────
-$bg-app:             #0d0f11;
-$bg-panel:           #111318;
-$bg-section:         #1a1d21;
-$bg-toolbar:         #202327;
-$bg-button:          #2a2e35;
-$bg-button-hover:    #32373f;
-$bg-hover:           #2e333b;
-$bg-entry-hover:     #22262c;
+$bg-app:             var(--bg-app, #0d0f11);
+$bg-panel:           var(--bg-panel, #111318);
+$bg-section:         var(--bg-section, #1a1d21);
+$bg-toolbar:         var(--bg-toolbar, #202327);
+$bg-button:          var(--bg-button, #2a2e35);
+$bg-button-hover:    var(--bg-button-hover, #32373f);
+$bg-hover:           var(--bg-hover, #2e333b);
+$bg-entry-hover:     var(--bg-hover, #22262c);
 
 // ── Borders ───────────────────────────────────────────────────────────────────
-$border:             #1e2228;
-$border-strong:      #2e333b;
+$border:             var(--border, #1e2228);
+$border-strong:      var(--border-strong, #2e333b);
 
 // ── Text ──────────────────────────────────────────────────────────────────────
-$text-white:         #ffffff;
-$text-primary:       #e5e7eb;
-$text-secondary:     #d1d5db;
-$text-default:       #c9d1d9;
-$text-muted:         #9ca3af;
-$text-dim:           #6b7280;
+$text-white:         var(--color-white, #ffffff);
+$text-primary:       var(--text-primary, #e5e7eb);
+$text-secondary:     var(--text-secondary, #d1d5db);
+$text-default:       var(--text-default, #c9d1d9);
+$text-muted:         var(--text-muted, #9ca3af);
+$text-dim:           var(--text-muted, #6b7280);
 $text-faint:         #4b5563;
 $text-ghost:         #374151;
 
 // ── Accent ────────────────────────────────────────────────────────────────────
-$color-accent:       #6f9ef8;
-$color-accent-hover: #8fb4ff;
-$color-blue:         #3b82f6;
-$color-teal:         #20b2aa;
-$color-cyan:         #7ec8e3;
+$color-accent:       var(--color-accent, #6f9ef8);
+$color-accent-hover: var(--color-blue, #8fb4ff);
+$color-blue:         var(--color-blue, #3b82f6);
+$color-teal:         var(--color-teal, #20b2aa);
+$color-cyan:         var(--color-cyan, #7ec8e3);
 
 // ── Status ────────────────────────────────────────────────────────────────────
-$color-success:      #4ade80;
-$color-danger:       #f87171;
-$color-warning:      #f8e56f;
+$color-success:      var(--color-success, #4ade80);
+$color-danger:       var(--color-danger, #f87171);
+$color-warning:      var(--color-warning, #f8e56f);
 
 // ── File status indicators ────────────────────────────────────────────────────
-$status-modified:    #f89b6f;
-$status-added:       #6ff8a0;
-$status-deleted:     #f86f6f;
-$status-renamed:     #6feef8;
+$status-modified:    var(--color-orange, #f89b6f);
+$status-added:       var(--color-success, #6ff8a0);
+$status-deleted:     var(--color-danger, #f86f6f);
+$status-renamed:     var(--color-cyan, #6feef8);
 
 // ── Project color swatches ────────────────────────────────────────────────────
 $project-emerald:    #34d399;

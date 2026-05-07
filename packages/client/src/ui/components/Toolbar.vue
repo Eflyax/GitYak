@@ -36,6 +36,14 @@
 		<NButton text title="Activity Log" @click="toggleActivityLog">
 			<Icon name="mdi-text-box-outline" />
 		</NButton>
+		<NButton
+			text
+			test-id="settings"
+			title="Settings"
+			@click="toggleSettings"
+		>
+			<Icon name="mdi-cog-outline" />
+		</NButton>
 		<Icon name="mdi-account" />
 	</div>
 
@@ -70,7 +78,7 @@ const
 	{selectedHashes, loadCommits} = useCommits(),
 	{stashes, stashSave, stashPop} = useStash(),
 	{loadStatus} = useWorkingTree(),
-	{toggleActivityLog} = useLayout(),
+	{toggleActivityLog, toggleSettings} = useLayout(),
 	{isConnecting} = useConnectionStatus();
 
 const notification = useNotification();

@@ -97,11 +97,35 @@ fn browse_directory(path: String) -> Result<Vec<DirEntry>, String> {
     Ok(entries)
 }
 
+#[tauri::command]
+fn list_theme_files(dir: String) -> Result<Vec<String>, String> {
+    let expanded = if dir.starts_with("~/") {
+        let home = std::env::var("HOME").unwrap_or_default();
+        std::path::PathBuf::from(format!("{}/{}", home, &dir[2..]))
+    } else {
+        std::path::PathBuf::from(&dir)
+    };
+
+    let entries = std::fs::read_dir(&expanded).map_err(|e| e.to_string())?;
+
+    let paths: Vec<String> = entries
+        .filter_map(|e| e.ok())
+        .filter(|e| {
+            e.file_name()
+                .to_string_lossy()
+                .ends_with(".jsonc")
+        })
+        .filter_map(|e| e.path().to_str().map(|s| s.to_owned()))
+        .collect();
+
+    Ok(paths)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![detect_ssh_keys, find_free_port, get_server_binary_path, get_file_size, write_log, browse_directory, read_file_at, write_file_at])
+        .invoke_handler(tauri::generate_handler![detect_ssh_keys, find_free_port, get_server_binary_path, get_file_size, write_log, browse_directory, read_file_at, write_file_at, list_theme_files])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

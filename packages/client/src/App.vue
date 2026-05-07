@@ -11,18 +11,18 @@
 </template>
 
 <script setup lang="ts">
+import {computed, onMounted} from 'vue';
 import {darkTheme} from 'naive-ui';
 import {NConfigProvider, NMessageProvider, NDialogProvider, NNotificationProvider} from 'naive-ui';
 import AppLayout from '@/ui/components/AppLayout.vue';
+import {useTheme, restoreSavedTheme} from '@/composables/useTheme';
 
-const themeOverrides = {
-	common: {
-		primaryColor: '#6f9ef8',
-		primaryColorHover: '#8fb4ff',
-		bodyColor: '#0d0f11',
-		cardColor: '#111418',
-		fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-		fontFamilyMono: '"JetBrains Mono", "Fira Code", "Cascadia Code", monospace',
-	},
-};
+const {naiveUiOverrides, loadThemes} = useTheme();
+
+const themeOverrides = computed(() => naiveUiOverrides.value);
+
+onMounted(async () => {
+	await loadThemes();
+	await restoreSavedTheme();
+});
 </script>
