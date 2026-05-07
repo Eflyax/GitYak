@@ -72,12 +72,15 @@
 			<Settings />
 		</NDrawerContent>
 	</NDrawer>
+
+	<CommandPalette />
 </template>
 
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, watch} from 'vue';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useKeyboard} from '@/composables/useKeyboard';
 import {NDrawer, NDrawerContent} from 'naive-ui';
 import {Splitpanes, Pane} from 'splitpanes';
 import Sidebar from './Sidebar/Sidebar.vue';
@@ -91,11 +94,14 @@ import ActivityLog from './ActivityLog/ActivityLog.vue';
 import ConnectionStatus from './ConnectionStatus/ConnectionStatus.vue';
 import ProjectManager from './ProjectManager/ProjectManager.vue';
 import Settings from './Settings/Settings.vue';
+import CommandPalette from './CommandPalette/CommandPalette.vue';
 import {useProject} from '@/composables/useProject';
 import {useCommits} from '@/composables/useCommits';
 import {useLayout} from '@/composables/useLayout';
 import {useGit} from '@/composables/useGit';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
+
+const keyboard = useKeyboard();
 
 const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSettings} = useLayout();
 const {isVisible} = useConnectionStatus();
@@ -116,6 +122,7 @@ const {loadStatus, status} = useWorkingTree();
 
 onMounted(() => {
 	openLastOpenProject();
+	keyboard.mount();
 	windowFocus.onFocus(() => {
 		if (!currentProject.value || isVisible.value) {
 			return;
@@ -125,6 +132,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+	keyboard.unmount();
 	windowFocus.destroy();
 });
 

@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed} from 'vue';
+import {ref, computed, onMounted, onUnmounted} from 'vue';
 import {NButton, useNotification} from 'naive-ui';
 import {useProject} from '@/composables/useProject';
 import {useBranches} from '@/composables/useBranches';
@@ -68,6 +68,7 @@ import {useStash} from '@/composables/useStash';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useLayout} from '@/composables/useLayout';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
+import {useCommands} from '@/composables/useCommands';
 import ReferenceModal from './ReferenceModal.vue';
 import {EReferenceModalType} from '@/domain';
 
@@ -79,7 +80,8 @@ const
 	{stashes, stashSave, stashPop} = useStash(),
 	{loadStatus} = useWorkingTree(),
 	{toggleActivityLog, toggleSettings} = useLayout(),
-	{isConnecting} = useConnectionStatus();
+	{isConnecting} = useConnectionStatus(),
+	{registerCommand, unregisterCommand} = useCommands();
 
 const notification = useNotification();
 const showBranchModal = ref(false);
@@ -143,6 +145,45 @@ async function handlePop(): Promise<void> {
 }
 
 const popDisabled = computed(() => stashes.value.length === 0);
+
+const TOOLBAR_COMMAND_IDS = ['pull', 'push', 'stash', 'pop', 'branch'];
+
+onMounted(() => {
+	registerCommand({
+		id: 'pull',
+		label: 'Pull',
+		action: handlePull,
+		isEnabled: () => !!currentProject.value && !isConnecting.value,
+	});
+	registerCommand({
+		id: 'push',
+		label: 'Push',
+		action: handlePush,
+		isEnabled: () => !!currentProject.value && !isConnecting.value,
+	});
+	registerCommand({
+		id: 'stash',
+		label: 'Stash',
+		action: handleStash,
+		isEnabled: () => !!currentProject.value,
+	});
+	registerCommand({
+		id: 'pop',
+		label: 'Pop',
+		action: handlePop,
+		isEnabled: () => !popDisabled.value,
+	});
+	registerCommand({
+		id: 'branch',
+		label: 'New Branch',
+		action: () => { showBranchModal.value = true; },
+		isEnabled: () => !!currentProject.value,
+	});
+});
+
+onUnmounted(() => {
+	TOOLBAR_COMMAND_IDS.forEach(id => { unregisterCommand(id); });
+});
 
 const actions = computed(() => [{
 	icon: "mdi-arrow-down-bold",

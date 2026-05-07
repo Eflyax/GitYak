@@ -194,7 +194,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed} from 'vue';
+import {ref, computed, onMounted, onUnmounted} from 'vue';
 import {NButton, NInput} from 'naive-ui';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useBranches} from '@/composables/useBranches';
@@ -202,6 +202,7 @@ import {useCommits} from '@/composables/useCommits';
 import {useGit} from '@/composables/useGit';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {useContextMenu} from '@/composables/useContextMenu';
+import {useCommands} from '@/composables/useCommands';
 import type {IFileStatus} from '@/domain';
 import FileStatus from '../FileStatus.vue';
 import Icon from '../Icon.vue';
@@ -218,6 +219,7 @@ const {loadCommits} = useCommits();
 const {commit, mergeAbort, activePath} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
+const {registerCommand, unregisterCommand} = useCommands();
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
 const stagedExpanded = ref(true);
@@ -262,6 +264,21 @@ async function handleAbortMerge(): Promise<void> {
 	await mergeAbort();
 	await Promise.all([loadStatus(), loadCommits(), loadBranches()]);
 }
+
+onMounted(() => {
+	registerCommand({
+		id: 'commit',
+		label: 'Commit',
+		shortcut: '⌘Enter',
+		keybinding: {key: 'enter', meta: true},
+		isEnabled: () => !!stagedFiles.value.length && !!commitSummary.value.trim() && !(conflictDetected.value && !!unstagedFiles.value.length),
+		action: handleCommit,
+	});
+});
+
+onUnmounted(() => {
+	unregisterCommand('commit');
+});
 
 loadStatus();
 </script>
