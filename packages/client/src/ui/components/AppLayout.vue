@@ -51,7 +51,9 @@
 
 	<NDrawer
 		v-model:show="showActivityLog"
-		:max-width="1000"
+		:width="500"
+		:min-width="500"
+		test-id="activity-log-drawer"
 		resizable
 		placement="right"
 	>
