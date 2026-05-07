@@ -23,6 +23,7 @@ export interface ICommand {
     isEnabled?: () => boolean;
     action?: () => void | Promise<void>;
     getItems?: (query: string) => Array<ISubItem>;
+    priority?: number;
 }
 
 export interface IUseCommands {

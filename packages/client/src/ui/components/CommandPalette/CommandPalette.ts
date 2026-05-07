@@ -41,6 +41,25 @@ export default defineComponent({
 
 			return allCommands.value
 				.filter(cmd => cmd.label.toLowerCase().includes(q))
+				.sort((a, b) => {
+					const aLabel = a.label.toLowerCase();
+					const bLabel = b.label.toLowerCase();
+					const aScore = aLabel.startsWith(q) ? 2 : 1;
+					const bScore = bLabel.startsWith(q) ? 2 : 1;
+
+					if (bScore !== aScore) {
+						return bScore - aScore;
+					}
+
+					const aPriority = a.priority ?? 0;
+					const bPriority = b.priority ?? 0;
+
+					if (bPriority !== aPriority) {
+						return bPriority - aPriority;
+					}
+
+					return aLabel.localeCompare(bLabel);
+				})
 				.slice(0, MAX_RESULTS);
 		},
 	},

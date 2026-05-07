@@ -160,6 +160,7 @@ onMounted(() => {
 		label: 'Push',
 		action: handlePush,
 		isEnabled: () => !!currentProject.value && !isConnecting.value,
+		priority: 1,
 	});
 	registerCommand({
 		id: 'stash',
