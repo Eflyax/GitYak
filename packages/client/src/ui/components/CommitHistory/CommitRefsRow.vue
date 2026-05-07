@@ -233,7 +233,12 @@ const shownRefs = computed(() =>
 async function handleDblClick(ref: IMergedRef): Promise<void> {
 	if (ref.isBranch) {
 		if (hasChanges.value) {
-			await stashSave();
+			try {
+				await stashSave();
+			}
+			catch {
+				return;
+			}
 		}
 
 		if (ref.isLocal) {
@@ -251,7 +256,7 @@ async function handleDblClick(ref: IMergedRef): Promise<void> {
 			}
 		}
 
-		await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
+		await Promise.all([loadCommits(), loadStatus()]);
 	}
 	else {
 		await checkout(ref.name);
