@@ -150,3 +150,8 @@ svg {
 	width: 16px;
 	fill: $text-primary;
 }
+
+input,
+textarea {
+	-webkit-spell-checking: false;
+}
