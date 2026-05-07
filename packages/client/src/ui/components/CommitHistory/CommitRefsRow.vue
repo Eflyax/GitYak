@@ -103,10 +103,14 @@ import {useContextMenu} from '@/composables/useContextMenu';
 import {useTags} from '@/composables/useTags';
 import {useGit} from '@/composables/useGit';
 import {useCommits} from '@/composables/useCommits';
+import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useStash} from '@/composables/useStash';
 
 const {currentBranch, branches, switchBranch, createBranch, loadBranches} = useBranches();
 const {checkout} = useGit();
 const {loadCommits} = useCommits();
+const {hasChanges, loadStatus} = useWorkingTree();
+const {stashSave} = useStash();
 const {remoteTags} = useTags();
 const {contextMenuRef} = useContextMenu();
 
@@ -228,13 +232,26 @@ const shownRefs = computed(() =>
 
 async function handleDblClick(ref: IMergedRef): Promise<void> {
 	if (ref.isBranch) {
+		if (hasChanges.value) {
+			await stashSave();
+		}
+
 		if (ref.isLocal) {
 			await switchBranch(ref.name);
 		}
 		else {
 			const remote = ref.remotes[0] ?? 'origin';
-			await createBranch(ref.name, `${remote}/${ref.name}`);
+			const localExists = branches.value.some(b => !b.isRemote && b.name === ref.name);
+
+			if (localExists) {
+				await switchBranch(ref.name);
+			}
+			else {
+				await createBranch(ref.name, `${remote}/${ref.name}`);
+			}
 		}
+
+		await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
 	}
 	else {
 		await checkout(ref.name);
