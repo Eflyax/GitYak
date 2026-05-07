@@ -81,6 +81,8 @@ import {computed, onMounted, onUnmounted, watch} from 'vue';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useKeyboard} from '@/composables/useKeyboard';
+import {useCommands} from '@/composables/useCommands';
+import {useCommitForm} from '@/composables/useCommitForm';
 import {NDrawer, NDrawerContent} from 'naive-ui';
 import {Splitpanes, Pane} from 'splitpanes';
 import Sidebar from './Sidebar/Sidebar.vue';
@@ -102,23 +104,25 @@ import {useGit} from '@/composables/useGit';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
 
 const keyboard = useKeyboard();
+const {registerCommand, unregisterCommand} = useCommands();
 
 const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSettings} = useLayout();
 const {isVisible} = useConnectionStatus();
-const {activePath} = useGit();
+const {activePath, commit} = useGit();
 
 function handleClose(): void {
 	activePath.value = null;
 	closeFileDiff();
 }
 
-const {currentProject, openLastOpenProject} = useProject();
-const {selectedHashes} = useCommits();
+const {currentProject, openLastOpenProject, openProject, projects} = useProject();
+const {selectedHashes, loadCommits} = useCommits();
+const {commitSummary, commitDescription, resetForm} = useCommitForm();
 
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value.length);
 
 const windowFocus = useWindowFocus();
-const {loadStatus, status} = useWorkingTree();
+const {loadStatus, status, conflictDetected} = useWorkingTree();
 
 onMounted(() => {
 	openLastOpenProject();
@@ -129,11 +133,45 @@ onMounted(() => {
 		}
 		loadStatus();
 	});
+
+	registerCommand({
+		id: 'commit',
+		label: 'Commit',
+		shortcut: '⌘Enter',
+		keybinding: {key: 'enter', meta: true},
+		isEnabled: () => !!status.value.staged.length && !!commitSummary.value.trim() && !(conflictDetected.value && !!status.value.unstaged.length),
+		action: async () => {
+			const message = commitDescription.value.trim()
+				? `${commitSummary.value.trim()}\n\n${commitDescription.value.trim()}`
+				: commitSummary.value.trim();
+			await commit(message);
+			resetForm();
+			await Promise.all([loadStatus(), loadCommits()]);
+		},
+	});
+
+	registerCommand({
+		id: 'open-repo',
+		label: 'Open repo',
+		getItems: (query: string) => {
+			const q = query.toLowerCase();
+
+			return projects.value
+				.filter(p => !q || p.alias.toLowerCase().includes(q))
+				.map(p => ({
+					id: p.id,
+					label: `Open repo: ${p.alias}`,
+					action: () => { void openProject(p); },
+				}));
+		},
+	});
 });
 
 onUnmounted(() => {
 	keyboard.unmount();
 	windowFocus.destroy();
+	unregisterCommand('commit');
+	unregisterCommand('open-repo');
 });
 
 watch(

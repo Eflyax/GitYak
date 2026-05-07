@@ -194,7 +194,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted} from 'vue';
+import {ref, computed} from 'vue';
 import {NButton, NInput} from 'naive-ui';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useBranches} from '@/composables/useBranches';
@@ -202,7 +202,7 @@ import {useCommits} from '@/composables/useCommits';
 import {useGit} from '@/composables/useGit';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {useContextMenu} from '@/composables/useContextMenu';
-import {useCommands} from '@/composables/useCommands';
+import {useCommitForm} from '@/composables/useCommitForm';
 import type {IFileStatus} from '@/domain';
 import FileStatus from '../FileStatus.vue';
 import Icon from '../Icon.vue';
@@ -219,12 +219,10 @@ const {loadCommits} = useCommits();
 const {commit, mergeAbort, activePath} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
-const {registerCommand, unregisterCommand} = useCommands();
+const {commitSummary, commitDescription, resetForm} = useCommitForm();
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
 const stagedExpanded = ref(true);
-const commitSummary = ref('');
-const commitDescription = ref('');
 
 const unstagedFiles = computed(() => status.value.unstaged);
 const stagedFiles = computed(() => status.value.staged);
@@ -255,8 +253,7 @@ async function handleCommit(): Promise<void> {
 		? `${commitSummary.value.trim()}\n\n${commitDescription.value.trim()}`
 		: commitSummary.value.trim();
 	await commit(message);
-	commitSummary.value = '';
-	commitDescription.value = '';
+	resetForm();
 	await Promise.all([loadStatus(), loadCommits()]);
 }
 
@@ -264,21 +261,6 @@ async function handleAbortMerge(): Promise<void> {
 	await mergeAbort();
 	await Promise.all([loadStatus(), loadCommits(), loadBranches()]);
 }
-
-onMounted(() => {
-	registerCommand({
-		id: 'commit',
-		label: 'Commit',
-		shortcut: '⌘Enter',
-		keybinding: {key: 'enter', meta: true},
-		isEnabled: () => !!stagedFiles.value.length && !!commitSummary.value.trim() && !(conflictDetected.value && !!unstagedFiles.value.length),
-		action: handleCommit,
-	});
-});
-
-onUnmounted(() => {
-	unregisterCommand('commit');
-});
 
 loadStatus();
 </script>

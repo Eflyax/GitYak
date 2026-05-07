@@ -9,13 +9,20 @@ export interface IKeybinding {
     alt?: boolean;
 }
 
+export interface ISubItem {
+    id: string;
+    label: string;
+    action: () => void | Promise<void>;
+}
+
 export interface ICommand {
     id: string;
     label: string;
     shortcut?: string;
     keybinding?: IKeybinding;
     isEnabled?: () => boolean;
-    action: () => void | Promise<void>;
+    action?: () => void | Promise<void>;
+    getItems?: (query: string) => Array<ISubItem>;
 }
 
 export interface IUseCommands {
@@ -57,7 +64,7 @@ async function executeCommand(id: string): Promise<void> {
         return;
     }
 
-    await cmd.action();
+    await cmd.action?.();
 }
 
 function matchKeybinding(event: KeyboardEvent): ICommand | undefined {
