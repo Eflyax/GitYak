@@ -112,6 +112,7 @@ export function useGit() {
 		const r = await resolveRemote(remote);
 		await callGit(
 			'push',
+			'--set-upstream',
 			r,
 			...(branch ? [branch] : []),
 			...(force ? ['--force-with-lease'] : []),

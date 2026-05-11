@@ -112,7 +112,7 @@ async function handlePush(): Promise<void> {
 	isPushing.value = true;
 
 	try {
-		await push();
+		await push(undefined, currentBranch.value?.name);
 		await Promise.all([loadCommits(), loadBranches()]);
 		notification.success({content: 'Push successful', duration: 3000});
 	}

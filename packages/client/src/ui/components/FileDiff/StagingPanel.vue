@@ -41,7 +41,7 @@
 						size="tiny"
 						:type="conflictDetected ? 'warning' : 'success'"
 						secondary
-						@click="stageAll"
+						@click="handleStageAll"
 					>
 						{{ conflictDetected ? 'Mark all resolved' : 'Stage all changes' }}
 					</NButton>
@@ -149,6 +149,7 @@
 			</div>
 
 			<n-input
+				ref="commitSummaryInput"
 				test-id="commit-summary-input"
 				v-model:value="commitSummary"
 				placeholder="Commit summary"
@@ -194,7 +195,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed} from 'vue';
+import {ref, computed, useTemplateRef} from 'vue';
 import {NButton, NInput} from 'naive-ui';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useBranches} from '@/composables/useBranches';
@@ -220,6 +221,7 @@ const {commit, mergeAbort, activePath} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
 const {commitSummary, commitDescription, resetForm} = useCommitForm();
+const commitSummaryInput = useTemplateRef<InstanceType<typeof NInput>>('commitSummaryInput');
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
 const stagedExpanded = ref(true);
@@ -246,6 +248,11 @@ function fileName(path: string): string {
 async function handleFileClick(file: IFileStatus): Promise<void> {
 	await loadDiff(file);
 	emit('openDiff', file.path);
+}
+
+async function handleStageAll(): Promise<void> {
+	await stageAll();
+	commitSummaryInput.value?.focus();
 }
 
 async function handleCommit(): Promise<void> {
