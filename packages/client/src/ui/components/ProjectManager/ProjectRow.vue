@@ -14,6 +14,9 @@
 			<n-button test-id="project-edit-btn" size="small" type="info" @click="emit('edit', project)">
 				<template #icon><Icon name="mdi-pencil" /></template>
 			</n-button>
+			<n-button test-id="project-duplicate-btn" size="small" @click="emit('duplicate', project)">
+				<template #icon><Icon name="mdi-content-copy" /></template>
+			</n-button>
 			<n-button test-id="project-delete-btn" size="small" type="error" @click="emit('delete', project)">
 				<template #icon><Icon name="mdi-trash-can" /></template>
 			</n-button>
@@ -33,6 +36,7 @@ defineProps<{
 const emit = defineEmits<{
 	open: [project: IProject];
 	edit: [project: IProject];
+	duplicate: [project: IProject];
 	delete: [project: IProject];
 }>();
 </script>

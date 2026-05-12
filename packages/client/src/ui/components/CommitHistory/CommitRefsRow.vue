@@ -377,4 +377,9 @@ function getTitle(ref: IMergedRef): string {
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+.tags-wrapper--expanded .ref-name {
+	max-width: none;
+	overflow: visible;
+}
 </style>

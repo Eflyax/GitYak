@@ -375,7 +375,7 @@ loadStatus();
 		}
 
 		&--active {
-			background-color: rgba($color-accent, 0.1);
+			box-shadow: inset 0 0 0 999px rgba(48, 160, 191, 0.35);
 		}
 	}
 

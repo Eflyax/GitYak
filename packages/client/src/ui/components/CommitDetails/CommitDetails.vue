@@ -48,6 +48,7 @@
 					:key="file.path"
 					:path="file.path"
 					:status="(file.status as EFileStatus)"
+					:is-selected="selectedFilePath === file.path"
 					@open="handleFileOpen(file)"
 				/>
 			</div>
@@ -60,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, watch} from 'vue';
+import {computed, ref, watch} from 'vue';
 import ChangedFileItem from './ChangedFileItem.vue';
 import CommitFileStats from '@/ui/components/CommitFileStats.vue';
 import {useCommits} from '@/composables/useCommits';
@@ -78,6 +79,8 @@ const EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 const {selectedHashes, commitMap, commitFiles, loadCommitDetails} = useCommits();
 const {loadDiff} = useFileDiff();
+
+const selectedFilePath = ref<string | null>(null);
 
 const selectedCommit = computed(() => {
 	const hash = selectedHashes.value[0];
@@ -117,6 +120,7 @@ async function handleFileOpen(file: ICommitFile): Promise<void> {
 		oldPath: file.oldPath,
 		area: EFileArea.Committed,
 	};
+	selectedFilePath.value = file.path;
 	await loadDiff(fileStatus, selectedRevisions.value);
 	emit('openDiff', file.path);
 }
@@ -124,6 +128,7 @@ async function handleFileOpen(file: ICommitFile): Promise<void> {
 watch(
 	selectedHashes,
 	(hashes) => {
+		selectedFilePath.value = null;
 		loadCommitDetails(hashes);
 	},
 	{immediate: true},

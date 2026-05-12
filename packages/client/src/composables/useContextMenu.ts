@@ -1,5 +1,7 @@
-import {ref} from 'vue';
+import {ref, h} from 'vue';
+import type {VNode} from 'vue';
 import ContextMenu from '@imengyu/vue3-context-menu';
+import * as mdiIcons from '@mdi/js';
 import {useGit} from '@/composables/useGit';
 import {useStash} from '@/composables/useStash';
 import {useWorkingTree} from '@/composables/useWorkingTree';
@@ -18,6 +20,14 @@ const referenceModalMode = ref<'create' | 'rename'>('create');
 const referenceModalCommitHash = ref<string | undefined>();
 const referenceModalInitialName = ref<string | undefined>();
 const referenceModalStashId = ref<string | undefined>();
+
+function menuIcon(mdiName: string): VNode {
+	const key = mdiName.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+	const path = (mdiIcons as Record<string, string>)[key] ?? '';
+	return h('svg', {viewBox: '0 0 24 24', width: 14, height: 14, fill: 'currentColor'}, [
+		h('path', {d: path}),
+	]);
+}
 
 export interface IRefContextTarget {
 	name: string;
@@ -53,11 +63,12 @@ export function useContextMenu() {
 			};
 
 			items.push(
-				{label: 'Apply stash', onClick: async () => stashAction('apply')},
-				{label: 'Pop stash', onClick: async () => stashAction('pop')},
-				{label: 'Delete stash', onClick: async () => stashAction('drop')},
+				{label: 'Apply stash', icon: menuIcon('mdi-archive-arrow-down'), onClick: async () => stashAction('apply')},
+				{label: 'Pop stash', icon: menuIcon('mdi-archive-arrow-up'), onClick: async () => stashAction('pop')},
+				{label: 'Delete stash', icon: menuIcon('mdi-trash-can'), onClick: async () => stashAction('drop')},
 				{
 					label: 'Rename',
+					icon: menuIcon('mdi-pencil'),
 					onClick: () => {
 						referenceModalType.value = EReferenceModalType.Stash;
 						referenceModalMode.value = 'rename';
@@ -78,6 +89,7 @@ export function useContextMenu() {
 			items.push(
 				{
 					label: 'Create tag here',
+					icon: menuIcon('mdi-tag-plus'),
 					onClick: () => {
 						referenceModalType.value = EReferenceModalType.Tag;
 						referenceModalMode.value = 'create';
@@ -88,6 +100,7 @@ export function useContextMenu() {
 				},
 				{
 					label: 'Create branch here',
+					icon: menuIcon('mdi-source-branch-plus'),
 					onClick: () => {
 						referenceModalType.value = EReferenceModalType.Branch;
 						referenceModalMode.value = 'create';
@@ -98,10 +111,11 @@ export function useContextMenu() {
 				},
 				{
 					label: 'Reset HEAD to this commit',
+					icon: menuIcon('mdi-restore'),
 					children: [
-						{label: 'Soft', onClick: async () => resetAction('--soft')},
-						{label: 'Mixed', onClick: async () => resetAction('--mixed')},
-						{label: 'Hard', onClick: async () => resetAction('--hard')},
+						{label: 'Soft', icon: menuIcon('mdi-circle-small'), onClick: async () => resetAction('--soft')},
+						{label: 'Mixed', icon: menuIcon('mdi-circle-small'), onClick: async () => resetAction('--mixed')},
+						{label: 'Hard', icon: menuIcon('mdi-circle-small'), onClick: async () => resetAction('--hard')},
 					],
 				},
 			);
@@ -123,6 +137,7 @@ export function useContextMenu() {
 			items: [
 				{
 					label: 'Delete file',
+					icon: menuIcon('mdi-trash-can'),
 					onClick: async () => {
 						await discardFile(filePath);
 					},
@@ -136,12 +151,14 @@ export function useContextMenu() {
 
 		items.push({
 			label: 'Copy name',
+			icon: menuIcon('mdi-content-copy'),
 			onClick: () => navigator.clipboard.writeText(target.name),
 		});
 
 		if (target.isTag) {
 			items.push({
 				label: `Delete ${target.name}`,
+				icon: menuIcon('mdi-trash-can'),
 				onClick: async () => {
 					await deleteTag(target.name);
 					await refreshAll();
@@ -152,6 +169,7 @@ export function useContextMenu() {
 			if (target.isLocal && target.remotes.length === 0) {
 				items.push({
 					label: 'Push',
+					icon: menuIcon('mdi-cloud-upload'),
 					onClick: async () => {
 						await pushBranch(target.name);
 						await refreshAll();
@@ -164,6 +182,7 @@ export function useContextMenu() {
 			if (target.isLocal) {
 				deleteChildren.push({
 					label: 'Local',
+					icon: menuIcon('mdi-laptop'),
 					onClick: async () => {
 						await deleteBranch(target.name, true);
 						await refreshAll();
@@ -174,6 +193,7 @@ export function useContextMenu() {
 			if (target.remotes.length > 0) {
 				deleteChildren.push({
 					label: 'Remote',
+					icon: menuIcon('mdi-cloud-outline'),
 					onClick: async () => {
 						await deleteRemoteBranch(target.name, target.remotes[0]);
 						await refreshAll();
@@ -184,6 +204,7 @@ export function useContextMenu() {
 			if (target.isLocal && target.remotes.length > 0) {
 				deleteChildren.push({
 					label: 'Both',
+					icon: menuIcon('mdi-trash-can'),
 					onClick: async () => {
 						await deleteBranchBoth(target.name, target.remotes[0]);
 						await refreshAll();
@@ -194,12 +215,14 @@ export function useContextMenu() {
 			if (deleteChildren.length === 1) {
 				items.push({
 					label: `Delete ${target.name}`,
-					onClick: deleteChildren[0].onClick,
+					icon: menuIcon('mdi-trash-can'),
+					onClick: deleteChildren[0]!.onClick,
 				});
 			}
 			else if (deleteChildren.length > 1) {
 				items.push({
 					label: `Delete ${target.name}`,
+					icon: menuIcon('mdi-trash-can'),
 					children: deleteChildren,
 				});
 			}

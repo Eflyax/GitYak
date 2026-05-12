@@ -23,6 +23,14 @@
 						</n-button>
 					</div>
 
+					<n-select
+						test-id="group-filter-select"
+						v-model:value="selectedGroupFilter"
+						:options="groupFilterOptions"
+						clearable
+						placeholder="All groups"
+					/>
+
 					<div class="project-list">
 						<!-- Grouped projects -->
 						<template v-for="group in groups" :key="group.id">
@@ -44,6 +52,7 @@
 									:project="project"
 									@open="handleOpenProject(project)"
 									@edit="openEdit(project)"
+									@duplicate="openDuplicate(project)"
 									@delete="confirmDelete(project)"
 								/>
 							</div>
@@ -61,6 +70,7 @@
 								:project="project"
 								@open="handleOpenProject(project)"
 								@edit="openEdit(project)"
+								@duplicate="openDuplicate(project)"
 								@delete="confirmDelete(project)"
 							/>
 						</div>
@@ -188,6 +198,7 @@ import {
 	NModal,
 	NForm,
 	NFormItem,
+	NSelect,
 	useDialog,
 } from 'naive-ui';
 import {useProject} from '@/composables/useProject';
@@ -217,20 +228,36 @@ const {projects, groups, openProject, removeProject, addGroup, updateGroup, remo
 
 const activeTab = ref<'projects' | 'groups'>('projects');
 const filterText = ref('');
+const selectedGroupFilter = ref<string | null>(null);
 const showProjectForm = ref(false);
 const editableProject = ref<IProject | null>(null);
 const showGroupForm = ref(false);
 const editableGroup = ref<Partial<IProjectGroup> & {name: string} | null>(null);
 
+const groupFilterOptions = computed(() => [
+	...groups.value.map(g => ({
+		label: g.name,
+		value: g.id,
+	})),
+	{label: 'Ungrouped', value: '__ungrouped__'},
+]);
+
 const filteredProjects = computed(() => {
 	const q = filterText.value.toLowerCase();
-	if (!q) {
-		return projects.value;
-	}
+	const groupFilter = selectedGroupFilter.value;
 
-	return projects.value.filter(p =>
-		p.alias.toLowerCase().includes(q) || p.path.toLowerCase().includes(q),
-	);
+	return projects.value.filter(p => {
+		if (q && !p.alias.toLowerCase().includes(q) && !p.path.toLowerCase().includes(q)) {
+			return false;
+		}
+		if (groupFilter === '__ungrouped__') {
+			return !p.groupId;
+		}
+		if (groupFilter !== null) {
+			return p.groupId === groupFilter;
+		}
+		return true;
+	});
 });
 
 const projectsByGroup = computed(() => {
@@ -245,7 +272,7 @@ const projectsByGroup = computed(() => {
 });
 
 const ungrouped = computed(() =>
-	projects.value.filter(p => !p.groupId),
+	filteredProjects.value.filter(p => !p.groupId),
 );
 
 // ── Project actions ──────────────────────────────────────────────────────────
@@ -262,6 +289,15 @@ function openAdd(): void {
 
 function openEdit(project: IProject): void {
 	editableProject.value = {...project};
+	showProjectForm.value = true;
+}
+
+function openDuplicate(project: IProject): void {
+	editableProject.value = {
+		...project,
+		id: '',
+		alias: project.alias + ' (copy)',
+	};
 	showProjectForm.value = true;
 }
 
@@ -346,6 +382,8 @@ function confirmDeleteGroup(group: IProjectGroup): void {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+	max-height: 400px;
+	overflow-y: auto;
 }
 
 .group-section {

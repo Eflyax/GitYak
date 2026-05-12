@@ -153,6 +153,14 @@ let diffEditor: editor.IStandaloneDiffEditor | null = null;
 function handleEditorMount(editorInstance: editor.IStandaloneDiffEditor, monacoInstance: typeof Monaco): void {
 	diffEditor = editorInstance;
 
+	const scrollDisposable = editorInstance.onDidUpdateDiff(() => {
+		scrollDisposable.dispose();
+		const changes = editorInstance.getLineChanges();
+		if (changes && changes.length > 0) {
+			editorInstance.getModifiedEditor().revealLineInCenter(changes[0]!.modifiedStartLineNumber);
+		}
+	});
+
 	monacoInstance.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
 		noSemanticValidation: true,
 		noSyntaxValidation: true,

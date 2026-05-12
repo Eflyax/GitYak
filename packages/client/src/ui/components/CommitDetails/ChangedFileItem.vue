@@ -2,7 +2,7 @@
 	<div
 		class="changed-file"
 		test-id="changed-file"
-		:class="`changed-file--${status}`"
+		:class="[`changed-file--${status}`, {'changed-file--active': isSelected}]"
 		@click="handleOpen"
 	>
 		<FileStatus :status="status" />
@@ -21,6 +21,7 @@ import {EFileStatus} from '@/domain/enums';
 const props = defineProps<{
 	path: string
 	status: EFileStatus
+	isSelected?: boolean
 }>();
 
 const emit = defineEmits<{
@@ -55,6 +56,10 @@ function handleOpen(): void {
 
 	&:hover {
 		background-color: rgba($text-white, 0.05);
+	}
+
+	&--active {
+		box-shadow: inset 0 0 0 999px rgba(48, 160, 191, 0.35);
 	}
 
 	&__path {
