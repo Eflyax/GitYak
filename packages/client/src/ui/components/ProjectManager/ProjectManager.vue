@@ -224,11 +224,10 @@ const emit = defineEmits<{
 }>();
 
 const dialog = useDialog();
-const {projects, groups, openProject, removeProject, addGroup, updateGroup, removeGroup} = useProject();
+const {projects, groups, openProject, removeProject, addGroup, updateGroup, removeGroup, selectedGroupFilter} = useProject();
 
 const activeTab = ref<'projects' | 'groups'>('projects');
 const filterText = ref('');
-const selectedGroupFilter = ref<string | null>(null);
 const showProjectForm = ref(false);
 const editableProject = ref<IProject | null>(null);
 const showGroupForm = ref(false);

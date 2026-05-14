@@ -122,11 +122,6 @@
 				</template>
 			</div>
 		</div>
-
-		<!-- Footer -->
-		<div v-if="!sidebarCollapsed" class="sidebar__footer">
-			<span test-id="stash-link" class="sidebar__stash-link">+ STASH</span>
-		</div>
 	</div>
 </template>
 

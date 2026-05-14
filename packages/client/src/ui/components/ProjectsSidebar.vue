@@ -132,21 +132,15 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref} from 'vue';
+import {computed, ref, watch} from 'vue';
 import {NButton, NModal, NTooltip} from 'naive-ui';
 import {useProject} from '@/composables/useProject';
 import Icon from './Icon.vue';
 import ProjectManager from './ProjectManager/ProjectManager.vue';
 
-const {projects, groups, currentProject, openProject} = useProject();
+const {projects, groups, currentProject, openProject, selectedGroupFilter} = useProject();
 const showManager = ref(false);
 const showGroupFilter = ref(false);
-const selectedGroupFilter = ref<string | null>(null);
-
-function selectGroup(value: string | null): void {
-	selectedGroupFilter.value = value;
-	showGroupFilter.value = false;
-}
 
 const filteredProjects = computed(() => {
 	const filter = selectedGroupFilter.value;
@@ -158,6 +152,18 @@ const filteredProjects = computed(() => {
 	}
 	return projects.value.filter(p => p.groupId === filter);
 });
+
+watch(selectedGroupFilter, () => {
+	const first = filteredProjects.value[0];
+	if (first) {
+		openProject(first);
+	}
+});
+
+function selectGroup(value: string | null): void {
+	selectedGroupFilter.value = value;
+	showGroupFilter.value = false;
+}
 
 function initials(alias: string): string {
 	const words = alias.trim().split(/\s+/);

@@ -9,6 +9,7 @@ const LAST_OPEN_PROJECT = 'git-yak:lastProjectId';
 const projects = ref<IProject[]>(loadFromStorage<IProject[]>(PROJECTS_KEY, []).map(migrateProject));
 const groups = ref<IProjectGroup[]>(loadFromStorage<IProjectGroup[]>(GROUPS_KEY, []));
 const currentProject = ref<IProject | null>(null);
+const selectedGroupFilter = ref<string | null>(null);
 
 function migrateProject(p: IProject): IProject {
 	return {
@@ -172,6 +173,7 @@ export function useProject() {
 		projects: readonly(projects),
 		groups: readonly(groups),
 		currentProject: readonly(currentProject),
+		selectedGroupFilter,
 		openProject,
 		closeProject,
 		addProject,
