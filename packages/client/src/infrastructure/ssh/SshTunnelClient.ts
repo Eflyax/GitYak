@@ -17,6 +17,9 @@ export class SshTunnelClient implements ITransportClient {
 	private wsClient: WebSocketClient | null = null;
 	private localPort = 0;
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+	private dead = false;
+	private consecutiveHeartbeatFailures = 0;
+	onDead?: () => void;
 	private readonly log = useActivityLog().addLog;
 	private readonly cs = useConnectionStatus();
 
@@ -211,9 +214,23 @@ export class SshTunnelClient implements ITransportClient {
 			.catch(() => {});
 	}
 
+	isAlive(): boolean {
+		return !this.dead && this.wsClient?.isOpen() === true;
+	}
+
 	private startHeartbeat(): void {
 		this.heartbeatTimer = setInterval(() => {
-			this.wsClient?.call(ENetworkCommand.Heartbeat, {}).catch(() => {});
+			this.wsClient?.call(ENetworkCommand.Heartbeat, {})
+				.then(() => { this.consecutiveHeartbeatFailures = 0; })
+				.catch(() => {
+					this.consecutiveHeartbeatFailures++;
+					if (this.consecutiveHeartbeatFailures >= 3) {
+						this.dead = true;
+						if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+						this.heartbeatTimer = null;
+						this.onDead?.();
+					}
+				});
 		}, 10_000);
 	}
 

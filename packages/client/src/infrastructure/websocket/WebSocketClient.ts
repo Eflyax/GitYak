@@ -75,6 +75,10 @@ export class WebSocketClient implements ITransportClient {
 		});
 	}
 
+	isOpen(): boolean {
+		return this.ws.readyState === WebSocket.OPEN;
+	}
+
 	close(): void {
 		this.ws.close();
 	}

@@ -1,7 +1,7 @@
 import {ref, readonly} from 'vue';
 import {WebSocketClient} from '@/infrastructure/websocket/WebSocketClient';
-import {SshTunnelClient} from '@/infrastructure/ssh/SshTunnelClient';
 import {TauriLocalClient} from '@/infrastructure/tauri/TauriLocalClient';
+import {sshConnectionPool} from '@/infrastructure/ssh/SshConnectionPool';
 import type {ITransportClient} from '@/infrastructure/ITransportClient';
 import {EConnectionStatus, ENetworkCommand, EServerType} from '@/domain';
 import type {IProject} from '@/domain';
@@ -15,7 +15,11 @@ const status = ref<EConnectionStatus>(EConnectionStatus.Idle);
 export function useWebSocket() {
 	async function connect(project: IProject): Promise<void> {
 		useConnectionStatus().reset();
-		client.value?.close();
+
+		if (project.serverType !== EServerType.SSH) {
+			client.value?.close();
+		}
+
 		status.value = EConnectionStatus.Connecting;
 
 		try {
@@ -25,14 +29,15 @@ export function useWebSocket() {
 				newClient = new TauriLocalClient();
 			}
 			else if (project.serverType === EServerType.SSH) {
-				const t = new SshTunnelClient(
+				const pooled = await sshConnectionPool.getOrCreate(
 					project.server,
 					project.port,
 					project.sshUser ?? '',
 					project.sshKeyPath,
 				);
-				await t.connect();
-				newClient = t;
+				client.value = pooled;
+				status.value = EConnectionStatus.Connected;
+				return;
 			}
 			else {
 				newClient = new WebSocketClient(`ws://${project.server}:${project.port}`);
@@ -48,7 +53,9 @@ export function useWebSocket() {
 	}
 
 	function disconnect(): void {
-		client.value?.close();
+		if (client.value) {
+			sshConnectionPool.closeByClient(client.value);
+		}
 		client.value = null;
 		status.value = EConnectionStatus.Disconnected;
 	}
