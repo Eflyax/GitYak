@@ -57,6 +57,7 @@
 
 	<PushRejectedDialog
 		v-model:show="showPushRejectedDialog"
+		:error-message="pushRejectedStderr"
 		@choose="handlePushRejectedChoice"
 	/>
 </div>
@@ -92,6 +93,7 @@ const
 const notification = useNotification();
 const showBranchModal = ref(false);
 const showPushRejectedDialog = ref(false);
+const pushRejectedStderr = ref('');
 const isPulling = ref(false);
 const isPushing = ref(false);
 
@@ -124,12 +126,26 @@ async function handlePush(force = false): Promise<void> {
 		notification.success({content: 'Push successful', duration: 3000});
 	}
 	catch (err: unknown) {
-		if (err instanceof GitError && err.code === EGitErrorCode.PushRejected) {
-			showPushRejectedDialog.value = true;
+		// Authentication or network errors → toast only; force/pull won't help.
+		if (
+			err instanceof GitError
+			&& (err.code === EGitErrorCode.AuthenticationFailed
+				|| err.code === EGitErrorCode.NetworkError
+				|| err.code === EGitErrorCode.PermissionDenied)
+		) {
+			notification.error({content: err.stderr.trim() || err.message, duration: 5000});
+
+			return;
 		}
-		else {
-			notification.error({content: err instanceof Error ? err.message : String(err), duration: 5000});
-		}
+
+		// Push rejected (or unknown failure during push) → show dialog with
+		// real stderr so the user can decide whether to force / pull / cancel.
+		const stderr = err instanceof GitError
+			? err.stderr.trim() || err.message
+			: err instanceof Error ? err.message : String(err);
+
+		pushRejectedStderr.value = stderr;
+		showPushRejectedDialog.value = true;
 	}
 	finally {
 		isPushing.value = false;

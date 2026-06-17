@@ -3,7 +3,7 @@
 	v-model:show="showModel"
 	preset="card"
 	title="Push rejected"
-	style="width: 460px;"
+	style="width: 520px;"
 	:mask-closable="false"
 >
 	<div test-id="push-rejected-dialog" class="push-rejected__body">
@@ -15,6 +15,11 @@
 			<li><strong>Pull</strong> — fast-forward only; aborts if a merge would be needed.</li>
 			<li><strong>Cancel</strong> — do nothing.</li>
 		</ul>
+		<pre
+			v-if="errorMessage"
+			test-id="push-rejected-stderr"
+			class="push-rejected__stderr"
+		>{{ errorMessage }}</pre>
 	</div>
 
 	<template #footer>
@@ -33,6 +38,7 @@ import {NModal, NButton} from 'naive-ui';
 
 const props = defineProps<{
 	show: boolean;
+	errorMessage?: string;
 }>();
 
 const emit = defineEmits<{
@@ -86,6 +92,20 @@ function choose(action: 'force' | 'pull'): void {
 			font-size: 11px;
 			color: $text-muted;
 		}
+	}
+
+	&__stderr {
+		margin: 0;
+		padding: 8px 10px;
+		background: rgba(0, 0, 0, 0.35);
+		border-radius: 4px;
+		color: $text-muted;
+		font-family: "JetBrains Mono", "Fira Code", monospace;
+		font-size: 11px;
+		line-height: 1.5;
+		white-space: pre-wrap;
+		max-height: 200px;
+		overflow-y: auto;
 	}
 
 	&__footer {

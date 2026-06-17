@@ -140,7 +140,7 @@ const emit = defineEmits<{
 
 const EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
-const {commits, selectedHashes, commitMap, commitFiles, loadCommitDetails} = useCommits();
+const {commits, selectedHashes, commitMap, commitFiles, loadCommitDetails, selectCommit} = useCommits();
 const {loadDiff} = useFileDiff();
 const {prefill, amendMode} = useCommitForm();
 const {status} = useWorkingTree();
@@ -212,6 +212,9 @@ function handleEditClick(): void {
 
 	amendMode.value = true;
 	prefill(commit.subject, commit.body ?? '');
+	// Switch to working-tree selection so the StagingPanel (which hosts the
+	// commit form) mounts and exposes the prefilled summary/description.
+	selectCommit('WORKING_TREE');
 }
 
 const filesStatuses = computed(() => {

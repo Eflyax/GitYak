@@ -59,7 +59,14 @@ export function parseGitError(stderr: string, exitCode: number): GitError {
 		});
 	}
 
-	if (stderr.includes('rejected') && stderr.includes('[rejected]')) {
+	if (
+		stderr.includes('[rejected]')
+		|| stderr.includes('non-fast-forward')
+		|| stderr.includes('Updates were rejected')
+		|| stderr.includes('failed to push some refs')
+		|| stderr.includes('(fetch first)')
+		|| stderr.includes('stale info')
+	) {
 		return new GitError({
 			message: 'Push rejected',
 			code: EGitErrorCode.PushRejected,

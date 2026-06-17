@@ -42,17 +42,25 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsMessage): 
 		const proc = Bun.spawn(['git', ...args], {
 			cwd: resolvedPath,
 			env: getAgentEnv(ws),
+			stdout: 'pipe',
+			// Bun defaults stderr to "inherit" — capture it so git errors
+			// (push rejections, conflicts, etc.) reach the client.
+			stderr: 'pipe',
 		});
 
-		const stdout = await new Response(proc.stdout).text();
-		const stderr = await new Response(proc.stderr).text();
+		const [stdout, stderr] = await Promise.all([
+			new Response(proc.stdout).text(),
+			new Response(proc.stderr).text(),
+		]);
 		const exitCode = await proc.exited;
 
 		if (exitCode === 0) {
 			return stdout;
 		}
 
-		throw new Error(stdout + stderr);
+		const combined = (stdout + stderr).trim();
+
+		throw new Error(combined || `git ${args.join(' ')} exited with code ${exitCode}`);
 	};
 
 	let retries = 3;
