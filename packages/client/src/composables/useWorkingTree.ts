@@ -86,16 +86,31 @@ export function useWorkingTree() {
 
 		status.value = parseStatus(output);
 
-		try {
-			await call(ENetworkCommand.ReadFile, {
-				repo_path: currentProject.value?.path ?? '',
-				file_path: '.git/MERGE_MSG',
-			});
+		// Conflict detection: either a merge/rebase/cherry-pick is in progress,
+		// or there are unmerged (UU/AA/etc.) entries in the working tree.
+		const hasUnmerged = [...status.value.staged, ...status.value.unstaged]
+			.some(f => f.status === EFileStatus.Conflicted || f.status === EFileStatus.UpdatedUnmerged);
+
+		if (hasUnmerged) {
 			conflictDetected.value = true;
+
+			return;
 		}
-		catch {
-			conflictDetected.value = false;
+
+		const repoPath = currentProject.value?.path ?? '';
+		const probes = ['.git/MERGE_MSG', '.git/CHERRY_PICK_HEAD', '.git/REBASE_HEAD'];
+		let detected = false;
+
+		for (const file of probes) {
+			try {
+				await call(ENetworkCommand.ReadFile, {repo_path: repoPath, file_path: file});
+				detected = true;
+				break;
+			}
+			catch {}
 		}
+
+		conflictDetected.value = detected;
 	}
 
 	async function stageFile(filePath: string): Promise<void> {

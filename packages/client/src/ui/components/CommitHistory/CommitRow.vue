@@ -10,7 +10,7 @@
 			height: (ROW_HEIGHT - 4) + 'px',
 			borderLeft: '2px solid ' + getGraphColor(commit.level ?? 0),
 		}"
-		@click="emit('select')"
+		@click="emit('select', $event)"
 		@contextmenu.prevent="emit('contextmenu', $event)"
 	>
 		<!-- Message / Working-tree stats -->
@@ -70,7 +70,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-	select: []
+	select: [event: MouseEvent]
 	contextmenu: [event: MouseEvent]
 }>();
 

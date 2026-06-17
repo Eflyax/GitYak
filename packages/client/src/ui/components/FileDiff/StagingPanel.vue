@@ -146,6 +146,16 @@
 		<div class="staging-panel__commit-form">
 			<div class="staging-panel__commit-header">
 				<span class="staging-panel__commit-label">Commit</span>
+				<label class="staging-panel__amend-label">
+					<input
+						test-id="amend-checkbox"
+						type="checkbox"
+						:checked="amendMode"
+						:disabled="amendDisabled"
+						@change="handleAmendToggle(($event.target as HTMLInputElement).checked)"
+					/>
+					<span>Amend previous commit</span>
+				</label>
 			</div>
 
 			<n-input
@@ -173,10 +183,10 @@
 					type="success"
 					size="large"
 					secondary
-					:disabled="!stagedFiles.length || !commitSummary.trim() || (conflictDetected && !!unstagedFiles.length)"
+					:disabled="commitDisabled"
 					@click="handleCommit"
 				>
-					{{ allConflictsResolved ? 'Commit & Merge' : 'Commit' }}
+					{{ commitButtonLabel }}
 				</NButton>
 				<NButton
 					v-if="conflictDetected"
@@ -216,11 +226,11 @@ const emit = defineEmits<{
 
 const {status, loadStatus, stageFile, stageAll, unstageAll, unstageFile, discardAllChanges, conflictDetected} = useWorkingTree();
 const {currentBranch, loadBranches} = useBranches();
-const {loadCommits} = useCommits();
-const {commit, mergeAbort, activePath} = useGit();
+const {commits, loadCommits} = useCommits();
+const {commit, mergeAbort, activePath, getCommitMessage} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
-const {commitSummary, commitDescription, resetForm} = useCommitForm();
+const {commitSummary, commitDescription, amendMode, resetForm, prefill} = useCommitForm();
 const commitSummaryInput = useTemplateRef<InstanceType<typeof NInput>>('commitSummaryInput');
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
@@ -229,6 +239,44 @@ const stagedExpanded = ref(true);
 const unstagedFiles = computed(() => status.value.unstaged);
 const stagedFiles = computed(() => status.value.staged);
 const allConflictsResolved = computed(() => conflictDetected.value && unstagedFiles.value.length === 0);
+
+const hasRegularHead = computed(() =>
+	commits.value.some(c => c.hash !== 'WORKING_TREE' && !c.isStash),
+);
+
+const amendDisabled = computed(() => conflictDetected.value || !hasRegularHead.value);
+
+const commitDisabled = computed(() => {
+	if (conflictDetected.value && unstagedFiles.value.length > 0) return true;
+	if (!commitSummary.value.trim()) return true;
+	if (amendMode.value) return false;
+
+	return !stagedFiles.value.length;
+});
+
+const commitButtonLabel = computed(() => {
+	if (allConflictsResolved.value) return 'Commit & Merge';
+	if (amendMode.value) return 'Amend commit';
+
+	return 'Commit';
+});
+
+async function handleAmendToggle(checked: boolean): Promise<void> {
+	if (checked) {
+		try {
+			const {subject, body} = await getCommitMessage('HEAD');
+			amendMode.value = true;
+			prefill(subject, body);
+		}
+		catch {
+			amendMode.value = false;
+		}
+	}
+	else {
+		amendMode.value = false;
+		prefill('', '');
+	}
+}
 
 const totalCount = computed(() => {
 	const paths = new Set([
@@ -259,7 +307,7 @@ async function handleCommit(): Promise<void> {
 	const message = commitDescription.value.trim()
 		? `${commitSummary.value.trim()}\n\n${commitDescription.value.trim()}`
 		: commitSummary.value.trim();
-	await commit(message);
+	await commit(message, {amend: amendMode.value});
 	resetForm();
 	await Promise.all([loadStatus(), loadCommits()]);
 }
@@ -415,6 +463,30 @@ loadStatus();
 		font-weight: 600;
 		color: $text-primary;
 		flex: 1;
+	}
+
+	&__amend-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		font-size: 11.5px;
+		color: $text-muted;
+		cursor: pointer;
+		user-select: none;
+
+		input {
+			accent-color: $color-accent;
+			cursor: pointer;
+
+			&:disabled {
+				cursor: not-allowed;
+			}
+		}
+
+		&:has(input:disabled) {
+			opacity: 0.45;
+			cursor: not-allowed;
+		}
 	}
 
 	&__reset-btn {

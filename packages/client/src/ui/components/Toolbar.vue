@@ -54,6 +54,11 @@
 		:commit-hash="selectedHashes[0]"
 		@done="loadCommits()"
 	/>
+
+	<PushRejectedDialog
+		v-model:show="showPushRejectedDialog"
+		@choose="handlePushRejectedChoice"
+	/>
 </div>
 </template>
 
@@ -70,12 +75,13 @@ import {useLayout} from '@/composables/useLayout';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
 import {useCommands} from '@/composables/useCommands';
 import ReferenceModal from './ReferenceModal.vue';
-import {EReferenceModalType} from '@/domain';
+import PushRejectedDialog from './PushRejectedDialog.vue';
+import {EReferenceModalType, EGitErrorCode, GitError} from '@/domain';
 
 const
 	{currentProject} = useProject(),
 	{currentBranch, loadBranches} = useBranches(),
-	{pull, push} = useGit(),
+	{pull, push, callGit} = useGit(),
 	{selectedHashes, loadCommits} = useCommits(),
 	{stashes, stashSave, stashPop} = useStash(),
 	{loadStatus} = useWorkingTree(),
@@ -85,6 +91,7 @@ const
 
 const notification = useNotification();
 const showBranchModal = ref(false);
+const showPushRejectedDialog = ref(false);
 const isPulling = ref(false);
 const isPushing = ref(false);
 
@@ -108,19 +115,47 @@ async function handlePull(): Promise<void> {
 	}
 }
 
-async function handlePush(): Promise<void> {
+async function handlePush(force = false): Promise<void> {
 	isPushing.value = true;
 
 	try {
-		await push(undefined, currentBranch.value?.name);
+		await push(undefined, currentBranch.value?.name, force);
 		await Promise.all([loadCommits(), loadBranches()]);
 		notification.success({content: 'Push successful', duration: 3000});
+	}
+	catch (err: unknown) {
+		if (err instanceof GitError && err.code === EGitErrorCode.PushRejected) {
+			showPushRejectedDialog.value = true;
+		}
+		else {
+			notification.error({content: err instanceof Error ? err.message : String(err), duration: 5000});
+		}
+	}
+	finally {
+		isPushing.value = false;
+	}
+}
+
+async function handlePushRejectedChoice(action: 'force' | 'pull'): Promise<void> {
+	if (action === 'force') {
+		await handlePush(true);
+
+		return;
+	}
+
+	// action === 'pull' → fast-forward only, then retry push
+	isPulling.value = true;
+
+	try {
+		await callGit('pull', '--ff-only');
+		await Promise.all([loadCommits(), loadBranches(), loadStatus()]);
+		await handlePush(false);
 	}
 	catch (err: unknown) {
 		notification.error({content: err instanceof Error ? err.message : String(err), duration: 5000});
 	}
 	finally {
-		isPushing.value = false;
+		isPulling.value = false;
 	}
 }
 

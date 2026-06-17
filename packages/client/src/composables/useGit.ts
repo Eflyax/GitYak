@@ -243,6 +243,58 @@ export function useGit() {
 		await callGit('merge', '--abort');
 	}
 
+	// ── Cherry-pick ───────────────────────────────────────────────────────────
+
+	async function cherryPick(hashes: Array<string>): Promise<void> {
+		await callGit('cherry-pick', ...hashes);
+	}
+
+	async function cherryPickAbort(): Promise<void> {
+		await callGit('cherry-pick', '--abort');
+	}
+
+	async function cherryPickContinue(): Promise<void> {
+		await callGit('cherry-pick', '--continue');
+	}
+
+	// ── Merge ─────────────────────────────────────────────────────────────────
+
+	async function merge(branchName: string): Promise<void> {
+		await callGit('merge', branchName);
+	}
+
+	// ── Init ──────────────────────────────────────────────────────────────────
+
+	async function initRepo(defaultBranch = 'master'): Promise<void> {
+		try {
+			await callGit('init', '-b', defaultBranch);
+		}
+		catch {
+			await callGit('init');
+			await callGit('symbolic-ref', 'HEAD', `refs/heads/${defaultBranch}`);
+		}
+	}
+
+	async function isGitRepo(): Promise<boolean> {
+		try {
+			await callGit('rev-parse', '--git-dir');
+			return true;
+		}
+		catch {
+			return false;
+		}
+	}
+
+	// ── Read commit message (for amend prefill / squash) ──────────────────────
+
+	async function getCommitMessage(hash = 'HEAD'): Promise<{subject: string; body: string}> {
+		const FIELD_SEP = '\x06';
+		const raw = await callGit('log', '-1', `--pretty=format:%s${FIELD_SEP}%b`, hash);
+		const [subject = '', body = ''] = raw.split(FIELD_SEP);
+
+		return {subject, body};
+	}
+
 	return {
 		activePath,
 		callGit,
@@ -275,5 +327,12 @@ export function useGit() {
 		resetHard,
 		resetMixed,
 		mergeAbort,
+		cherryPick,
+		cherryPickAbort,
+		cherryPickContinue,
+		merge,
+		initRepo,
+		isGitRepo,
+		getCommitMessage,
 	};
 }

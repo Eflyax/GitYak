@@ -60,8 +60,8 @@
 			</button>
 		</div>
 
-		<!-- Conflict resolution editor -->
-		<ConflictEditor
+		<!-- Conflict resolution editor (Monaco) -->
+		<MonacoConflictEditor
 			v-if="isConflictFile"
 			:content="modified"
 			:file-path="activePath ?? ''"
@@ -92,7 +92,8 @@ import {VueMonacoDiffEditor} from '@guolao/vue-monaco-editor';
 import {useGit} from '@/composables/useGit';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useFileDiff} from '@/composables/useFileDiff';
-import ConflictEditor from './ConflictEditor.vue';
+import {getMonacoLanguage} from '@/composables/useMonacoLanguage';
+import MonacoConflictEditor from './MonacoConflictEditor.vue';
 
 const emit = defineEmits<{
 	close: []
@@ -112,32 +113,7 @@ const tabs: {key: TabKey; label: string}[] = [
 	{key: 'gitDiff', label: 'Git Diff'},
 ];
 
-const EXTENSION_TO_LANGUAGE: Record<string, string> = {
-	ts: 'typescript', tsx: 'typescript',
-	js: 'javascript', jsx: 'javascript', mjs: 'javascript', cjs: 'javascript',
-	json: 'json', jsonc: 'json',
-	html: 'html', vue: 'html',
-	css: 'css', scss: 'scss', less: 'less',
-	md: 'markdown',
-	rs: 'rust',
-	py: 'python',
-	sh: 'shell', bash: 'shell',
-	yml: 'yaml', yaml: 'yaml',
-	xml: 'xml',
-	go: 'go',
-	java: 'java',
-	rb: 'ruby',
-	php: 'php',
-	c: 'c', cpp: 'cpp', h: 'cpp',
-	cs: 'csharp',
-	sql: 'sql',
-	toml: 'ini',
-};
-
-const language = computed(() => {
-	const ext = (activePath.value ?? '').split('.').pop()?.toLowerCase() ?? '';
-	return EXTENSION_TO_LANGUAGE[ext] ?? 'plaintext';
-});
+const language = computed(() => getMonacoLanguage(activePath.value ?? ''));
 
 const pathParts = computed(() => (activePath.value ?? '').split('/'));
 const isConflictFile = computed(() => modified.value.includes('<<<<<<<'));

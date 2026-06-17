@@ -39,9 +39,21 @@ export function parseGitError(stderr: string, exitCode: number): GitError {
 	}
 
 	if (stderr.includes('CONFLICT') || stderr.includes('Merge conflict in')) {
+		const isStash = /\b(stash|git stash)\b/i.test(stderr);
+		const isCherryPick = /cherry-pick/i.test(stderr);
+		const code = isStash
+			? EGitErrorCode.StashConflict
+			: isCherryPick
+				? EGitErrorCode.CherryPickConflict
+				: EGitErrorCode.MergeConflict;
+
 		return new GitError({
-			message: 'Merge conflict',
-			code: EGitErrorCode.MergeConflict,
+			message: code === EGitErrorCode.StashConflict
+				? 'Stash applied with conflicts'
+				: code === EGitErrorCode.CherryPickConflict
+					? 'Cherry-pick caused conflicts'
+					: 'Merge conflict',
+			code,
 			exitCode,
 			stderr,
 		});

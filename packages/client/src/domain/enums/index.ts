@@ -36,6 +36,8 @@ export enum EGitErrorCode {
 	NotARepository = 'notARepository',
 	AuthenticationFailed = 'authenticationFailed',
 	MergeConflict = 'mergeConflict',
+	StashConflict = 'stashConflict',
+	CherryPickConflict = 'cherryPickConflict',
 	PushRejected = 'pushRejected',
 	BranchNotFound = 'branchNotFound',
 	CommitNotFound = 'commitNotFound',

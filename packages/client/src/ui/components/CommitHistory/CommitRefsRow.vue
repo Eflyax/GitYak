@@ -34,7 +34,13 @@
 				:style="{backgroundColor: tagColor}"
 				:title="getTitle(ref)"
 				:test-id="`ref-${ref.id}`"
+				draggable="true"
+				@click.stop="handleClick"
 				@dblclick.stop="handleDblClick(ref)"
+				@dragstart.stop="onRefDragStart($event, ref)"
+				@dragover.prevent="onRefDragOver($event)"
+				@dragleave="onRefDragLeave"
+				@drop.stop.prevent="onRefDrop($event, ref)"
 				@contextmenu.prevent="contextMenuRef($event, refContextTarget(ref))"
 			>
 				<!-- Branch: ikony local + remote -->
@@ -105,14 +111,16 @@ import {useGit} from '@/composables/useGit';
 import {useCommits} from '@/composables/useCommits';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useStash} from '@/composables/useStash';
+import {useDragRef} from '@/composables/useDragRef';
 
 const {currentBranch, branches, switchBranch, createBranch, loadBranches} = useBranches();
 const {checkout} = useGit();
-const {loadCommits} = useCommits();
+const {loadCommits, selectCommit} = useCommits();
 const {hasChanges, loadStatus} = useWorkingTree();
 const {stashSave} = useStash();
 const {remoteTags} = useTags();
-const {contextMenuRef} = useContextMenu();
+const {contextMenuRef, contextMenuRefDrop} = useContextMenu();
+const {dragSource, startDrag, endDrag} = useDragRef();
 
 function refContextTarget(mergedRef: IMergedRef) {
 	if (!mergedRef.isBranch) {
@@ -229,6 +237,44 @@ const sortedRefs = computed((): IMergedRef[] => {
 const shownRefs = computed(() =>
 	expanded.value ? sortedRefs.value : sortedRefs.value.slice(0, 1),
 );
+
+function handleClick(): void {
+	selectCommit(props.commit.hash);
+}
+
+function onRefDragStart(e: DragEvent, ref: IMergedRef): void {
+	startDrag({
+		type: ref.isBranch ? 'branch' : 'tag',
+		name: ref.name,
+	});
+
+	if (e.dataTransfer) {
+		e.dataTransfer.effectAllowed = 'move';
+		e.dataTransfer.setData('text/plain', ref.name);
+	}
+}
+
+function onRefDragOver(e: DragEvent): void {
+	if (!dragSource.value) return;
+	if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+	(e.currentTarget as HTMLElement).classList.add('ref-tag--drop-target');
+}
+
+function onRefDragLeave(e: DragEvent): void {
+	(e.currentTarget as HTMLElement).classList.remove('ref-tag--drop-target');
+}
+
+function onRefDrop(e: DragEvent, ref: IMergedRef): void {
+	(e.currentTarget as HTMLElement).classList.remove('ref-tag--drop-target');
+
+	const src = dragSource.value;
+
+	endDrag();
+
+	if (!src) return;
+
+	contextMenuRefDrop(e, src.name, ref.name);
+}
 
 async function handleDblClick(ref: IMergedRef): Promise<void> {
 	if (ref.isBranch) {
@@ -351,6 +397,11 @@ function getTitle(ref: IMergedRef): string {
 	&--overflow {
 		box-shadow: inset 0 0 0 999px rgba(black, 0.55);
 		color: $text-white;
+	}
+
+	&--drop-target {
+		outline: 2px dashed $color-accent;
+		outline-offset: 1px;
 	}
 
 	svg {

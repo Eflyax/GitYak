@@ -353,40 +353,44 @@ export function useCommits() {
 
 		if (hashes.length === 0) return;
 
-		const firstHash = hashes[0];
+		const realHashes = hashes.filter(h => h !== 'WORKING_TREE');
 
-		if (!firstHash || firstHash === 'WORKING_TREE') {
+		if (realHashes.length === 0) {
 			commitFiles.value = [];
 
 			return;
 		}
 
-		let diffArgs: string[];
-
-		if (hashes.length === 1) {
-			const commit = commitMap.value.get(firstHash);
+		if (realHashes.length === 1) {
+			const hash = realHashes[0]!;
+			const commit = commitMap.value.get(hash);
 			const parents = commit?.parents as string[] | undefined;
 			const parentHash = parents?.[0];
 
-			diffArgs = parentHash
-				? [parentHash, firstHash]
-				: [EMPTY_TREE_HASH, firstHash];
-		}
-		else if (hashes.length === 2) {
-			const h1 = hashes[0] as string;
-			const h2 = hashes[1] as string;
+			const diffArgs = parentHash
+				? [parentHash, hash]
+				: [EMPTY_TREE_HASH, hash];
 
-			diffArgs = [h2, h1];
-		}
-		else {
-			commitFiles.value = [];
+			const output = await callGit('diff', ...diffArgs, '--name-status', '-z');
+
+			commitFiles.value = parseDiffNameStatus(output);
 
 			return;
 		}
 
-		const output = await callGit('diff', ...diffArgs, '--name-status', '-z');
+		const dedup = new Map<string, ICommitFile>();
 
-		commitFiles.value = parseDiffNameStatus(output);
+		for (const hash of realHashes) {
+			const commit = commitMap.value.get(hash);
+			const parentHash = (commit?.parents as string[] | undefined)?.[0] ?? EMPTY_TREE_HASH;
+			const output = await callGit('diff', parentHash, hash, '--name-status', '-z');
+
+			for (const f of parseDiffNameStatus(output)) {
+				dedup.set(f.path, f);
+			}
+		}
+
+		commitFiles.value = [...dedup.values()].sort((a, b) => a.path.localeCompare(b.path));
 	}
 
 	return {

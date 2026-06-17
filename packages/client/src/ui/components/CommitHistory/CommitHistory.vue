@@ -11,6 +11,20 @@
 			<span>No repository open</span>
 		</div>
 
+		<!-- Empty state – needs init -->
+		<div v-else-if="needsInit && !loading" class="commit-history__empty">
+			<Icon name="mdi-source-repository" />
+			<span>This folder is not a git repository.</span>
+			<NButton
+				test-id="init-repo-btn"
+				type="primary"
+				size="small"
+				@click="showInitDialog = true"
+			>
+				Initialize repository
+			</NButton>
+		</div>
+
 		<!-- Empty state – no commits yet -->
 		<div v-else-if="!commits.length && !loading" class="commit-history__empty">
 			<Icon name="mdi-git" />
@@ -43,8 +57,8 @@
 						v-for="commit in visibleCommits"
 						:key="commit.hash"
 						:commit="commit"
-						:is-selected="selectedHash === commit.hash"
-						@select="handleSelectCommit(commit)"
+						:is-selected="selectedHashes.includes(commit.hash)"
+						@select="handleSelectCommit(commit, $event)"
 						@contextmenu="onContextMenu(commit, $event)"
 					/>
 				</div>
@@ -61,16 +75,31 @@
 		:stash-id="referenceModalStashId"
 		@done="refresh"
 	/>
+
+	<ConfirmDialog
+		v-model:show="showDeleteStashConfirm"
+		title="Delete stash"
+		:message="`Delete ${deleteStashId ?? 'stash'}: ${deleteStashSubject}. This cannot be undone.`"
+		@confirm="handleConfirmDeleteStash"
+	/>
+
+	<ConfirmDialog
+		v-model:show="showInitDialog"
+		title="Initialize repository"
+		message="Default branch: master · README.md will be created · 'Initial commit' will be made."
+		@confirm="handleInitRepo"
+	/>
 </template>
 
 <script setup lang="ts">
 import {ref, computed, onMounted, watch} from 'vue';
-import {NSpin, useMessage} from 'naive-ui';
+import {NSpin, NButton, useMessage} from 'naive-ui';
 import CommitGraph from './CommitGraph.vue';
 import CommitRow from './CommitRow.vue';
 import CommitRefsRow from './CommitRefsRow.vue';
 import Icon from '@/ui/components/Icon.vue';
 import ReferenceModal from '@/ui/components/ReferenceModal.vue';
+import ConfirmDialog from '@/ui/components/ConfirmDialog.vue';
 import {useCommits} from '@/composables/useCommits';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useStash} from '@/composables/useStash';
@@ -78,6 +107,7 @@ import {useBranches} from '@/composables/useBranches';
 import {useProject} from '@/composables/useProject';
 import {useLayout} from '@/composables/useLayout';
 import {useContextMenu} from '@/composables/useContextMenu';
+import {useGit} from '@/composables/useGit';
 import type {ICommit} from '@/domain';
 
 
@@ -85,12 +115,13 @@ const ROW_HEIGHT = 28;
 const REFS_WIDTH = 180;
 
 const message = useMessage();
-const {commits, selectedHashes, selectCommit, loadCommits} = useCommits();
+const {commits, selectedHashes, selectCommit, toggleCommitSelection, loadCommits} = useCommits();
 const {loadStatus, hasChanges, conflictDetected} = useWorkingTree();
 const {loadStashes} = useStash();
 const {loadBranches} = useBranches();
 const {currentProject} = useProject();
 const {loading} = useLayout();
+const {stashDrop, isGitRepo, initRepo, writeFile, callGit, commit} = useGit();
 
 const {
 	contextMenuCommit,
@@ -100,7 +131,37 @@ const {
 	referenceModalCommitHash,
 	referenceModalInitialName,
 	referenceModalStashId,
+	showDeleteStashConfirm,
+	deleteStashId,
+	deleteStashSubject,
 } = useContextMenu();
+
+const needsInit = ref(false);
+const showInitDialog = ref(false);
+
+async function handleConfirmDeleteStash(): Promise<void> {
+	const id = deleteStashId.value;
+
+	if (!id) return;
+
+	await stashDrop(id);
+	await Promise.all([loadStashes(), loadCommits()]);
+}
+
+async function handleInitRepo(): Promise<void> {
+	try {
+		await initRepo('master');
+		const projectName = currentProject.value?.alias ?? 'New repository';
+		await writeFile('README.md', `# ${projectName}\n`);
+		await callGit('add', 'README.md');
+		await commit('Initial commit');
+		needsInit.value = false;
+		await refresh();
+	}
+	catch (e: unknown) {
+		message.error(e instanceof Error ? e.message : 'Failed to initialize repository');
+	}
+}
 
 const scrollEl = ref<HTMLElement | null>(null);
 
@@ -130,6 +191,16 @@ async function refresh(): Promise<void> {
 		return;
 	}
 
+	const repoExists = await isGitRepo();
+
+	if (!repoExists) {
+		needsInit.value = true;
+
+		return;
+	}
+
+	needsInit.value = false;
+
 	try {
 		await Promise.all([
 			loadStatus(),
@@ -143,11 +214,19 @@ async function refresh(): Promise<void> {
 	}
 }
 
-function handleSelectCommit(commit: ICommit): void {
-	selectCommit(commit.hash);
+function handleSelectCommit(commit: ICommit, event: MouseEvent): void {
+	if (event.metaKey || event.ctrlKey) {
+		toggleCommitSelection(commit.hash);
+	}
+	else {
+		selectCommit(commit.hash);
+	}
 }
 
 function onContextMenu(commit: ICommit, event: MouseEvent): void {
+	if (!selectedHashes.value.includes(commit.hash)) {
+		selectCommit(commit.hash);
+	}
 	contextMenuCommit({e: event, commit});
 }
 

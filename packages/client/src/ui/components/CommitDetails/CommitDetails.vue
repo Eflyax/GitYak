@@ -1,14 +1,75 @@
 <template>
 	<div class="commit-details">
-		<template v-if="selectedCommit">
+		<!-- Multi-select aggregation -->
+		<template v-if="isMultiSelection">
+			<div class="commit-details__hash-row">
+				<span class="commit-details__hash-full">
+					{{ multiSelectionCount }} commits selected
+				</span>
+			</div>
+			<div test-id="commit-details-multi-summary" class="commit-details__title">
+				{{ multiSelectionCount }} commits · {{ uniqueAuthors.length }} author{{ uniqueAuthors.length === 1 ? '' : 's' }}
+			</div>
+			<div class="commit-details__author commit-details__author--multi">
+				<div
+					v-for="author in uniqueAuthors"
+					:key="author"
+					class="commit-details__author-chip"
+				>{{ author }}</div>
+			</div>
+			<div class="commit-details__meta-row">
+				<CommitFileStats
+					:A="filesStatuses[EFileStatus.Added]"
+					:M="filesStatuses[EFileStatus.Modified]"
+					:D="filesStatuses[EFileStatus.Deleted]"
+					:R="filesStatuses[EFileStatus.Renamed]"
+				/>
+				<span class="commit-details__meta-label">Range</span>
+				<span class="commit-details__parent-hash">
+					{{ multiDateRange }}
+				</span>
+			</div>
+
+			<div class="commit-details__files">
+				<ChangedFileItem
+					v-for="file in commitFiles ?? []"
+					:key="file.path"
+					:path="file.path"
+					:status="(file.status as EFileStatus)"
+					:is-selected="selectedFilePath === file.path"
+					@open="handleFileOpen(file)"
+				/>
+			</div>
+		</template>
+
+		<!-- Single commit -->
+		<template v-else-if="selectedCommit">
 			<!-- Hash -->
 			<div class="commit-details__hash-row">
 				<span class="commit-details__hash">{{ selectedCommit.hashAbbr }}</span>
 				<span class="commit-details__hash-full">parents: {{ selectedCommit.parents.length }}</span>
 			</div>
 
-			<!-- Title -->
-			<div class="commit-details__title">{{ selectedCommit.subject }}</div>
+			<!-- Title (clickable to edit when HEAD) -->
+			<div
+				test-id="commit-details-subject"
+				class="commit-details__title"
+				:class="{'commit-details__title--editable': canEdit}"
+				:title="canEdit ? 'Click to edit this commit (amend)' : 'Only the HEAD commit can be edited'"
+				@click="canEdit ? handleEditClick() : null"
+			>
+				{{ selectedCommit.subject }}
+			</div>
+
+			<!-- Body / description -->
+			<div
+				v-if="selectedCommit.body"
+				test-id="commit-details-body"
+				class="commit-details__body"
+				:class="{'commit-details__body--editable': canEdit}"
+				:title="canEdit ? 'Click to edit this commit (amend)' : 'Only the HEAD commit can be edited'"
+				@click="canEdit ? handleEditClick() : null"
+			>{{ selectedCommit.body }}</div>
 
 			<!-- Author -->
 			<div class="commit-details__author">
@@ -67,6 +128,8 @@ import CommitFileStats from '@/ui/components/CommitFileStats.vue';
 import {useCommits} from '@/composables/useCommits';
 import type {ICommitFile} from '@/composables/useCommits';
 import {useFileDiff} from '@/composables/useFileDiff';
+import {useCommitForm} from '@/composables/useCommitForm';
+import {useWorkingTree} from '@/composables/useWorkingTree';
 import {getGraphColor} from '@/ui/components/CommitHistory/graphColors';
 import {EFileStatus, EFileArea} from '@/domain/enums';
 import type {IFileStatus} from '@/domain';
@@ -77,8 +140,10 @@ const emit = defineEmits<{
 
 const EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
-const {selectedHashes, commitMap, commitFiles, loadCommitDetails} = useCommits();
+const {commits, selectedHashes, commitMap, commitFiles, loadCommitDetails} = useCommits();
 const {loadDiff} = useFileDiff();
+const {prefill, amendMode} = useCommitForm();
+const {status} = useWorkingTree();
 
 const selectedFilePath = ref<string | null>(null);
 
@@ -87,6 +152,67 @@ const selectedCommit = computed(() => {
 
 	return hash ? commitMap.value.get(hash) : undefined;
 });
+
+const isMultiSelection = computed(() => selectedHashes.value.length > 1);
+const multiSelectionCount = computed(() => selectedHashes.value.length);
+
+const selectedCommitObjects = computed(() =>
+	selectedHashes.value.map(h => commitMap.value.get(h)).filter(Boolean) as Array<NonNullable<ReturnType<typeof commitMap.value.get>>>,
+);
+
+const uniqueAuthors = computed(() => {
+	const set = new Set<string>();
+
+	for (const c of selectedCommitObjects.value) {
+		if (c.authorName) set.add(c.authorName);
+	}
+
+	return [...set];
+});
+
+const multiDateRange = computed(() => {
+	const dates = selectedCommitObjects.value
+		.map(c => c.authorDate)
+		.filter(Boolean)
+		.sort();
+
+	if (dates.length === 0) return '';
+	if (dates.length === 1) return dates[0]!;
+
+	return `${dates[0]} → ${dates[dates.length - 1]}`;
+});
+
+const headHash = computed(() => {
+	const wt = commits.value.find(c => c.hash === 'WORKING_TREE');
+
+	return (wt?.parents as Array<string> | undefined)?.[0]
+		?? commits.value.find(c => c.hash !== 'WORKING_TREE' && !c.isStash)?.hash;
+});
+
+const canEdit = computed(() => {
+	if (isMultiSelection.value) return false;
+
+	const commit = selectedCommit.value;
+
+	if (!commit) return false;
+	if (commit.hash === 'WORKING_TREE') return false;
+	if (commit.isStash) return false;
+
+	const dirty = status.value.unstaged.length > 0 || status.value.staged.length > 0;
+
+	if (dirty) return false;
+
+	return commit.hash === headHash.value;
+});
+
+function handleEditClick(): void {
+	const commit = selectedCommit.value;
+
+	if (!commit) return;
+
+	amendMode.value = true;
+	prefill(commit.subject, commit.body ?? '');
+}
 
 const filesStatuses = computed(() => {
 	return {
@@ -178,6 +304,34 @@ watch(
 		color: $text-primary;
 		line-height: 1.4;
 		border-bottom: 1px solid $border;
+		cursor: default;
+
+		&--editable {
+			cursor: pointer;
+
+			&:hover {
+				background: rgba($color-accent, 0.08);
+			}
+		}
+	}
+
+	&__body {
+		padding: 8px 12px;
+		font-size: 12px;
+		color: $text-muted;
+		white-space: pre-wrap;
+		line-height: 1.5;
+		border-bottom: 1px solid $border;
+		font-family: "JetBrains Mono", "Fira Code", monospace;
+		cursor: default;
+
+		&--editable {
+			cursor: pointer;
+
+			&:hover {
+				background: rgba($color-accent, 0.08);
+			}
+		}
 	}
 
 	&__author {
@@ -186,6 +340,20 @@ watch(
 		gap: 10px;
 		padding: 10px 12px;
 		border-bottom: 1px solid $border;
+
+		&--multi {
+			flex-wrap: wrap;
+			gap: 4px;
+		}
+	}
+
+	&__author-chip {
+		display: inline-block;
+		padding: 2px 8px;
+		font-size: 11px;
+		background: rgba($text-white, 0.06);
+		color: $text-muted;
+		border-radius: 10px;
 	}
 
 	&__avatar {

@@ -2,18 +2,27 @@ import {ref} from 'vue';
 
 const commitSummary = ref('');
 const commitDescription = ref('');
+const amendMode = ref(false);
 
 export interface IUseCommitForm {
-    commitSummary: typeof commitSummary;
-    commitDescription: typeof commitDescription;
-    resetForm: () => void;
+	commitSummary: typeof commitSummary;
+	commitDescription: typeof commitDescription;
+	amendMode: typeof amendMode;
+	resetForm: () => void;
+	prefill: (subject: string, body: string) => void;
 }
 
 export const useCommitForm: () => IUseCommitForm = () => {
-    function resetForm(): void {
-        commitSummary.value = '';
-        commitDescription.value = '';
-    }
+	function resetForm(): void {
+		commitSummary.value = '';
+		commitDescription.value = '';
+		amendMode.value = false;
+	}
 
-    return {commitSummary, commitDescription, resetForm};
+	function prefill(subject: string, body: string): void {
+		commitSummary.value = subject;
+		commitDescription.value = body;
+	}
+
+	return {commitSummary, commitDescription, amendMode, resetForm, prefill};
 };
