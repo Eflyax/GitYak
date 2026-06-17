@@ -206,6 +206,11 @@ export function useGit() {
 		await callGit('push', r, '--delete', `refs/tags/${name}`);
 	}
 
+	async function pushTag(name: string, remote?: string): Promise<void> {
+		const r = await resolveRemote(remote);
+		await callGit('push', r, `refs/tags/${name}`);
+	}
+
 	// ── Stash ─────────────────────────────────────────────────────────────────
 
 	async function stashSave(message?: string): Promise<void> {
@@ -262,6 +267,7 @@ export function useGit() {
 		createTag,
 		deleteTag,
 		deleteRemoteTag,
+		pushTag,
 		stashSave,
 		stashPop,
 		stashDrop,

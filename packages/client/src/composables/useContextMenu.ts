@@ -38,7 +38,7 @@ export interface IRefContextTarget {
 
 export function useContextMenu() {
 	const
-		{callGit, deleteTag, pushBranch} = useGit(),
+		{callGit, deleteTag, pushBranch, pushTag} = useGit(),
 		{loadStashes} = useStash(),
 		{discardFile, loadStatus} = useWorkingTree(),
 		{loadCommits} = useCommits(),
@@ -156,6 +156,17 @@ export function useContextMenu() {
 		});
 
 		if (target.isTag) {
+			if (target.remotes.length === 0) {
+				items.push({
+					label: 'Push',
+					icon: menuIcon('mdi-cloud-upload'),
+					onClick: async () => {
+						await pushTag(target.name);
+						await refreshAll();
+					},
+				});
+			}
+
 			items.push({
 				label: `Delete ${target.name}`,
 				icon: menuIcon('mdi-trash-can'),

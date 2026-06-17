@@ -155,3 +155,7 @@ input,
 textarea {
 	-webkit-spell-checking: false;
 }
+
+.mx-context-menu-item:not(.disabled) {
+	cursor: pointer;
+}
