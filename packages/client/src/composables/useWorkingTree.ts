@@ -97,8 +97,19 @@ export function useWorkingTree() {
 			return;
 		}
 
+		// Probe only markers that git removes once the operation finishes or is
+		// aborted. `.git/MERGE_MSG` and `.git/REBASE_HEAD` are NOT such markers —
+		// they linger after a completed merge/rebase and cause false positives.
+		// An in-progress rebase is identified by the rebase-merge/rebase-apply
+		// directories (probed via a file that exists for the whole operation).
 		const repoPath = currentProject.value?.path ?? '';
-		const probes = ['.git/MERGE_MSG', '.git/CHERRY_PICK_HEAD', '.git/REBASE_HEAD'];
+		const probes = [
+			'.git/MERGE_HEAD',
+			'.git/CHERRY_PICK_HEAD',
+			'.git/REVERT_HEAD',
+			'.git/rebase-merge/git-rebase-todo',
+			'.git/rebase-apply/next',
+		];
 		let detected = false;
 
 		for (const file of probes) {
