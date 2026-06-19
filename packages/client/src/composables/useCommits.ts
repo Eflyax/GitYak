@@ -334,13 +334,14 @@ export function useCommits() {
 	}
 
 	function toggleCommitSelection(hash: string): void {
-		const idx = selectedHashes.value.indexOf(hash);
-
-		if (idx === -1) {
-			selectedHashes.value.push(hash);
+		// Reassign the array (never mutate in place) so the reference changes and
+		// non-deep `watch(selectedHashes)` consumers (e.g. CommitDetails loading
+		// the aggregated file list) actually re-run.
+		if (selectedHashes.value.includes(hash)) {
+			selectedHashes.value = selectedHashes.value.filter(h => h !== hash);
 		}
 		else {
-			selectedHashes.value.splice(idx, 1);
+			selectedHashes.value = [...selectedHashes.value, hash];
 		}
 	}
 

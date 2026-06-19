@@ -54,6 +54,8 @@
 				:key="project.id"
 				placement="right"
 				:delay="400"
+				:show="altPressed || undefined"
+				:content-style="tooltipContentStyle(project)"
 			>
 				<template #trigger>
 					<button
@@ -132,7 +134,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue';
+import {computed, ref, watch, onMounted, onBeforeUnmount} from 'vue';
+import type {CSSProperties} from 'vue';
 import {NButton, NModal, NTooltip} from 'naive-ui';
 import {useProject} from '@/composables/useProject';
 import Icon from './Icon.vue';
@@ -141,6 +144,62 @@ import ProjectManager from './ProjectManager/ProjectManager.vue';
 const {projects, groups, currentProject, openProject, selectedGroupFilter} = useProject();
 const showManager = ref(false);
 const showGroupFilter = ref(false);
+// Holding Alt/Option force-shows every project tooltip at once.
+const altPressed = ref(false);
+
+const PROJECT_FALLBACK_COLOR = '#6f9ef8';
+
+// Style the teleported tooltip content (scoped SCSS can't reach it): center it
+// vertically to roughly match the .project-btn height, and border it with the
+// project's own color since the button's --project-color var doesn't cascade
+// into the teleported node.
+function tooltipContentStyle(project: {color?: string}): CSSProperties {
+	const color = project.color ?? PROJECT_FALLBACK_COLOR;
+
+	return {
+		alignItems: 'flex-start',
+		borderLeft: `4px solid ${color}`,
+		boxSizing: 'border-box',
+		display: 'flex',
+		flexDirection: 'column',
+		height: '26px',
+		justifyContent: 'center',
+		lineHeight: '1.1',
+		paddingLeft: '7px',
+		paddingBottom: '0',
+		paddingTop: '0',
+	};
+}
+
+function onKeyDown(event: KeyboardEvent): void {
+	if (event.key === 'Alt') {
+		altPressed.value = true;
+	}
+}
+
+function onKeyUp(event: KeyboardEvent): void {
+	if (event.key === 'Alt') {
+		altPressed.value = false;
+	}
+}
+
+function onWindowBlur(): void {
+	// Releasing Alt outside the window never fires keyup, so reset on blur to
+	// avoid the tooltips getting stuck open.
+	altPressed.value = false;
+}
+
+onMounted(() => {
+	window.addEventListener('keydown', onKeyDown);
+	window.addEventListener('keyup', onKeyUp);
+	window.addEventListener('blur', onWindowBlur);
+});
+
+onBeforeUnmount(() => {
+	window.removeEventListener('keydown', onKeyDown);
+	window.removeEventListener('keyup', onKeyUp);
+	window.removeEventListener('blur', onWindowBlur);
+});
 
 const filteredProjects = computed(() => {
 	const filter = selectedGroupFilter.value;
