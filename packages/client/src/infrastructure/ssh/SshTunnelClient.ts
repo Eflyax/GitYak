@@ -237,6 +237,10 @@ export class SshTunnelClient implements ITransportClient {
 	private buildSshArgs(remoteCmd: string): string[] {
 		return [
 			'-p', String(this.sshPort),
+			// Forward the local ssh-agent so the remote-worker (and the git it
+			// spawns) can authenticate to upstreams using locally loaded keys.
+			'-A',
+			'-o', 'ForwardAgent=yes',
 			'-o', 'BatchMode=yes',
 			'-o', 'StrictHostKeyChecking=accept-new',
 			'-o', 'SendEnv=NONE',

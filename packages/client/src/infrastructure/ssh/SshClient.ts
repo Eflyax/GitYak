@@ -35,6 +35,10 @@ export class SshClient implements ITransportClient {
 	private buildSshArgs(remoteCmd: string): string[] {
 		const args: string[] = [
 			'-p', String(this.port),
+			// Forward the local ssh-agent so the remote git can authenticate to
+			// upstreams (e.g. git@host) using the user's locally loaded keys.
+			'-A',
+			'-o', 'ForwardAgent=yes',
 			'-o', 'ControlMaster=auto',
 			'-o', `ControlPath=${this.controlPath}`,
 			'-o', 'ControlPersist=60',
