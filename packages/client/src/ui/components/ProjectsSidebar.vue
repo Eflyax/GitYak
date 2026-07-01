@@ -54,7 +54,7 @@
 				:key="project.id"
 				placement="right"
 				:delay="400"
-				:show="altPressed || undefined"
+				:show="tooltipsPinned || undefined"
 				:content-style="tooltipContentStyle(project)"
 			>
 				<template #trigger>
@@ -134,18 +134,19 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch, onMounted, onBeforeUnmount} from 'vue';
+import {computed, ref, watch} from 'vue';
 import type {CSSProperties} from 'vue';
 import {NButton, NModal, NTooltip} from 'naive-ui';
 import {useProject} from '@/composables/useProject';
+import {useLayout} from '@/composables/useLayout';
 import Icon from './Icon.vue';
 import ProjectManager from './ProjectManager/ProjectManager.vue';
 
 const {projects, groups, currentProject, openProject, selectedGroupFilter} = useProject();
+// Alt+T toggles all project tooltips on at once (state lives in useLayout).
+const {tooltipsPinned} = useLayout();
 const showManager = ref(false);
 const showGroupFilter = ref(false);
-// Holding Alt/Option force-shows every project tooltip at once.
-const altPressed = ref(false);
 
 const PROJECT_FALLBACK_COLOR = '#6f9ef8';
 
@@ -170,36 +171,6 @@ function tooltipContentStyle(project: {color?: string}): CSSProperties {
 		paddingTop: '0',
 	};
 }
-
-function onKeyDown(event: KeyboardEvent): void {
-	if (event.key === 'Alt') {
-		altPressed.value = true;
-	}
-}
-
-function onKeyUp(event: KeyboardEvent): void {
-	if (event.key === 'Alt') {
-		altPressed.value = false;
-	}
-}
-
-function onWindowBlur(): void {
-	// Releasing Alt outside the window never fires keyup, so reset on blur to
-	// avoid the tooltips getting stuck open.
-	altPressed.value = false;
-}
-
-onMounted(() => {
-	window.addEventListener('keydown', onKeyDown);
-	window.addEventListener('keyup', onKeyUp);
-	window.addEventListener('blur', onWindowBlur);
-});
-
-onBeforeUnmount(() => {
-	window.removeEventListener('keydown', onKeyDown);
-	window.removeEventListener('keyup', onKeyUp);
-	window.removeEventListener('blur', onWindowBlur);
-});
 
 const filteredProjects = computed(() => {
 	const filter = selectedGroupFilter.value;

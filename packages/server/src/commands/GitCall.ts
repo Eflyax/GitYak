@@ -55,6 +55,15 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsMessage): 
 		const exitCode = await proc.exited;
 
 		if (exitCode === 0) {
+			// Hooks write diagnostics to stderr; return it for `commit` so the
+			// client can show hook output on success. git's own commit summary
+			// goes to stdout and is redundant (the UI refreshes), so it's dropped
+			// here to avoid a popup on every plain commit. Other commands keep
+			// clean stdout for parsing.
+			if (args[0] === 'commit') {
+				return stderr;
+			}
+
 			return stdout;
 		}
 

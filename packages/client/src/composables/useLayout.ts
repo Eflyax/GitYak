@@ -6,6 +6,8 @@ const activePanelWidth = ref(320);
 const sidebarCollapsed = ref(false);
 const showActivityLog = ref(false);
 const showSettings = ref(false);
+const showGraph = ref(false);
+const tooltipsPinned = ref(false);
 
 export function useLayout() {
 	function setLoading(value: boolean): void {
@@ -38,6 +40,14 @@ export function useLayout() {
 		showSettings.value = !showSettings.value;
 	}
 
+	function toggleGraph(): void {
+		showGraph.value = !showGraph.value;
+	}
+
+	function toggleTooltips(): void {
+		tooltipsPinned.value = !tooltipsPinned.value;
+	}
+
 	return {
 		loading: readonly(loading),
 		selectedFilePath: readonly(selectedFilePath),
@@ -45,6 +55,8 @@ export function useLayout() {
 		activePanelWidth,
 		showActivityLog,
 		showSettings,
+		showGraph,
+		tooltipsPinned: readonly(tooltipsPinned),
 		setLoading,
 		openFileDiff,
 		closeFileDiff,
@@ -52,5 +64,7 @@ export function useLayout() {
 		expandSidebar,
 		toggleActivityLog,
 		toggleSettings,
+		toggleGraph,
+		toggleTooltips,
 	};
 }

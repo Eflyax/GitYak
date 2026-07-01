@@ -178,11 +178,12 @@ export function useGit() {
 
 	// ── Commit ────────────────────────────────────────────────────────────────
 
-	async function commit(message: string, options: {amend?: boolean} = {}): Promise<void> {
-		await callGit(
+	async function commit(message: string, options: {amend?: boolean; noVerify?: boolean} = {}): Promise<string> {
+		return callGit(
 			'commit',
 			'-m', message,
 			...(options.amend ? ['--amend'] : []),
+			...(options.noVerify ? ['--no-verify'] : []),
 		);
 	}
 

@@ -156,6 +156,17 @@
 					/>
 					<span>Amend previous commit</span>
 				</label>
+				<label
+					class="staging-panel__amend-label"
+					title="Bypass pre-commit and commit-msg hooks (--no-verify)"
+				>
+					<input
+						test-id="no-verify-checkbox"
+						type="checkbox"
+						v-model="noVerify"
+					/>
+					<span>No verify</span>
+				</label>
 			</div>
 
 			<n-input
@@ -183,8 +194,9 @@
 					type="success"
 					size="large"
 					secondary
-					:disabled="commitDisabled"
-					@click="handleCommit"
+					:loading="isCommitting"
+					:disabled="commitDisabled || isCommitting"
+					@click="runCommit"
 				>
 					{{ commitButtonLabel }}
 				</NButton>
@@ -214,6 +226,7 @@ import {useGit} from '@/composables/useGit';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {useContextMenu} from '@/composables/useContextMenu';
 import {useCommitForm} from '@/composables/useCommitForm';
+import {useCommitAction} from '@/composables/useCommitAction';
 import type {IFileStatus} from '@/domain';
 import FileStatus from '../FileStatus.vue';
 import Icon from '../Icon.vue';
@@ -227,10 +240,11 @@ const emit = defineEmits<{
 const {status, loadStatus, stageFile, stageAll, unstageAll, unstageFile, discardAllChanges, conflictDetected} = useWorkingTree();
 const {currentBranch, loadBranches} = useBranches();
 const {commits, loadCommits} = useCommits();
-const {commit, mergeAbort, activePath, getCommitMessage} = useGit();
+const {mergeAbort, activePath, getCommitMessage} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
-const {commitSummary, commitDescription, amendMode, resetForm, prefill} = useCommitForm();
+const {commitSummary, commitDescription, amendMode, noVerify, prefill} = useCommitForm();
+const {runCommit, isCommitting} = useCommitAction();
 const commitSummaryInput = useTemplateRef<InstanceType<typeof NInput>>('commitSummaryInput');
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
@@ -301,15 +315,6 @@ async function handleFileClick(file: IFileStatus): Promise<void> {
 async function handleStageAll(): Promise<void> {
 	await stageAll();
 	commitSummaryInput.value?.focus();
-}
-
-async function handleCommit(): Promise<void> {
-	const message = commitDescription.value.trim()
-		? `${commitSummary.value.trim()}\n\n${commitDescription.value.trim()}`
-		: commitSummary.value.trim();
-	await commit(message, {amend: amendMode.value});
-	resetForm();
-	await Promise.all([loadStatus(), loadCommits()]);
 }
 
 async function handleAbortMerge(): Promise<void> {

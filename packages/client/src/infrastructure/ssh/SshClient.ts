@@ -71,6 +71,13 @@ export class SshClient implements ITransportClient {
 					throw new Error(result.stderr || result.stdout || 'Git command failed');
 				}
 
+				// Hooks write diagnostics to stderr; return it for `commit` so hook
+				// output reaches the client on success (git's stdout summary is
+				// redundant since the UI refreshes).
+				if (gitArgs[0] === 'commit') {
+					return result.stderr;
+				}
+
 				return result.stdout;
 			}
 

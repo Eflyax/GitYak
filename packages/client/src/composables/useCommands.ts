@@ -3,6 +3,7 @@ import type {ComputedRef, Ref} from 'vue';
 
 export interface IKeybinding {
     key: string;
+    code?: string;
     meta?: boolean;
     shift?: boolean;
     ctrl?: boolean;
@@ -78,7 +79,15 @@ function matchKeybinding(event: KeyboardEvent): ICommand | undefined {
             continue;
         }
 
-        if (kb.key !== key) {
+        if (kb.code) {
+            // On macOS, Option+letter yields a composed character, so event.key
+            // is unreliable for Alt chords. event.code is layout-position based
+            // and matches regardless.
+            if (kb.code !== event.code) {
+                continue;
+            }
+        }
+        else if (kb.key !== key) {
             continue;
         }
 

@@ -74,6 +74,17 @@
 	</NDrawer>
 
 	<CommandPalette />
+
+	<RepositoryGraph
+		v-if="showGraph"
+		@close="showGraph = false"
+	/>
+
+	<HookOutputDialog
+		v-model:show="showHookOutput"
+		:success="hookOutputSuccess"
+		:output="hookOutput"
+	/>
 </template>
 
 <script setup lang="ts">
@@ -97,6 +108,9 @@ import ConnectionStatus from './ConnectionStatus/ConnectionStatus.vue';
 import ProjectManager from './ProjectManager/ProjectManager.vue';
 import Settings from './Settings/Settings.vue';
 import CommandPalette from './CommandPalette/CommandPalette.vue';
+import RepositoryGraph from './RepositoryGraph/RepositoryGraph.vue';
+import HookOutputDialog from './HookOutputDialog.vue';
+import {useCommitAction} from '@/composables/useCommitAction';
 import {useProject} from '@/composables/useProject';
 import {useCommits} from '@/composables/useCommits';
 import {useLayout} from '@/composables/useLayout';
@@ -106,9 +120,10 @@ import {useConnectionStatus} from '@/composables/useConnectionStatus';
 const keyboard = useKeyboard();
 const {registerCommand, unregisterCommand} = useCommands();
 
-const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSettings} = useLayout();
+const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSettings, showGraph, toggleGraph, toggleTooltips} = useLayout();
 const {isVisible} = useConnectionStatus();
-const {activePath, commit} = useGit();
+const {activePath} = useGit();
+const {runCommit, showHookOutput, hookOutput, hookOutputSuccess} = useCommitAction();
 
 function handleClose(): void {
 	activePath.value = null;
@@ -116,8 +131,8 @@ function handleClose(): void {
 }
 
 const {currentProject, openLastOpenProject, openProject, projects} = useProject();
-const {selectedHashes, loadCommits} = useCommits();
-const {commitSummary, commitDescription, resetForm} = useCommitForm();
+const {selectedHashes} = useCommits();
+const {commitSummary} = useCommitForm();
 
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value.length);
 
@@ -140,14 +155,23 @@ onMounted(() => {
 		shortcut: '⌘Enter',
 		keybinding: {key: 'enter', meta: true},
 		isEnabled: () => !!status.value.staged.length && !!commitSummary.value.trim() && !(conflictDetected.value && !!status.value.unstaged.length),
-		action: async () => {
-			const message = commitDescription.value.trim()
-				? `${commitSummary.value.trim()}\n\n${commitDescription.value.trim()}`
-				: commitSummary.value.trim();
-			await commit(message);
-			resetForm();
-			await Promise.all([loadStatus(), loadCommits()]);
-		},
+		action: runCommit,
+	});
+
+	registerCommand({
+		id: 'toggle-tooltips',
+		label: 'Toggle repo tooltips',
+		shortcut: '⌥T',
+		keybinding: {key: 't', code: 'KeyT', alt: true},
+		action: toggleTooltips,
+	});
+
+	registerCommand({
+		id: 'open-graph',
+		label: 'Repository graph',
+		shortcut: '⌥G',
+		keybinding: {key: 'g', code: 'KeyG', alt: true},
+		action: toggleGraph,
 	});
 
 	registerCommand({
@@ -172,6 +196,8 @@ onUnmounted(() => {
 	windowFocus.destroy();
 	unregisterCommand('commit');
 	unregisterCommand('open-repo');
+	unregisterCommand('toggle-tooltips');
+	unregisterCommand('open-graph');
 });
 
 watch(
