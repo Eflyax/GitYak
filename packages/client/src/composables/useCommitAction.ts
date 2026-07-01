@@ -42,20 +42,12 @@ export const useCommitAction: () => IUseCommitAction = () => {
 		isCommitting.value = true;
 
 		try {
-			const output = await commit(buildMessage(), {amend: amendMode.value, noVerify: noVerify.value});
+			// A successful commit never interrupts the user — even if the hook
+			// printed diagnostics, the commit just gets created.
+			await commit(buildMessage(), {amend: amendMode.value, noVerify: noVerify.value});
 
 			resetForm();
 			await Promise.all([loadStatus(), loadCommits()]);
-
-			const trimmed = output.trim();
-
-			// Only surface the dialog when a hook actually printed something; a
-			// silent passing hook shouldn't interrupt the user.
-			if (trimmed) {
-				hookOutput.value = trimmed;
-				hookOutputSuccess.value = true;
-				showHookOutput.value = true;
-			}
 		}
 		catch (err: unknown) {
 			hookOutput.value = err instanceof GitError

@@ -1,6 +1,7 @@
 import {Command} from '@tauri-apps/plugin-shell';
 import {invoke} from '@tauri-apps/api/core';
 import type {ITransportClient} from '../ITransportClient';
+import {getShellPath} from './shellPath';
 import {ENetworkCommand} from '@/domain';
 
 interface IDirEntry {
@@ -14,7 +15,10 @@ export class TauriLocalClient implements ITransportClient {
 			case ENetworkCommand.GitCall: {
 				const repoPath = payload['repo_path'] as string;
 				const args = payload['args'] as Array<string>;
-				const result = await Command.create('git', ['-C', repoPath, ...args]).execute();
+				// Pass the user's login-shell PATH so git hooks can find node tooling
+				// (npx/node) even when the app was launched from Finder.
+				const path = await getShellPath();
+				const result = await Command.create('git', ['-C', repoPath, ...args], {env: {PATH: path}}).execute();
 
 				if (result.code !== 0) {
 					throw new Error(result.stderr || result.stdout || 'Git command failed');

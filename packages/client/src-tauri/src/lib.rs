@@ -46,6 +46,27 @@ fn write_log(msg: String) {
 }
 
 #[tauri::command]
+fn get_login_shell_path() -> Result<String, String> {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+    let output = std::process::Command::new(&shell)
+        .args(["-lic", "echo $PATH"])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let path = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .last()
+        .unwrap_or("")
+        .to_string();
+    if path.is_empty() {
+        Err("empty PATH".into())
+    } else {
+        Ok(path)
+    }
+}
+
+#[tauri::command]
 fn read_file_at(path: String, null_if_not_exists: bool) -> Result<Option<String>, String> {
     match std::fs::read_to_string(&path) {
         Ok(content) => Ok(Some(content)),
@@ -125,7 +146,7 @@ fn list_theme_files(dir: String) -> Result<Vec<String>, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![detect_ssh_keys, find_free_port, get_server_binary_path, get_file_size, write_log, browse_directory, read_file_at, write_file_at, list_theme_files])
+        .invoke_handler(tauri::generate_handler![detect_ssh_keys, find_free_port, get_server_binary_path, get_file_size, write_log, get_login_shell_path, browse_directory, read_file_at, write_file_at, list_theme_files])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
