@@ -89,6 +89,8 @@
 
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, watch} from 'vue';
+import {onOpenUrl, getCurrent} from '@tauri-apps/plugin-deep-link';
+import {EServerType} from '@/domain';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useKeyboard} from '@/composables/useKeyboard';
@@ -130,7 +132,7 @@ function handleClose(): void {
 	closeFileDiff();
 }
 
-const {currentProject, openLastOpenProject, openProject, projects} = useProject();
+const {currentProject, openLastOpenProject, openProject, projects, addProject} = useProject();
 const {selectedHashes} = useCommits();
 const {commitSummary} = useCommitForm();
 
@@ -139,8 +141,63 @@ const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKIN
 const windowFocus = useWindowFocus();
 const {loadStatus, status, conflictDetected} = useWorkingTree();
 
+function handleGitYakUrl(url: string): void {
+	let parsed: URL;
+
+	try {
+		parsed = new URL(url);
+	}
+	catch {
+		return;
+	}
+
+	if (parsed.protocol !== 'gityak:') {
+		return;
+	}
+
+	const path = parsed.searchParams.get('path');
+
+	if (!path) {
+		return;
+	}
+
+	const server = parsed.searchParams.get('server') || 'localhost';
+	const existing = projects.value.find(project => project.path === path && project.server === server);
+
+	if (existing) {
+		openProject(existing);
+		return;
+	}
+
+	const created = addProject({
+		alias: parsed.searchParams.get('alias') || path,
+		path,
+		server,
+		port: Number(parsed.searchParams.get('port')) || (server === 'localhost' ? 3000 : 22),
+		serverType: parsed.searchParams.get('serverType') === 'ssh' ? EServerType.SSH : EServerType.Bun,
+		sshUser: parsed.searchParams.get('sshUser') || undefined,
+		sshKeyPath: parsed.searchParams.get('sshKeyPath') || undefined,
+		color: parsed.searchParams.get('color') || undefined,
+	});
+
+	openProject(created);
+}
+
+function setupDeepLinks(): void {
+	getCurrent().then(urls => {
+		if (urls) {
+			urls.forEach(handleGitYakUrl);
+		}
+	}).catch(() => undefined);
+
+	onOpenUrl(urls => {
+		urls.forEach(handleGitYakUrl);
+	}).catch(() => undefined);
+}
+
 onMounted(() => {
 	openLastOpenProject();
+	setupDeepLinks();
 	keyboard.mount();
 	windowFocus.onFocus(() => {
 		if (!currentProject.value || isVisible.value) {

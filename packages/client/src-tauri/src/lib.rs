@@ -145,7 +145,14 @@ fn list_theme_files(dir: String) -> Result<Vec<String>, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            use tauri::Manager;
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_deep_link::init())
         .invoke_handler(tauri::generate_handler![detect_ssh_keys, find_free_port, get_server_binary_path, get_file_size, write_log, get_login_shell_path, browse_directory, read_file_at, write_file_at, list_theme_files])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

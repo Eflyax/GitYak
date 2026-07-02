@@ -263,6 +263,7 @@ __metadata:
     "@mdi/js": "npm:^7.4.47"
     "@tauri-apps/api": "npm:^2.0.0"
     "@tauri-apps/cli": "npm:^2.0.0"
+    "@tauri-apps/plugin-deep-link": "npm:^2"
     "@tauri-apps/plugin-shell": "npm:^2.0.0"
     "@types/chroma-js": "npm:^3.1.2"
     "@types/d3-force": "npm:^3.0.10"
@@ -830,7 +831,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tauri-apps/api@npm:^2.0.0, @tauri-apps/api@npm:^2.10.1":
+"@tauri-apps/api@npm:^2.0.0, @tauri-apps/api@npm:^2.10.1, @tauri-apps/api@npm:^2.11.0":
   version: 2.11.1
   resolution: "@tauri-apps/api@npm:2.11.1"
   checksum: 10c0/78a08a64ee7eab9d34bd4ba1bdc3a2440c7e9cc5737b3f1d77bd80fa38b0cb5e9601efe04da40c947c5da2ca38dc702bec21b4ae96b18ee5f3e82980d1f0b325
@@ -955,6 +956,15 @@ __metadata:
   bin:
     tauri: tauri.js
   checksum: 10c0/8596dd46f2846e94885aa7ec355f43d3e163c97d52e310e22557a5c756eceb1b644b58e05e138481eef9f7bfe3753576e84d41d44798906dd744d02a02c60641
+  languageName: node
+  linkType: hard
+
+"@tauri-apps/plugin-deep-link@npm:^2":
+  version: 2.4.9
+  resolution: "@tauri-apps/plugin-deep-link@npm:2.4.9"
+  dependencies:
+    "@tauri-apps/api": "npm:^2.11.0"
+  checksum: 10c0/3a3a5f41f4556889ecd94ab9c8b23f5faed5ebbe61590a4ddc6116b8ff7f4c6e16e33a60e384e11668101d85f9059600375a978ac280f51ea212b9906b6acc95
   languageName: node
   linkType: hard
 
