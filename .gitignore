@@ -10,6 +10,7 @@ CLAUDE.md
 instructions.txt
 
 # Tauri / Rust
+!packages/client/src-tauri/icons/*.png
 packages/client/src-tauri/target/
 packages/client/src-tauri/WixTools/
 packages/remote-worker-rs/target/
