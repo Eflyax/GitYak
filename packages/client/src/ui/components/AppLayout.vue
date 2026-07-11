@@ -75,6 +75,8 @@
 
 	<CommandPalette />
 
+	<RebaseModal />
+
 	<RepositoryGraph
 		v-if="showGraph"
 		@close="showGraph = false"
@@ -110,6 +112,7 @@ import ConnectionStatus from './ConnectionStatus/ConnectionStatus.vue';
 import ProjectManager from './ProjectManager/ProjectManager.vue';
 import Settings from './Settings/Settings.vue';
 import CommandPalette from './CommandPalette/CommandPalette.vue';
+import RebaseModal from './RebaseModal.vue';
 import RepositoryGraph from './RepositoryGraph/RepositoryGraph.vue';
 import HookOutputDialog from './HookOutputDialog.vue';
 import {useCommitAction} from '@/composables/useCommitAction';

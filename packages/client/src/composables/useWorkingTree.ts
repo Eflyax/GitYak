@@ -5,9 +5,12 @@ import {useGit} from './useGit';
 import {useWebSocket} from './useWebSocket';
 import {useProject} from './useProject';
 
+export type TGitOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert';
+
 const
 	status = ref<IWorkingTreeStatus>({staged: [], unstaged: []}),
-	conflictDetected = ref(false);
+	conflictDetected = ref(false),
+	operationKind = ref<TGitOperation | null>(null);
 
 function parseStatus(output: string): IWorkingTreeStatus {
 	const tokens = output.split('\0').filter((t, i, arr) => i < arr.length - 1 || t);
@@ -100,37 +103,34 @@ export function useWorkingTree() {
 		const hasUnmerged = [...status.value.staged, ...status.value.unstaged]
 			.some(f => f.status === EFileStatus.Conflicted || f.status === EFileStatus.UpdatedUnmerged);
 
-		if (hasUnmerged) {
-			conflictDetected.value = true;
-
-			return;
-		}
-
 		// Probe only markers that git removes once the operation finishes or is
 		// aborted. `.git/MERGE_MSG` and `.git/REBASE_HEAD` are NOT such markers —
 		// they linger after a completed merge/rebase and cause false positives.
 		// An in-progress rebase is identified by the rebase-merge/rebase-apply
 		// directories (probed via a file that exists for the whole operation).
+		// Rebase is probed first so a rebase's transient merge state isn't
+		// mislabelled as a plain merge.
 		const repoPath = currentProject.value?.path ?? '';
-		const probes = [
-			'.git/MERGE_HEAD',
-			'.git/CHERRY_PICK_HEAD',
-			'.git/REVERT_HEAD',
-			'.git/rebase-merge/git-rebase-todo',
-			'.git/rebase-apply/next',
+		const probes: Array<[string, TGitOperation]> = [
+			['.git/rebase-merge/git-rebase-todo', 'rebase'],
+			['.git/rebase-apply/next', 'rebase'],
+			['.git/MERGE_HEAD', 'merge'],
+			['.git/CHERRY_PICK_HEAD', 'cherry-pick'],
+			['.git/REVERT_HEAD', 'revert'],
 		];
-		let detected = false;
+		let kind: TGitOperation | null = null;
 
-		for (const file of probes) {
+		for (const [file, operation] of probes) {
 			try {
 				await call(ENetworkCommand.ReadFile, {repo_path: repoPath, file_path: file});
-				detected = true;
+				kind = operation;
 				break;
 			}
 			catch {}
 		}
 
-		conflictDetected.value = detected;
+		operationKind.value = kind;
+		conflictDetected.value = kind !== null || hasUnmerged;
 	}
 
 	async function stageFile(filePath: string): Promise<void> {
@@ -185,6 +185,7 @@ export function useWorkingTree() {
 		stagedCount,
 		unstagedCount,
 		conflictDetected: readonly(conflictDetected),
+		operationKind: readonly(operationKind),
 		hasUnresolvedConflicts,
 		loadStatus,
 		stageFile,

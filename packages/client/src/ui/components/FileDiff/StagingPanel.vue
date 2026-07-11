@@ -188,29 +188,64 @@
 				class="staging-panel__description-input"
 			/>
 			<div class="staging-panel__commit-actions">
-				<NButton
-					test-id="commit-btn"
-					class="staging-panel__commit-btn"
-					type="success"
-					size="large"
-					secondary
-					:loading="isCommitting"
-					:disabled="commitDisabled || isCommitting"
-					@click="runCommit"
-				>
-					{{ commitButtonLabel }}
-				</NButton>
-				<NButton
-					v-if="conflictDetected"
-					test-id="abort-merge-btn"
-					class="staging-panel__abort-btn"
-					type="error"
-					size="large"
-					secondary
-					@click="handleAbortMerge"
-				>
-					Abort merge
-				</NButton>
+				<template v-if="operationKind === 'rebase'">
+					<NButton
+						test-id="rebase-continue-btn"
+						class="staging-panel__commit-btn"
+						type="success"
+						size="large"
+						secondary
+						:loading="rebaseBusy"
+						:disabled="!allConflictsResolved || rebaseBusy"
+						@click="handleRebaseContinue"
+					>
+						Continue rebase
+					</NButton>
+					<NButton
+						test-id="rebase-skip-btn"
+						size="large"
+						secondary
+						:disabled="rebaseBusy"
+						@click="handleRebaseSkip"
+					>
+						Skip
+					</NButton>
+					<NButton
+						test-id="rebase-abort-btn"
+						class="staging-panel__abort-btn"
+						type="error"
+						size="large"
+						secondary
+						@click="handleAbort"
+					>
+						Abort rebase
+					</NButton>
+				</template>
+				<template v-else>
+					<NButton
+						test-id="commit-btn"
+						class="staging-panel__commit-btn"
+						type="success"
+						size="large"
+						secondary
+						:loading="isCommitting"
+						:disabled="commitDisabled || isCommitting"
+						@click="runCommit"
+					>
+						{{ commitButtonLabel }}
+					</NButton>
+					<NButton
+						v-if="conflictDetected"
+						test-id="abort-merge-btn"
+						class="staging-panel__abort-btn"
+						type="error"
+						size="large"
+						secondary
+						@click="handleAbort"
+					>
+						{{ abortLabel }}
+					</NButton>
+				</template>
 			</div>
 		</div>
 	</div>
@@ -238,10 +273,10 @@ const emit = defineEmits<{
 	openDiff: [filePath: string]
 }>();
 
-const {status, loadStatus, stageFile, stageAll, unstageAll, unstageFile, discardAllChanges, conflictDetected} = useWorkingTree();
+const {status, loadStatus, stageFile, stageAll, unstageAll, unstageFile, discardAllChanges, conflictDetected, operationKind} = useWorkingTree();
 const {currentBranch, loadBranches} = useBranches();
 const {commits, loadCommits} = useCommits();
-const {mergeAbort, activePath, getCommitMessage} = useGit();
+const {mergeAbort, activePath, getCommitMessage, callGit, cherryPickAbort, rebaseContinue, rebaseSkip, rebaseAbort} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
 const {commitSummary, commitDescription, amendMode, noVerify, prefill} = useCommitForm();
@@ -353,9 +388,61 @@ async function handleStageAll(): Promise<void> {
 	commitSummaryInput.value?.focus();
 }
 
-async function handleAbortMerge(): Promise<void> {
-	await mergeAbort();
+const rebaseBusy = ref(false);
+
+const abortLabel = computed(() => {
+	switch (operationKind.value) {
+		case 'rebase': return 'Abort rebase';
+		case 'cherry-pick': return 'Abort cherry-pick';
+		case 'revert': return 'Abort revert';
+		default: return 'Abort merge';
+	}
+});
+
+async function refreshAfterOp(): Promise<void> {
 	await Promise.all([loadStatus(), loadCommits(), loadBranches()]);
+}
+
+async function handleAbort(): Promise<void> {
+	switch (operationKind.value) {
+		case 'rebase': await rebaseAbort(); break;
+		case 'cherry-pick': await cherryPickAbort(); break;
+		case 'revert': await callGit('revert', '--abort'); break;
+		default: await mergeAbort();
+	}
+
+	await refreshAfterOp();
+}
+
+async function handleRebaseContinue(): Promise<void> {
+	rebaseBusy.value = true;
+
+	try {
+		await rebaseContinue();
+		await refreshAfterOp();
+	}
+	catch {
+		// A later commit may conflict again — status keeps the panel in rebase mode.
+		await loadStatus();
+	}
+	finally {
+		rebaseBusy.value = false;
+	}
+}
+
+async function handleRebaseSkip(): Promise<void> {
+	rebaseBusy.value = true;
+
+	try {
+		await rebaseSkip();
+		await refreshAfterOp();
+	}
+	catch {
+		await loadStatus();
+	}
+	finally {
+		rebaseBusy.value = false;
+	}
 }
 
 loadStatus();

@@ -30,3 +30,13 @@ const props = defineProps<{
 }>();
 
 </script>
+
+<style lang="scss" scoped>
+.commit-stats {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	font-variant-numeric: tabular-nums;
+	line-height: 1;
+}
+</style>

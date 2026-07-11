@@ -9,6 +9,7 @@ import {useCommits} from '@/composables/useCommits';
 import {useBranches} from '@/composables/useBranches';
 import {useTags} from '@/composables/useTags';
 import {useCommitForm} from '@/composables/useCommitForm';
+import {useRebase} from '@/composables/useRebase';
 import {EReferenceModalType} from '@/domain';
 import type {ICommit} from '@/domain';
 
@@ -64,7 +65,8 @@ export function useContextMenu() {
 		{commits, commitMap, selectedHashes, loadCommits} = useCommits(),
 		{loadBranches, deleteBranch, deleteRemoteBranch, deleteBranchBoth, currentBranch, switchBranch} = useBranches(),
 		{loadTags, loadRemoteTags} = useTags(),
-		{prefill, amendMode} = useCommitForm();
+		{prefill, amendMode} = useCommitForm(),
+		{open: openRebase} = useRebase();
 
 	async function refreshAll(): Promise<void> {
 		await Promise.all([loadCommits(), loadStashes(), loadStatus(), loadBranches(), loadTags(), loadRemoteTags()]);
@@ -312,12 +314,19 @@ export function useContextMenu() {
 	function contextMenuRefDrop(e: MouseEvent, source: string, target: string) {
 		const sameRef = source === target;
 		const dirty = isWorkingTreeDirty();
+		const enabled = !sameRef && !dirty;
 
-		const mergeEnabled = !sameRef && !dirty;
-		let label = `Merge ${source} into ${target}`;
+		let mergeLabel = `Merge ${source} into ${target}`;
+		let rebaseLabel = `Rebase ${source} onto ${target}…`;
 
-		if (sameRef) label = 'Cannot merge a ref into itself';
-		else if (dirty) label = 'Working tree has uncommitted changes';
+		if (sameRef) {
+			mergeLabel = 'Cannot merge a ref into itself';
+			rebaseLabel = 'Cannot rebase a ref onto itself';
+		}
+		else if (dirty) {
+			mergeLabel = 'Working tree has uncommitted changes';
+			rebaseLabel = 'Working tree has uncommitted changes';
+		}
 
 		ContextMenu.showContextMenu({
 			x: e.x,
@@ -325,12 +334,20 @@ export function useContextMenu() {
 			theme: THEME,
 			items: [
 				{
-					label,
+					label: mergeLabel,
 					icon: menuIcon('mdi-source-merge'),
-					disabled: !mergeEnabled,
+					disabled: !enabled,
 					customClass: 'merge-context-menu-item',
-					onClick: mergeEnabled ? async () => {
+					onClick: enabled ? async () => {
 						await mergeRefs(source, target);
+					} : undefined,
+				},
+				{
+					label: rebaseLabel,
+					icon: menuIcon('mdi-source-branch-refresh'),
+					disabled: !enabled,
+					onClick: enabled ? async () => {
+						await openRebase(source, target);
 					} : undefined,
 				},
 			],
@@ -377,7 +394,7 @@ export function useContextMenu() {
 			}
 
 			items.push({
-				label: `Delete ${target.name}`,
+				label: `Delete`,
 				icon: menuIcon('mdi-trash-can'),
 				onClick: async () => {
 					await deleteTag(target.name);
@@ -434,14 +451,14 @@ export function useContextMenu() {
 
 			if (deleteChildren.length === 1) {
 				items.push({
-					label: `Delete ${target.name}`,
+					label: `Delete`,
 					icon: menuIcon('mdi-trash-can'),
 					onClick: deleteChildren[0]!.onClick,
 				});
 			}
 			else if (deleteChildren.length > 1) {
 				items.push({
-					label: `Delete ${target.name}`,
+					label: `Delete`,
 					icon: menuIcon('mdi-trash-can'),
 					children: deleteChildren,
 				});

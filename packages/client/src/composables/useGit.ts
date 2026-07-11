@@ -270,6 +270,53 @@ export function useGit() {
 		await callGit('merge', branchName);
 	}
 
+	// ── Rebase ────────────────────────────────────────────────────────────────
+
+	async function mergeBase(a: string, b: string): Promise<string> {
+		return (await callGit('merge-base', a, b)).trim();
+	}
+
+	// Commits reachable from `to` but not `from`, oldest first (git-rebase order).
+	async function logRange(from: string, to: string): Promise<Array<{hash: string; shortHash: string; subject: string}>> {
+		const SEP = '\x1f';
+		const raw = await callGit('log', '--reverse', `--pretty=format:%H${SEP}%h${SEP}%s`, `${from}..${to}`);
+
+		return raw
+			.split('\n')
+			.filter(Boolean)
+			.map(line => {
+				const [hash = '', shortHash = '', subject = ''] = line.split(SEP);
+
+				return {hash, shortHash, subject};
+			});
+	}
+
+	// Runs `git rebase -i <upstream>` headlessly: our pre-written todo file is
+	// copied over git's generated one via `sequence.editor`, and `core.editor` is
+	// disabled so no action ever opens an interactive editor (reword/squash
+	// messages are applied by `exec` lines in the todo instead).
+	async function rebaseInteractive(upstream: string, todoRelPath: string): Promise<void> {
+		await callGit(
+			'-c', 'core.editor=false',
+			'-c', 'rebase.missingCommitsCheck=ignore',
+			'-c', `sequence.editor=cp '${todoRelPath}'`,
+			'rebase', '-i', upstream,
+		);
+	}
+
+	async function rebaseContinue(): Promise<void> {
+		// core.editor=true → accept the in-progress commit message as-is (no prompt).
+		await callGit('-c', 'core.editor=true', 'rebase', '--continue');
+	}
+
+	async function rebaseSkip(): Promise<void> {
+		await callGit('rebase', '--skip');
+	}
+
+	async function rebaseAbort(): Promise<void> {
+		await callGit('rebase', '--abort');
+	}
+
 	// ── Init ──────────────────────────────────────────────────────────────────
 
 	async function initRepo(defaultBranch = 'master'): Promise<void> {
@@ -376,6 +423,12 @@ export function useGit() {
 		cherryPickAbort,
 		cherryPickContinue,
 		merge,
+		mergeBase,
+		logRange,
+		rebaseInteractive,
+		rebaseContinue,
+		rebaseSkip,
+		rebaseAbort,
 		initRepo,
 		isGitRepo,
 		getRemotes,
