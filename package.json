@@ -1,5 +1,5 @@
 {
-	"name": "git-yak",
+	"name": "@eflyax/git-yak",
 	"version": "2.0.0",
 	"description": "Web-based GUI for Git.",
 	"license": "MIT",
