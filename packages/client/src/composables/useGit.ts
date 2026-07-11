@@ -6,6 +6,12 @@ import {useActivityLog} from './useActivityLog';
 import {ENetworkCommand} from '@/domain';
 import {parseGitError} from '@/domain';
 
+export interface IRemoteConfig {
+	name: string;
+	fetchUrl: string;
+	pushUrl: string;
+}
+
 const activePath = ref<string | null>(null);
 
 export function useGit() {
@@ -286,6 +292,44 @@ export function useGit() {
 		}
 	}
 
+	// ── Remotes ───────────────────────────────────────────────────────────────
+
+	async function getRemotes(): Promise<Array<IRemoteConfig>> {
+		const raw = (await callGit('remote', '-v')).trim();
+
+		if (!raw) return [];
+
+		const map = new Map<string, IRemoteConfig>();
+
+		for (const line of raw.split('\n')) {
+			const match = line.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/);
+
+			if (!match) continue;
+
+			const [, name, url, kind] = match as unknown as [string, string, string, 'fetch' | 'push'];
+			const entry = map.get(name) ?? {name, fetchUrl: '', pushUrl: ''};
+
+			if (kind === 'fetch') entry.fetchUrl = url;
+			else entry.pushUrl = url;
+
+			map.set(name, entry);
+		}
+
+		return [...map.values()];
+	}
+
+	async function saveRemote(originalName: string | null, name: string, fetchUrl: string, pushUrl: string): Promise<void> {
+		if (!originalName) {
+			await callGit('remote', 'add', name, fetchUrl);
+		}
+		else if (originalName !== name) {
+			await callGit('remote', 'rename', originalName, name);
+		}
+
+		await callGit('remote', 'set-url', name, fetchUrl);
+		await callGit('remote', 'set-url', '--push', name, pushUrl || fetchUrl);
+	}
+
 	// ── Read commit message (for amend prefill / squash) ──────────────────────
 
 	async function getCommitMessage(hash = 'HEAD'): Promise<{subject: string; body: string}> {
@@ -334,6 +378,8 @@ export function useGit() {
 		merge,
 		initRepo,
 		isGitRepo,
+		getRemotes,
+		saveRemote,
 		getCommitMessage,
 	};
 }

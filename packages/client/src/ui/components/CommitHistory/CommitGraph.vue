@@ -59,7 +59,7 @@
 				:fill="commit.hash === 'WORKING_TREE' ? 'none' : getColor(commit.level ?? 0)"
 				:stroke="commit.hash === 'WORKING_TREE' ? getColor(commit.level ?? 0) : '#0d0f11'"
 				:stroke-dasharray="commit.hash === 'WORKING_TREE' ? '3 2' : undefined"
-				:stroke-width="0"
+				:stroke-width="commit.hash === 'WORKING_TREE' ? 2 : 0"
 			/>
 			<line
 				v-if="commit.references?.length && !commit.isStash"

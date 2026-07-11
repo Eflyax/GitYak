@@ -34,6 +34,21 @@ function menuIcon(mdiName: string): VNode {
 	]);
 }
 
+type TMenuItem = {label?: string; divided?: boolean; [key: string]: unknown};
+
+// A non-interactive title row naming the source (branch / tag / commit) the
+// menu acts on. Styled via `.ctx-menu-header` in global.scss.
+function headerItem(label: string): TMenuItem {
+	return {label, customClass: 'ctx-menu-header', disabled: true};
+}
+
+// Prepends a header row and draws a divider between it and the first action.
+function withHeader(label: string, items: Array<TMenuItem>): Array<TMenuItem> {
+	if (items[0]) items[0].divided = true;
+
+	return [headerItem(label), ...items];
+}
+
 export interface IRefContextTarget {
 	name: string;
 	isLocal: boolean;
@@ -273,7 +288,7 @@ export function useContextMenu() {
 		ContextMenu.showContextMenu({
 			x: e.x,
 			y: e.y,
-			items,
+			items: withHeader(commit.subject || commit.hashAbbr, items),
 			theme: THEME
 		});
 	}
@@ -328,7 +343,7 @@ export function useContextMenu() {
 			x: e.x,
 			y: e.y,
 			theme: THEME,
-			items: [
+			items: withHeader(filePath.split('/').pop() ?? filePath, [
 				{
 					label: 'Delete file',
 					icon: menuIcon('mdi-trash-can'),
@@ -336,7 +351,7 @@ export function useContextMenu() {
 						await discardFile(filePath);
 					},
 				},
-			],
+			]),
 		});
 	}
 
@@ -433,7 +448,7 @@ export function useContextMenu() {
 			}
 		}
 
-		ContextMenu.showContextMenu({x: e.x, y: e.y, items, theme: THEME});
+		ContextMenu.showContextMenu({x: e.x, y: e.y, items: withHeader(target.name, items), theme: THEME});
 	}
 
 	return {

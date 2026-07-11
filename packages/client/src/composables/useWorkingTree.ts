@@ -76,6 +76,15 @@ export function useWorkingTree() {
 	const stagedCount = computed(() => status.value.staged.length);
 	const unstagedCount = computed(() => status.value.unstaged.length);
 
+	// True only while unmerged entries actually remain in the working tree.
+	// Distinct from `conflictDetected` (a merge/rebase is in progress): once every
+	// conflict is staged, this flips to false while `conflictDetected` stays true
+	// until the merge is committed.
+	const hasUnresolvedConflicts = computed(() =>
+		[...status.value.staged, ...status.value.unstaged]
+			.some(f => f.status === EFileStatus.Conflicted || f.status === EFileStatus.UpdatedUnmerged),
+	);
+
 	async function loadStatus(): Promise<void> {
 		const output = await callGit(
 			'status',
@@ -176,6 +185,7 @@ export function useWorkingTree() {
 		stagedCount,
 		unstagedCount,
 		conflictDetected: readonly(conflictDetected),
+		hasUnresolvedConflicts,
 		loadStatus,
 		stageFile,
 		stageAll,

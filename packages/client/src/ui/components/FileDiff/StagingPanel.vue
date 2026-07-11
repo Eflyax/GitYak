@@ -69,7 +69,7 @@
 							class="staging-panel__stage-action"
 							:type="conflictDetected ? 'warning' : 'success'"
 							secondary
-							@click.stop="stageFile(file.path)"
+							@click.stop="handleStageFile(file)"
 						>
 							{{ conflictDetected ? 'Mark resolved' : 'Stage file' }}
 						</NButton>
@@ -217,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, useTemplateRef} from 'vue';
+import {ref, computed, useTemplateRef, onMounted, onUnmounted} from 'vue';
 import {NButton, NInput} from 'naive-ui';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useBranches} from '@/composables/useBranches';
@@ -227,6 +227,7 @@ import {useFileDiff} from '@/composables/useFileDiff';
 import {useContextMenu} from '@/composables/useContextMenu';
 import {useCommitForm} from '@/composables/useCommitForm';
 import {useCommitAction} from '@/composables/useCommitAction';
+import {useListNav} from '@/composables/useListNav';
 import type {IFileStatus} from '@/domain';
 import FileStatus from '../FileStatus.vue';
 import Icon from '../Icon.vue';
@@ -245,6 +246,7 @@ const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
 const {commitSummary, commitDescription, amendMode, noVerify, prefill} = useCommitForm();
 const {runCommit, isCommitting} = useCommitAction();
+const {register, unregister, setActive} = useListNav();
 const commitSummaryInput = useTemplateRef<InstanceType<typeof NInput>>('commitSummaryInput');
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
@@ -308,9 +310,43 @@ function fileName(path: string): string {
 }
 
 async function handleFileClick(file: IFileStatus): Promise<void> {
+	setActive('staging');
 	await loadDiff(file);
 	emit('openDiff', file.path);
 }
+
+// Stage a file, then move the active selection to the next unstaged file so the
+// user can keep reviewing top-to-bottom without re-clicking.
+async function handleStageFile(file: IFileStatus): Promise<void> {
+	const list = unstagedFiles.value;
+	const idx = list.findIndex(f => f.path === file.path);
+	const neighbour = list[idx + 1] ?? list[idx - 1];
+
+	await stageFile(file.path);
+
+	const target = neighbour && unstagedFiles.value.find(f => f.path === neighbour.path);
+
+	if (target) await handleFileClick(target);
+}
+
+const navFiles = computed(() => [...unstagedFiles.value, ...stagedFiles.value]);
+
+function moveFile(delta: number): void {
+	const list = navFiles.value;
+
+	if (!list.length) return;
+
+	const current = list.findIndex(f => f.path === activePath.value);
+	const next = current === -1
+		? 0
+		: Math.max(0, Math.min(list.length - 1, current + delta));
+	const target = list[next];
+
+	if (target) void handleFileClick(target);
+}
+
+onMounted(() => register('staging', {moveUp: () => moveFile(-1), moveDown: () => moveFile(1)}));
+onUnmounted(() => unregister('staging'));
 
 async function handleStageAll(): Promise<void> {
 	await stageAll();

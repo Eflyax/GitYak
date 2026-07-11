@@ -92,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, watch} from 'vue';
+import {ref, computed, onMounted, onUnmounted, watch, nextTick} from 'vue';
 import {NSpin, NButton, useMessage} from 'naive-ui';
 import CommitGraph from './CommitGraph.vue';
 import CommitRow from './CommitRow.vue';
@@ -108,6 +108,7 @@ import {useProject} from '@/composables/useProject';
 import {useLayout} from '@/composables/useLayout';
 import {useContextMenu} from '@/composables/useContextMenu';
 import {useGit} from '@/composables/useGit';
+import {useListNav} from '@/composables/useListNav';
 import type {ICommit} from '@/domain';
 
 
@@ -122,6 +123,7 @@ const {loadBranches} = useBranches();
 const {currentProject} = useProject();
 const {loading} = useLayout();
 const {stashDrop, isGitRepo, initRepo, writeFile, callGit, commit} = useGit();
+const {register, unregister, setActive} = useListNav();
 
 const {
 	contextMenuCommit,
@@ -151,16 +153,25 @@ async function handleConfirmDeleteStash(): Promise<void> {
 async function handleInitRepo(): Promise<void> {
 	try {
 		await initRepo('master');
-		const projectName = currentProject.value?.alias ?? 'New repository';
-		await writeFile('README.md', `# ${projectName}\n`);
-		await callGit('add', 'README.md');
-		await commit('Initial commit');
 		needsInit.value = false;
 		await refresh();
 	}
 	catch (e: unknown) {
 		message.error(e instanceof Error ? e.message : 'Failed to initialize repository');
 	}
+}
+
+// Create the first commit (README named after the project folder) for a repo
+// that has none yet — whether freshly `git init`ed here or opened from outside.
+async function bootstrapInitialCommit(): Promise<void> {
+	const path = currentProject.value?.path ?? '';
+	const folderName = path.split('/').filter(Boolean).pop()
+		?? currentProject.value?.alias
+		?? 'Repository';
+
+	await writeFile('README.md', `# ${folderName}\n`);
+	await callGit('add', 'README.md');
+	await commit('Initial commit');
 }
 
 const scrollEl = ref<HTMLElement | null>(null);
@@ -202,6 +213,14 @@ async function refresh(): Promise<void> {
 	needsInit.value = false;
 
 	try {
+		// A git repo with no commits yet (fresh `git init`) has no HEAD and `git log`
+		// would fail → seed it with the initial commit before loading.
+		const hasHead = await callGit('rev-parse', '--verify', 'HEAD').then(() => true).catch(() => false);
+
+		if (!hasHead) {
+			await bootstrapInitialCommit();
+		}
+
 		await Promise.all([
 			loadStatus(),
 			loadStashes(),
@@ -215,12 +234,47 @@ async function refresh(): Promise<void> {
 }
 
 function handleSelectCommit(commit: ICommit, event: MouseEvent): void {
+	setActive('commits');
+
 	if (event.metaKey || event.ctrlKey) {
 		toggleCommitSelection(commit.hash);
 	}
 	else {
 		selectCommit(commit.hash);
 	}
+}
+
+function scrollCommitIntoView(index: number): void {
+	const el = scrollEl.value;
+
+	if (!el) return;
+
+	const top = index * ROW_HEIGHT;
+	const bottom = top + ROW_HEIGHT;
+
+	if (top < el.scrollTop) {
+		el.scrollTop = top;
+	}
+	else if (bottom > el.scrollTop + el.clientHeight) {
+		el.scrollTop = bottom - el.clientHeight;
+	}
+}
+
+function moveCommit(delta: number): void {
+	const list = visibleCommits.value;
+
+	if (!list.length) return;
+
+	const current = list.findIndex(c => c.hash === selectedHash.value);
+	const next = current === -1
+		? 0
+		: Math.max(0, Math.min(list.length - 1, current + delta));
+	const target = list[next];
+
+	if (!target) return;
+
+	selectCommit(target.hash);
+	void nextTick(() => scrollCommitIntoView(next));
 }
 
 function onContextMenu(commit: ICommit, event: MouseEvent): void {
@@ -230,7 +284,13 @@ function onContextMenu(commit: ICommit, event: MouseEvent): void {
 	contextMenuCommit({e: event, commit});
 }
 
-onMounted(refresh);
+onMounted(() => {
+	refresh();
+	register('commits', {moveUp: () => moveCommit(-1), moveDown: () => moveCommit(1)});
+	setActive('commits');
+});
+
+onUnmounted(() => unregister('commits'));
 
 watch(() => currentProject.value, refresh);
 

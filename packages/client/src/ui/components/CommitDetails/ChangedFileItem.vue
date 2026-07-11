@@ -53,6 +53,8 @@ function handleOpen(): void {
 	cursor: pointer;
 	border-radius: 3px;
 	font-size: 12px;
+	min-width: 0;
+	overflow: hidden;
 
 	&:hover {
 		background-color: rgba($text-white, 0.05);
@@ -63,17 +65,23 @@ function handleOpen(): void {
 	}
 
 	&__path {
-		overflow: hidden;
-		text-overflow: ellipsis;
+		display: flex;
+		flex: 1;
+		min-width: 0;
 		white-space: nowrap;
 	}
 
 	&__dir {
+		flex: 0 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		color: $text-faint;
 		font-size: 11.5px;
 	}
 
 	&__name {
+		flex-shrink: 0;
 		color: $text-default;
 		font-size: 12px;
 	}

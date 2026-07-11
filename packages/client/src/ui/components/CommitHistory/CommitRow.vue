@@ -4,7 +4,7 @@
 		class="commit-row"
 		:class="{
 			'commit-row--selected': isSelected,
-			'commit-row--conflict': commit.hash === 'WORKING_TREE' && conflictDetected,
+			'commit-row--conflict': commit.hash === 'WORKING_TREE' && hasUnresolvedConflicts,
 		}"
 		:style="{
 			height: (ROW_HEIGHT - 4) + 'px',
@@ -16,7 +16,7 @@
 		<!-- Message / Working-tree stats -->
 		<div class="commit-row__body">
 			<template v-if="commit.hash === 'WORKING_TREE'">
-				<template v-if="conflictDetected">
+				<template v-if="hasUnresolvedConflicts">
 					<Icon name="mdi-alert" class="commit-row__conflict-icon" />
 					<span class="commit-row__conflict-message">A file conflict was found when attempting to merge into {{ currentBranch?.name }}</span>
 				</template>
@@ -87,7 +87,7 @@ void _authorColor;
 void _authorInitial;
 
 
-const {workingTreeStats, conflictDetected} = useWorkingTree();
+const {workingTreeStats, hasUnresolvedConflicts} = useWorkingTree();
 const {currentBranch} = useBranches();
 
 </script>

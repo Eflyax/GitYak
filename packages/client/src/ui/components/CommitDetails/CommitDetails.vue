@@ -7,7 +7,10 @@
 					{{ multiSelectionCount }} commits selected
 				</span>
 			</div>
-			<div test-id="commit-details-multi-summary" class="commit-details__title">
+			<div
+				test-id="commit-details-multi-summary"
+				class="commit-details__title"
+			>
 				{{ multiSelectionCount }} commits · {{ uniqueAuthors.length }} author{{ uniqueAuthors.length === 1 ? '' : 's' }}
 			</div>
 			<div class="commit-details__author commit-details__author--multi">
@@ -15,7 +18,9 @@
 					v-for="author in uniqueAuthors"
 					:key="author"
 					class="commit-details__author-chip"
-				>{{ author }}</div>
+				>
+					{{ author }}
+				</div>
 			</div>
 			<div class="commit-details__meta-row">
 				<CommitFileStats
@@ -24,7 +29,9 @@
 					:D="filesStatuses[EFileStatus.Deleted]"
 					:R="filesStatuses[EFileStatus.Renamed]"
 				/>
-				<span class="commit-details__meta-label">Range</span>
+				<span class="commit-details__meta-label">
+					Range
+				</span>
 				<span class="commit-details__parent-hash">
 					{{ multiDateRange }}
 				</span>
@@ -46,16 +53,20 @@
 		<template v-else-if="selectedCommit">
 			<!-- Hash -->
 			<div class="commit-details__hash-row">
-				<span class="commit-details__hash">{{ selectedCommit.hashAbbr }}</span>
-				<span class="commit-details__hash-full">parents: {{ selectedCommit.parents.length }}</span>
+				<span class="commit-details__hash">
+					{{ selectedCommit.hashAbbr }}
+				</span>
+				<span class="commit-details__hash-full">
+					parents: {{ selectedCommit.parents.length }}
+				</span>
 			</div>
 
 			<!-- Title (clickable to edit when HEAD) -->
 			<div
+				:title="canEdit ? 'Click to edit this commit (amend)' : 'Only the HEAD commit can be edited'"
 				test-id="commit-details-subject"
 				class="commit-details__title"
 				:class="{'commit-details__title--editable': canEdit}"
-				:title="canEdit ? 'Click to edit this commit (amend)' : 'Only the HEAD commit can be edited'"
 				@click="canEdit ? handleEditClick() : null"
 			>
 				{{ selectedCommit.subject }}
@@ -64,12 +75,14 @@
 			<!-- Body / description -->
 			<div
 				v-if="selectedCommit.body"
+				:title="canEdit ? 'Click to edit this commit (amend)' : 'Only the HEAD commit can be edited'"
 				test-id="commit-details-body"
 				class="commit-details__body"
 				:class="{'commit-details__body--editable': canEdit}"
-				:title="canEdit ? 'Click to edit this commit (amend)' : 'Only the HEAD commit can be edited'"
 				@click="canEdit ? handleEditClick() : null"
-			>{{ selectedCommit.body }}</div>
+			>
+				{{ selectedCommit.body }}
+			</div>
 
 			<!-- Author -->
 			<div class="commit-details__author">
@@ -80,13 +93,20 @@
 					{{ avatarLetter }}
 				</div>
 				<div class="commit-details__author-info">
-					<span class="commit-details__author-name">{{ selectedCommit.authorName || 'Working Tree' }}</span>
-					<span class="commit-details__author-date">{{ selectedCommit.authorDate }}</span>
+					<span class="commit-details__author-name">
+						{{ selectedCommit.authorName || 'Working Tree' }}
+					</span>
+					<span class="commit-details__author-date">
+						{{ selectedCommit.authorDate }}
+					</span>
 				</div>
 			</div>
 
 			<!-- Parent hashes -->
-			<div class="commit-details__meta-row" v-if="selectedCommit.parents.length">
+			<div
+				v-if="selectedCommit.parents.length"
+				class="commit-details__meta-row"
+			>
 				<CommitFileStats
 					:A="filesStatuses[EFileStatus.Added]"
 					:M="filesStatuses[EFileStatus.Modified]"
@@ -94,12 +114,16 @@
 					:R="filesStatuses[EFileStatus.Renamed]"
 				/>
 
-				<span class="commit-details__meta-label">Parent</span>
+				<span class="commit-details__meta-label">
+					Parent
+				</span>
 				<span
 					v-for="p in selectedCommit.parents"
 					:key="String(p)"
 					class="commit-details__parent-hash"
-				>{{ String(p).slice(0, 7) }}</span>
+				>
+					{{ String(p).slice(0, 7) }}
+				</span>
 			</div>
 
 			<!-- File list -->
@@ -115,23 +139,27 @@
 			</div>
 		</template>
 
-		<div v-else class="commit-details__empty">
+		<div
+			v-else
+			class="commit-details__empty"
+		>
 			Select a commit to view details
 		</div>
 	</div>
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch} from 'vue';
+import {computed, ref, watch, onMounted, onUnmounted} from 'vue';
+import {EFileArea, EFileStatus} from '@/domain/enums';
+import {getGraphColor} from '@/ui/components/CommitHistory/graphColors';
+import {useCommitForm} from '@/composables/useCommitForm';
+import {useCommits} from '@/composables/useCommits';
+import {useFileDiff} from '@/composables/useFileDiff';
+import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useListNav} from '@/composables/useListNav';
 import ChangedFileItem from './ChangedFileItem.vue';
 import CommitFileStats from '@/ui/components/CommitFileStats.vue';
-import {useCommits} from '@/composables/useCommits';
 import type {ICommitFile} from '@/composables/useCommits';
-import {useFileDiff} from '@/composables/useFileDiff';
-import {useCommitForm} from '@/composables/useCommitForm';
-import {useWorkingTree} from '@/composables/useWorkingTree';
-import {getGraphColor} from '@/ui/components/CommitHistory/graphColors';
-import {EFileStatus, EFileArea} from '@/domain/enums';
 import type {IFileStatus} from '@/domain';
 
 const emit = defineEmits<{
@@ -144,6 +172,7 @@ const {commits, selectedHashes, commitMap, commitFiles, loadCommitDetails, selec
 const {loadDiff} = useFileDiff();
 const {prefill, amendMode} = useCommitForm();
 const {status} = useWorkingTree();
+const {register, unregister, setActive} = useListNav();
 
 const selectedFilePath = ref<string | null>(null);
 
@@ -243,6 +272,8 @@ const selectedRevisions = computed((): [string, string] => {
 });
 
 async function handleFileOpen(file: ICommitFile): Promise<void> {
+	setActive('commitFiles');
+
 	const fileStatus: IFileStatus = {
 		path: file.path,
 		status: file.status as EFileStatus,
@@ -254,6 +285,23 @@ async function handleFileOpen(file: ICommitFile): Promise<void> {
 	emit('openDiff', file.path);
 }
 
+function moveFile(delta: number): void {
+	const list = commitFiles.value ?? [];
+
+	if (!list.length) return;
+
+	const current = list.findIndex(f => f.path === selectedFilePath.value);
+	const next = current === -1
+		? 0
+		: Math.max(0, Math.min(list.length - 1, current + delta));
+	const target = list[next];
+
+	if (target) void handleFileOpen(target);
+}
+
+onMounted(() => register('commitFiles', {moveUp: () => moveFile(-1), moveDown: () => moveFile(1)}));
+onUnmounted(() => unregister('commitFiles'));
+
 watch(
 	selectedHashes,
 	(hashes) => {
@@ -263,51 +311,50 @@ watch(
 	{immediate: true},
 );
 </script>
-
 <style scoped lang="scss">
 .commit-details {
+	background-color: $bg-panel;
 	display: flex;
 	flex-direction: column;
 	height: 100%;
-	background-color: $bg-panel;
 	overflow: hidden;
 
 	&__empty {
-		flex: 1;
-		display: flex;
 		align-items: center;
-		justify-content: center;
 		color: $text-faint;
+		display: flex;
+		flex: 1;
 		font-size: 13px;
+		justify-content: center;
 	}
 
 	&__hash-row {
-		display: flex;
 		align-items: center;
-		justify-content: flex-end;
+		display: flex;
 		gap: 8px;
+		justify-content: flex-end;
 		padding: 8px 12px 4px;
 	}
 
 	&__hash {
+		color: $text-ghost;
 		font-family: monospace;
 		font-size: 11px;
-		color: $text-ghost;
 	}
 
 	&__hash-full {
-		font-size: 10.5px;
 		color: $text-faint;
+		font-size: 10.5px;
 	}
 
 	&__title {
-		padding: 4px 12px 12px;
+		border-bottom: 1px solid $border;
+		color: $text-primary;
+		cursor: default;
 		font-size: 14px;
 		font-weight: 600;
-		color: $text-primary;
 		line-height: 1.4;
-		border-bottom: 1px solid $border;
-		cursor: default;
+		padding: 4px 12px 12px;
 
 		&--editable {
 			cursor: pointer;
@@ -319,14 +366,16 @@ watch(
 	}
 
 	&__body {
-		padding: 8px 12px;
-		font-size: 12px;
-		color: $text-muted;
-		white-space: pre-wrap;
-		line-height: 1.5;
 		border-bottom: 1px solid $border;
-		font-family: "JetBrains Mono", "Fira Code", monospace;
+		color: $text-muted;
 		cursor: default;
+		font-family: "JetBrains Mono", "Fira Code", monospace;
+		font-size: 12px;
+		height: 200px;
+		line-height: 1.5;
+		overflow: scroll;
+		padding: 8px 12px;
+		white-space: pre-wrap;
 
 		&--editable {
 			cursor: pointer;
@@ -338,11 +387,11 @@ watch(
 	}
 
 	&__author {
-		display: flex;
 		align-items: center;
+		border-bottom: 1px solid $border;
+		display: flex;
 		gap: 10px;
 		padding: 10px 12px;
-		border-bottom: 1px solid $border;
 
 		&--multi {
 			flex-wrap: wrap;
@@ -351,25 +400,25 @@ watch(
 	}
 
 	&__author-chip {
-		display: inline-block;
-		padding: 2px 8px;
-		font-size: 11px;
 		background: rgba($text-white, 0.06);
-		color: $text-muted;
 		border-radius: 10px;
+		color: $text-muted;
+		display: inline-block;
+		font-size: 11px;
+		padding: 2px 8px;
 	}
 
 	&__avatar {
-		width: 28px;
-		height: 28px;
-		border-radius: 50%;
-		display: flex;
 		align-items: center;
-		justify-content: center;
+		border-radius: 50%;
+		color: $bg-app;
+		display: flex;
+		flex-shrink: 0;
 		font-size: 12px;
 		font-weight: 700;
-		color: $bg-app;
-		flex-shrink: 0;
+		height: 28px;
+		justify-content: center;
+		width: 28px;
 	}
 
 	&__author-info {
@@ -379,40 +428,42 @@ watch(
 	}
 
 	&__author-name {
+		color: $text-primary;
 		font-size: 12.5px;
 		font-weight: 600;
-		color: $text-primary;
 	}
 
 	&__author-date {
-		font-size: 11px;
 		color: $text-dim;
+		font-size: 11px;
 	}
 
 	&__meta-row {
-		display: flex;
 		align-items: center;
-		gap: 8px;
-		padding: 6px 12px;
 		border-bottom: 1px solid $border;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		min-width: 0;
+		padding: 6px 12px;
 	}
 
 	&__meta-label {
-		font-size: 11px;
 		color: $text-faint;
-		text-transform: uppercase;
-		letter-spacing: 0.4px;
+		font-size: 11px;
 		font-weight: 600;
+		letter-spacing: 0.4px;
+		text-transform: uppercase;
 	}
 
 	&__parent-hash {
-		font-family: monospace;
-		font-size: 11px;
-		padding: 1px 6px;
 		background: rgba($text-white, 0.06);
 		border-radius: 3px;
 		color: $text-muted;
 		cursor: pointer;
+		font-family: monospace;
+		font-size: 11px;
+		padding: 1px 6px;
 
 		&:hover {
 			background: rgba($color-accent, 0.15);
@@ -421,35 +472,35 @@ watch(
 	}
 
 	&__stats {
-		padding: 8px 12px;
 		border-bottom: 1px solid $border;
+		padding: 8px 12px;
 	}
 
 	&__stat {
-		font-size: 12px;
 		color: $text-dim;
+		font-size: 12px;
 	}
 
 	&__tabs {
+		border-bottom: 1px solid $border;
 		display: flex;
 		gap: 2px;
 		padding: 6px 12px 4px;
-		border-bottom: 1px solid $border;
 	}
 
 	&__tab {
-		padding: 3px 12px;
+		background: transparent;
 		border: none;
 		border-radius: 4px;
-		font-size: 12px;
-		cursor: pointer;
-		background: transparent;
 		color: $text-dim;
+		cursor: pointer;
+		font-size: 12px;
+		padding: 3px 12px;
 		transition: all 0.1s;
 
 		&:hover {
-			color: $text-default;
 			background: rgba($text-white, 0.05);
+			color: $text-default;
 		}
 
 		&--active {
@@ -461,6 +512,7 @@ watch(
 
 	&__files {
 		flex: 1;
+		overflow-x: hidden;
 		overflow-y: auto;
 		padding: 4px 0;
 	}

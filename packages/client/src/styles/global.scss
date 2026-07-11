@@ -121,15 +121,31 @@
 html,
 body,
 #app {
-	height: 100%;
 	background-color: $bg-app;
 	color: $text-primary;
 	font-size: 13px;
+	height: 100%;
+}
+
+// Disable text selection app-wide (feels like a native desktop app).
+// Re-enable it for inputs and code/diff surfaces where selecting matters.
+body {
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+.monaco-editor,
+.allow-select {
+	user-select: text;
+	-webkit-user-select: text;
 }
 
 ::-webkit-scrollbar {
-	width: 6px;
 	height: 6px;
+	width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -146,9 +162,9 @@ body,
 }
 
 svg {
+	fill: $text-primary;
 	height: 16px;
 	width: 16px;
-	fill: $text-primary;
 }
 
 input,
@@ -158,4 +174,91 @@ textarea {
 
 .mx-context-menu-item:not(.disabled) {
 	cursor: pointer;
+}
+
+// ── Compact context menu ────────────────────────────────────────────────────
+.ctx-menu-header {
+	border-bottom: 1px solid $text-muted;
+	font-size: 14px;
+	font-weight: 800;
+}
+
+.mx-context-menu.win10.dark .mx-context-menu-item {
+	padding: 3px 12px;
+}
+.mx-context-menu {
+	border-radius: 7px;
+	font-size: 12px;
+	min-width: 170px;
+	padding: 3px;
+}
+
+.mx-context-menu-item {
+	border-radius: 4px;
+	min-width: 0;
+	padding: 4px 8px;
+
+	.mx-context-menu-item-label {
+		font-size: 12px;
+		line-height: 1.3;
+	}
+
+	.mx-icon-placeholder,
+	svg {
+		height: 14px;
+		width: 14px;
+	}
+}
+
+.mx-context-menu-item-sperator {
+	margin: 3px 0;
+}
+
+// Header row: shows the source name (branch / tag / commit) the actions apply to.
+.mx-context-menu-item.ctx-menu-header,
+.mx-context-menu-item.ctx-menu-header.disabled {
+	cursor: default;
+	opacity: 1;
+	padding: 4px 8px 5px;
+
+	.mx-context-menu-item-label {
+		color: $text-muted;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.3px;
+		max-width: 240px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	&:hover {
+		background: transparent;
+	}
+}
+
+// ── Notifications coloured by type ──────────────────────────────────────────
+.n-notification:has(.gy-notify) {
+	border-left: 3px solid transparent;
+	border-radius: 4px;
+}
+
+.n-notification:has(.gy-notify--success) {
+	background-color: rgba($color-success, 0.1);
+	border-left-color: $color-success;
+}
+
+.n-notification:has(.gy-notify--error) {
+	background-color: rgba($color-danger, 0.1);
+	border-left-color: $color-danger;
+}
+
+.n-notification:has(.gy-notify--warning) {
+	background-color: rgba($status-modified, 0.1);
+	border-left-color: $status-modified;
+}
+
+.n-notification:has(.gy-notify--info) {
+	background-color: rgba($color-accent, 0.1);
+	border-left-color: $color-accent;
 }

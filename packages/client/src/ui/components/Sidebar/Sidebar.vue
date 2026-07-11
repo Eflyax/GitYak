@@ -73,6 +73,13 @@
 					</svg>
 					<span>REMOTE</span>
 					<span class="sidebar__section-count">({{ filteredRemoteBranches.length }})</span>
+					<Icon
+						test-id="remote-settings-btn"
+						name="mdi-cog-outline"
+						class="sidebar__remote-settings"
+						title="Remote settings"
+						@click.stop="showRemoteSettings = true"
+					/>
 				</div>
 
 				<template v-if="remoteExpanded">
@@ -122,6 +129,10 @@
 				</template>
 			</div>
 		</div>
+		<RemoteSettingsModal
+			v-model:show="showRemoteSettings"
+			@saved="loadBranches"
+		/>
 	</div>
 </template>
 
@@ -130,6 +141,7 @@ import {ref, computed, onMounted} from 'vue';
 import {NInput} from 'naive-ui';
 import BranchItem from './BranchItem.vue';
 import Icon from '@/ui/components/Icon.vue';
+import RemoteSettingsModal from '@/ui/components/RemoteSettingsModal.vue';
 import {useLayout} from '@/composables/useLayout';
 import {useBranches} from '@/composables/useBranches';
 import {useTags} from '@/composables/useTags';
@@ -189,6 +201,7 @@ const searchQuery = ref('');
 const localExpanded = ref(true);
 const remoteExpanded = ref(false);
 const tagsExpanded = ref(false);
+const showRemoteSettings = ref(false);
 
 const localBranches = computed(() => branches.value.filter(b => !b.isRemote));
 const remoteBranches = computed(() => branches.value.filter(b => b.isRemote));
@@ -343,6 +356,18 @@ onMounted(async () => {
 
 		&:hover {
 			color: $text-dim;
+		}
+	}
+
+	&__remote-settings {
+		margin-left: auto;
+		width: 15px;
+		height: 15px;
+		opacity: 0.6;
+		cursor: pointer;
+
+		&:hover {
+			opacity: 1;
 		}
 	}
 

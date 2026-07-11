@@ -114,7 +114,7 @@ import {useStash} from '@/composables/useStash';
 import {useDragRef} from '@/composables/useDragRef';
 
 const {currentBranch, branches, switchBranch, createBranch, loadBranches} = useBranches();
-const {checkout} = useGit();
+const {checkout, callGit} = useGit();
 const {loadCommits, selectCommit} = useCommits();
 const {hasChanges, loadStatus} = useWorkingTree();
 const {stashSave} = useStash();
@@ -293,8 +293,14 @@ async function handleDblClick(ref: IMergedRef): Promise<void> {
 		else {
 			const remote = ref.remotes[0] ?? 'origin';
 			const localExists = branches.value.some(b => !b.isRemote && b.name === ref.name);
+			const isCurrent = currentBranch.value?.name === ref.name;
 
-			if (localExists) {
+			if (isCurrent) {
+				// Double-clicking a remote branch whose local counterpart is already
+				// checked out → reset that local branch to the remote position clicked.
+				await callGit('reset', '--hard', props.commit.hash);
+			}
+			else if (localExists) {
 				await switchBranch(ref.name);
 			}
 			else {
@@ -302,7 +308,7 @@ async function handleDblClick(ref: IMergedRef): Promise<void> {
 			}
 		}
 
-		await Promise.all([loadCommits(), loadStatus()]);
+		await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
 	}
 	else {
 		await checkout(ref.name);
@@ -364,8 +370,15 @@ function getTitle(ref: IMergedRef): string {
 	margin-top: -5px;
 
 	&--expanded {
+		position: absolute;
+		top: 0;
+		left: 0;
 		flex-direction: column;
 		align-items: flex-start;
+		gap: 2px;
+		padding-top: 3px;
+		width: auto;
+		max-width: 100%;
 		overflow: visible;
 		z-index: 10;
 	}

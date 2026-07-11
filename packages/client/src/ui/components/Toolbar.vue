@@ -65,7 +65,8 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted} from 'vue';
-import {NButton, useNotification} from 'naive-ui';
+import {NButton} from 'naive-ui';
+import {useNotify} from '@/composables/useNotify';
 import {useProject} from '@/composables/useProject';
 import {useBranches} from '@/composables/useBranches';
 import {useGit} from '@/composables/useGit';
@@ -90,7 +91,7 @@ const
 	{isConnecting} = useConnectionStatus(),
 	{registerCommand, unregisterCommand} = useCommands();
 
-const notification = useNotification();
+const notify = useNotify();
 const showBranchModal = ref(false);
 const showPushRejectedDialog = ref(false);
 const pushRejectedStderr = ref('');
@@ -107,10 +108,10 @@ async function handlePull(): Promise<void> {
 	try {
 		await pull();
 		await Promise.all([loadCommits(), loadBranches()]);
-		notification.success({content: 'Pull successful', duration: 3000});
+		notify.success('Pull successful');
 	}
 	catch (err: unknown) {
-		notification.error({content: err instanceof Error ? err.message : String(err), duration: 5000});
+		notify.error(err instanceof Error ? err.message : String(err));
 	}
 	finally {
 		isPulling.value = false;
@@ -123,7 +124,7 @@ async function handlePush(force = false): Promise<void> {
 	try {
 		await push(undefined, currentBranch.value?.name, force);
 		await Promise.all([loadCommits(), loadBranches()]);
-		notification.success({content: 'Push successful', duration: 3000});
+		notify.success('Push successful');
 	}
 	catch (err: unknown) {
 		// Authentication or network errors → toast only; force/pull won't help.
@@ -133,7 +134,7 @@ async function handlePush(force = false): Promise<void> {
 				|| err.code === EGitErrorCode.NetworkError
 				|| err.code === EGitErrorCode.PermissionDenied)
 		) {
-			notification.error({content: err.stderr.trim() || err.message, duration: 5000});
+			notify.error(err.stderr.trim() || err.message);
 
 			return;
 		}
@@ -168,7 +169,7 @@ async function handlePushRejectedChoice(action: 'force' | 'pull'): Promise<void>
 		await handlePush(false);
 	}
 	catch (err: unknown) {
-		notification.error({content: err instanceof Error ? err.message : String(err), duration: 5000});
+		notify.error(err instanceof Error ? err.message : String(err));
 	}
 	finally {
 		isPulling.value = false;
@@ -181,7 +182,7 @@ async function handleStash(): Promise<void> {
 		await Promise.all([loadCommits(), loadStatus()]);
 	}
 	catch (err: unknown) {
-		notification.error({content: err instanceof Error ? err.message : String(err), duration: 5000});
+		notify.error(err instanceof Error ? err.message : String(err));
 	}
 }
 
@@ -191,7 +192,7 @@ async function handlePop(): Promise<void> {
 		await Promise.all([loadCommits(), loadStatus()]);
 	}
 	catch (err: unknown) {
-		notification.error({content: err instanceof Error ? err.message : String(err), duration: 5000});
+		notify.error(err instanceof Error ? err.message : String(err));
 	}
 }
 

@@ -60,8 +60,8 @@
 			</button>
 		</div>
 
-		<!-- Conflict resolution editor (Monaco) -->
-		<MonacoConflictEditor
+		<!-- Conflict resolution: two-column, pick side(s) per hunk -->
+		<ConflictResolver
 			v-if="isConflictFile"
 			:content="modified"
 			:file-path="activePath ?? ''"
@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onBeforeUnmount} from 'vue';
+import {ref, computed, onMounted, onBeforeUnmount} from 'vue';
 import type {editor} from 'monaco-editor';
 import type * as Monaco from 'monaco-editor';
 import {NButton} from 'naive-ui';
@@ -93,11 +93,26 @@ import {useGit} from '@/composables/useGit';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {getMonacoLanguage} from '@/composables/useMonacoLanguage';
-import MonacoConflictEditor from './MonacoConflictEditor.vue';
+import {useCommands} from '@/composables/useCommands';
+import ConflictResolver from './ConflictResolver.vue';
 
 const emit = defineEmits<{
 	close: []
 }>();
+
+const {paletteOpen} = useCommands();
+
+// Esc closes the editor. Capture phase so it fires before Monaco swallows the key.
+function onKeydown(event: KeyboardEvent): void {
+	if (event.key !== 'Escape' || paletteOpen.value) return;
+
+	event.preventDefault();
+	event.stopPropagation();
+	emit('close');
+}
+
+onMounted(() => document.addEventListener('keydown', onKeydown, true));
+onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true));
 
 const {activePath, stageFile} = useGit();
 const {loadStatus} = useWorkingTree();
