@@ -13,6 +13,10 @@ export interface IKeybinding {
 export interface ISubItem {
     id: string;
     label: string;
+    description?: string;
+    hint?: string;
+    hintIcon?: string;
+    color?: string;
     action: () => void | Promise<void>;
 }
 

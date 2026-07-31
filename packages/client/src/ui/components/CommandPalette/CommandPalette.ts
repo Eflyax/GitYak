@@ -1,5 +1,6 @@
 import {defineComponent, nextTick} from 'vue';
 import {NModal, NInput} from 'naive-ui';
+import Icon from '@/ui/components/Icon.vue';
 import {useCommands} from '@/composables/useCommands';
 import type {ICommand, ISubItem} from '@/composables/useCommands';
 
@@ -8,7 +9,7 @@ const MAX_RESULTS = 10;
 const {allCommands, paletteOpen, executeCommand, closePalette} = useCommands();
 
 export default defineComponent({
-	components: {NModal, NInput},
+	components: {NModal, NInput, Icon},
 
 	data() {
 		return {

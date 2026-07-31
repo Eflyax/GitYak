@@ -33,7 +33,29 @@
 						@click="onSubItemClick(item)"
 						@mousemove="onItemHover(i)"
 					>
-						<span class="command-palette__label">{{ item.label }}</span>
+						<span
+							v-if="item.color"
+							class="command-palette__dot"
+							:style="{background: item.color}"
+						/>
+						<span class="command-palette__text">
+							<span class="command-palette__label">{{ item.label }}</span>
+							<span
+								v-if="item.description"
+								class="command-palette__description"
+								:title="item.description"
+							>{{ item.description }}</span>
+						</span>
+						<span
+							v-if="item.hint"
+							class="command-palette__hint"
+						>
+							<Icon
+								v-if="item.hintIcon"
+								:name="item.hintIcon"
+							/>
+							{{ item.hint }}
+						</span>
 					</div>
 					<div
 						v-if="!subItems.length"

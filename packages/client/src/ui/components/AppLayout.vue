@@ -144,6 +144,31 @@ const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKIN
 const windowFocus = useWindowFocus();
 const {loadStatus, status, conflictDetected} = useWorkingTree();
 
+interface IProjectLocation {
+	server: string;
+	port: number;
+	serverType: EServerType;
+	sshUser?: string;
+}
+
+function isLocalProject(project: IProjectLocation): boolean {
+	return project.server === 'localhost' || project.server === '127.0.0.1';
+}
+
+function getProjectLocationLabel(project: IProjectLocation): string {
+	if (isLocalProject(project)) {
+		return 'This PC';
+	}
+
+	if (project.serverType === EServerType.SSH) {
+		const host = project.sshUser ? `${project.sshUser}@${project.server}` : project.server;
+
+		return project.port === 22 ? host : `${host}:${project.port}`;
+	}
+
+	return `${project.server}:${project.port}`;
+}
+
 function handleGitYakUrl(url: string): void {
 	let parsed: URL;
 
@@ -241,10 +266,14 @@ onMounted(() => {
 			const q = query.toLowerCase();
 
 			return projects.value
-				.filter(p => !q || p.alias.toLowerCase().includes(q))
+				.filter(p => !q || `${p.alias} ${p.server} ${p.path}`.toLowerCase().includes(q))
 				.map(p => ({
 					id: p.id,
-					label: `Open repo: ${p.alias}`,
+					label: p.alias,
+					description: p.path,
+					hint: getProjectLocationLabel(p),
+					hintIcon: isLocalProject(p) ? 'mdi-laptop' : 'mdi-server',
+					color: p.color,
 					action: () => { void openProject(p); },
 				}));
 		},
