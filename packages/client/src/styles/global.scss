@@ -127,22 +127,6 @@ body,
 	height: 100%;
 }
 
-// Disable text selection app-wide (feels like a native desktop app).
-// Re-enable it for inputs and code/diff surfaces where selecting matters.
-body {
-	user-select: none;
-	-webkit-user-select: none;
-}
-
-input,
-textarea,
-[contenteditable="true"],
-.monaco-editor,
-.allow-select {
-	user-select: text;
-	-webkit-user-select: text;
-}
-
 ::-webkit-scrollbar {
 	height: 6px;
 	width: 6px;
