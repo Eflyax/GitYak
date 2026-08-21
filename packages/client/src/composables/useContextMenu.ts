@@ -63,7 +63,7 @@ export function useContextMenu() {
 		{loadStashes} = useStash(),
 		{discardFile, loadStatus, status} = useWorkingTree(),
 		{commits, commitMap, selectedHashes, loadCommits} = useCommits(),
-		{loadBranches, deleteBranch, deleteRemoteBranch, deleteBranchBoth, currentBranch, switchBranch} = useBranches(),
+		{loadBranches, deleteBranch, deleteRemoteBranch, deleteBranchBoth, branches, currentBranch, switchBranch} = useBranches(),
 		{loadTags, loadRemoteTags} = useTags(),
 		{prefill, amendMode} = useCommitForm(),
 		{open: openRebase} = useRebase();
@@ -314,7 +314,15 @@ export function useContextMenu() {
 	function contextMenuRefDrop(e: MouseEvent, source: string, target: string) {
 		const sameRef = source === target;
 		const dirty = isWorkingTreeDirty();
-		const enabled = !sameRef && !dirty;
+		const isLocalBranch = (name: string): boolean =>
+			branches.value.some(b => !b.isRemote && b.name === name);
+		const sourceIsCurrent = currentBranch.value?.name === source;
+
+		// Merge checks out `target`, rebase checks out `source` — each must be a
+		// local branch. A dirty tree is fine for rebase when no checkout is
+		// needed: `--autostash` covers the rebase itself.
+		const mergeEnabled = !sameRef && isLocalBranch(target) && !dirty;
+		const rebaseEnabled = !sameRef && isLocalBranch(source) && (!dirty || sourceIsCurrent);
 
 		let mergeLabel = `Merge ${source} into ${target}`;
 		let rebaseLabel = `Rebase ${source} onto ${target}…`;
@@ -323,9 +331,12 @@ export function useContextMenu() {
 			mergeLabel = 'Cannot merge a ref into itself';
 			rebaseLabel = 'Cannot rebase a ref onto itself';
 		}
-		else if (dirty) {
-			mergeLabel = 'Working tree has uncommitted changes';
-			rebaseLabel = 'Working tree has uncommitted changes';
+		else {
+			if (!isLocalBranch(target)) mergeLabel = 'Merge target must be a local branch';
+			else if (dirty) mergeLabel = 'Working tree has uncommitted changes';
+
+			if (!isLocalBranch(source)) rebaseLabel = 'Only a local branch can be rebased';
+			else if (!rebaseEnabled) rebaseLabel = 'Working tree has uncommitted changes';
 		}
 
 		ContextMenu.showContextMenu({
@@ -336,17 +347,17 @@ export function useContextMenu() {
 				{
 					label: mergeLabel,
 					icon: menuIcon('mdi-source-merge'),
-					disabled: !enabled,
+					disabled: !mergeEnabled,
 					customClass: 'merge-context-menu-item',
-					onClick: enabled ? async () => {
+					onClick: mergeEnabled ? async () => {
 						await mergeRefs(source, target);
 					} : undefined,
 				},
 				{
 					label: rebaseLabel,
 					icon: menuIcon('mdi-source-branch-refresh'),
-					disabled: !enabled,
-					onClick: enabled ? async () => {
+					disabled: !rebaseEnabled,
+					onClick: rebaseEnabled ? async () => {
 						await openRebase(source, target);
 					} : undefined,
 				},

@@ -149,6 +149,10 @@ function refContextTarget(mergedRef: IMergedRef) {
 interface IMergedRef {
 	id: string;
 	name: string;
+	// Full name git understands: the branch name for local chips,
+	// `<remote>/<branch>` for remote-only chips. Used for drag & drop so a
+	// diverged local/remote pair isn't mistaken for the same ref.
+	refName: string;
 	isBranch: boolean;
 	isLocal: boolean;
 	remotes: Array<string>;
@@ -205,6 +209,7 @@ const mergedRefs = computed((): IMergedRef[] => {
 		mergedBranches.push({
 			id: `branch:${key}`,
 			name: key,
+			refName: g.local ? key : g.remotes[0]!.name,
 			isBranch: true,
 			isLocal: g.local !== null,
 			remotes: g.remotes.map(r => r.name.split('/')[0]!),
@@ -214,6 +219,7 @@ const mergedRefs = computed((): IMergedRef[] => {
 	const otherMerged: IMergedRef[] = otherRefs.map(r => ({
 		id: r.id,
 		name: r.name,
+		refName: r.name,
 		isBranch: false,
 		isLocal: true,
 		remotes: remoteTags.value.includes(r.name) ? ['origin'] : [],
@@ -245,12 +251,12 @@ function handleClick(): void {
 function onRefDragStart(e: DragEvent, ref: IMergedRef): void {
 	startDrag({
 		type: ref.isBranch ? 'branch' : 'tag',
-		name: ref.name,
+		name: ref.refName,
 	});
 
 	if (e.dataTransfer) {
 		e.dataTransfer.effectAllowed = 'move';
-		e.dataTransfer.setData('text/plain', ref.name);
+		e.dataTransfer.setData('text/plain', ref.refName);
 	}
 }
 
@@ -273,7 +279,7 @@ function onRefDrop(e: DragEvent, ref: IMergedRef): void {
 
 	if (!src) return;
 
-	contextMenuRefDrop(e, src.name, ref.name);
+	contextMenuRefDrop(e, src.name, ref.refName);
 }
 
 async function handleDblClick(ref: IMergedRef): Promise<void> {
@@ -357,26 +363,24 @@ function getTitle(ref: IMergedRef): string {
 	pointer-events: none;
 }
 
+// Both states share the same top offset so the first chip does not move
+// when the wrapper switches between collapsed and expanded.
 .tags-wrapper {
-	position: relative;
+	position: absolute;
+	top: 0;
+	left: 0;
 	z-index: 1;
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 3px;
-	padding: 0 6px;
+	padding: 1px 6px 0;
 	width: 100%;
 	overflow: hidden;
 	cursor: pointer;
-	margin-top: -5px;
 
 	&--expanded {
-		position: absolute;
-		top: 0;
-		left: 0;
 		flex-direction: column;
-		align-items: flex-start;
 		gap: 2px;
-		padding-top: 3px;
 		width: auto;
 		max-width: 100%;
 		overflow: visible;
@@ -388,7 +392,8 @@ function getTitle(ref: IMergedRef): string {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	padding: 1px 5px;
+	height: 17px;
+	padding: 0 5px;
 	border-radius: 3px;
 	font-size: 12px;
 	font-weight: 600;

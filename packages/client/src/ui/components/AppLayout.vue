@@ -21,7 +21,7 @@
 				</Pane>
 
 				<Pane
-					:size="sidebarCollapsed ? 75 : 60"
+					:size="sidebarCollapsed ? 74 : 59"
 					:min-size="30"
 					class="pane-center"
 				>
@@ -93,6 +93,7 @@
 import {computed, onMounted, onUnmounted, watch} from 'vue';
 import {onOpenUrl, getCurrent} from '@tauri-apps/plugin-deep-link';
 import {EServerType} from '@/domain';
+import {filterProjects} from '@/domain/services/projectSearch';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useKeyboard} from '@/composables/useKeyboard';
@@ -263,10 +264,7 @@ onMounted(() => {
 		id: 'open-repo',
 		label: 'Open repo',
 		getItems: (query: string) => {
-			const q = query.toLowerCase();
-
-			return projects.value
-				.filter(p => !q || `${p.alias} ${p.server} ${p.path}`.toLowerCase().includes(q))
+			return filterProjects(projects.value, query)
 				.map(p => ({
 					id: p.id,
 					label: p.alias,
@@ -309,6 +307,7 @@ watch(
 
 	.repository {
 		width: 100%;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
@@ -319,6 +318,7 @@ watch(
 	width: 100%;
 	flex: 1;
 	min-height: 0;
+	overflow: hidden;
 }
 
 .pane-sidebar {

@@ -83,7 +83,7 @@ import {EReferenceModalType, EGitErrorCode, GitError} from '@/domain';
 const
 	{currentProject} = useProject(),
 	{currentBranch, loadBranches} = useBranches(),
-	{pull, push, callGit} = useGit(),
+	{fetch, pull, push, callGit} = useGit(),
 	{selectedHashes, loadCommits} = useCommits(),
 	{stashes, stashSave, stashPop} = useStash(),
 	{loadStatus} = useWorkingTree(),
@@ -95,12 +95,29 @@ const notify = useNotify();
 const showBranchModal = ref(false);
 const showPushRejectedDialog = ref(false);
 const pushRejectedStderr = ref('');
+const isFetching = ref(false);
 const isPulling = ref(false);
 const isPushing = ref(false);
 
 defineProps<{
 	hideActions: Boolean
 }>();
+
+async function handleFetch(): Promise<void> {
+	isFetching.value = true;
+
+	try {
+		await fetch();
+		await Promise.all([loadCommits(), loadBranches()]);
+		notify.success('Fetch successful');
+	}
+	catch (err: unknown) {
+		notify.error(err instanceof Error ? err.message : String(err));
+	}
+	finally {
+		isFetching.value = false;
+	}
+}
 
 async function handlePull(): Promise<void> {
 	isPulling.value = true;
@@ -198,9 +215,15 @@ async function handlePop(): Promise<void> {
 
 const popDisabled = computed(() => stashes.value.length === 0);
 
-const TOOLBAR_COMMAND_IDS = ['pull', 'push', 'stash', 'pop', 'branch'];
+const TOOLBAR_COMMAND_IDS = ['fetch', 'pull', 'push', 'stash', 'pop', 'branch'];
 
 onMounted(() => {
+	registerCommand({
+		id: 'fetch',
+		label: 'Fetch',
+		action: handleFetch,
+		isEnabled: () => !!currentProject.value && !isConnecting.value,
+	});
 	registerCommand({
 		id: 'pull',
 		label: 'Pull',
@@ -239,6 +262,11 @@ onUnmounted(() => {
 });
 
 const actions = computed(() => [{
+	icon: "mdi-cloud-download-outline",
+	label: "Fetch",
+	loading: isFetching.value,
+	onClick: handleFetch,
+}, {
 	icon: "mdi-arrow-down-bold",
 	label: "Pull",
 	loading: isPulling.value,

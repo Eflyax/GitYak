@@ -12,10 +12,10 @@ function parseStashes(output: string): IStash[] {
 			const [id, hash, parentHash, ...messageParts] = line.split('|');
 
 			return {
-				id: (id ?? '').replace(/^"/, '').replace(/"$/, ''),
+				id: id ?? '',
 				hash: hash ?? '',
 				parentHash: parentHash ?? '',
-				message: messageParts.join('|').replace(/\n$/, ''),
+				message: messageParts.join('|').trimEnd(),
 				isStash: true as const,
 			};
 		});
@@ -27,7 +27,7 @@ export function useStash() {
 	async function loadStashes(): Promise<void> {
 		const output = await callGit(
 			'stash', 'list',
-			'--format="%gd|%H|%P|%s"',
+			'--format=%gd|%H|%P|%s',
 		);
 
 		stashes.value = parseStashes(output);

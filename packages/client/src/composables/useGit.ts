@@ -106,7 +106,7 @@ export function useGit() {
 	}
 
 	async function fetch(remote?: string): Promise<void> {
-		await callGit('fetch', remote ?? '--all');
+		await callGit('fetch', '--prune', remote ?? '--all');
 	}
 
 	async function pull(remote?: string, branch?: string): Promise<void> {
@@ -221,7 +221,7 @@ export function useGit() {
 	// ── Stash ─────────────────────────────────────────────────────────────────
 
 	async function stashSave(message?: string): Promise<void> {
-		await callGit('stash', 'push', ...(message ? ['-m', message] : []));
+		await callGit('stash', 'push', '--include-untracked', ...(message ? ['-m', message] : []));
 	}
 
 	async function stashPop(stashId: string): Promise<void> {
@@ -300,7 +300,7 @@ export function useGit() {
 			'-c', 'core.editor=false',
 			'-c', 'rebase.missingCommitsCheck=ignore',
 			'-c', `sequence.editor=cp '${todoRelPath}'`,
-			'rebase', '-i', upstream,
+			'rebase', '-i', '--autostash', upstream,
 		);
 	}
 

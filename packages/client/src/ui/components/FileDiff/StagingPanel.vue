@@ -492,8 +492,23 @@ loadStatus();
 
 	&__section-header {
 		display: flex;
+		align-items: center;
 		justify-content: space-between;
+		gap: 6px;
+		min-width: 0;
 		padding: 6px 10px;
+
+		> div {
+			min-width: 0;
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+		}
+
+		> .n-button {
+			flex-shrink: 0;
+		}
+
 		font-size: 13px;
 		border-bottom: 1px solid $border;
 		color: $text-white;
