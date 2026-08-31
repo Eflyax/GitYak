@@ -2,6 +2,16 @@
 <div class="toolbar">
 	<span class="toolbar__branch-path">
 		<template v-if="currentProject && !hideActions">
+			<span
+				test-id="repo-location"
+				class="toolbar__location"
+				:class="{'toolbar__location--remote': location.isRemote}"
+				:title="location.title"
+			>
+				<Icon :name="location.icon" />
+				{{ location.label }}
+			</span>
+			<span class="toolbar__sep">›</span>
 			<span class="toolbar__project">
 				{{ currentProject.alias }}
 			</span>
@@ -78,7 +88,7 @@ import {useConnectionStatus} from '@/composables/useConnectionStatus';
 import {useCommands} from '@/composables/useCommands';
 import ReferenceModal from './ReferenceModal.vue';
 import PushRejectedDialog from './PushRejectedDialog.vue';
-import {EReferenceModalType, EGitErrorCode, GitError} from '@/domain';
+import {EReferenceModalType, EGitErrorCode, EServerType, GitError} from '@/domain';
 
 const
 	{currentProject} = useProject(),
@@ -102,6 +112,53 @@ const isPushing = ref(false);
 defineProps<{
 	hideActions: Boolean
 }>();
+
+const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1'];
+
+interface IRepoLocation {
+	isRemote: boolean;
+	icon: string;
+	label: string;
+	title: string;
+}
+
+// Describes where the open repository physically lives — the project record is the
+// source of truth, so in web mode "local" means the host running the Bun server.
+const location = computed<IRepoLocation>(() => {
+	const project = currentProject.value;
+
+	if (!project) {
+		return {isRemote: false, icon: 'mdi-laptop', label: 'Local', title: 'Repository on this machine'};
+	}
+
+	if (project.serverType === EServerType.SSH) {
+		const host = project.sshUser ? `${project.sshUser}@${project.server}` : project.server;
+		const label = project.port === 22 ? host : `${host}:${project.port}`;
+
+		return {
+			isRemote: true,
+			icon: 'mdi-cloud-outline',
+			label,
+			title: `Repository on remote server over SSH (${project.sshUser ?? ''}@${project.server}:${project.port})`,
+		};
+	}
+
+	if (LOCAL_HOSTS.includes(project.server)) {
+		return {
+			isRemote: false,
+			icon: 'mdi-laptop',
+			label: 'Local',
+			title: 'Repository on this machine',
+		};
+	}
+
+	return {
+		isRemote: true,
+		icon: 'mdi-server-network',
+		label: `${project.server}:${project.port}`,
+		title: `Repository on remote server ${project.server}:${project.port}`,
+	};
+});
 
 async function handleFetch(): Promise<void> {
 	isFetching.value = true;
@@ -318,6 +375,24 @@ const actions = computed(() => [{
 		align-items: center;
 		gap: 5px;
 		font-size: 14px;
+	}
+
+	&__location {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		color: $text-muted;
+		font-weight: 500;
+		white-space: nowrap;
+
+		svg {
+			width: 15px;
+			height: 15px;
+		}
+
+		&--remote {
+			color: $color-accent;
+		}
 	}
 
 	&__project {

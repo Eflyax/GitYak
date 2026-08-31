@@ -1,7 +1,7 @@
 {
 	"meta": {
 		"name": "Oled Dream",
-		"scheme": "dark",
+		"scheme": "dark"
 	},
 	"themeValues": {
 		// values applied to the entire app
@@ -102,7 +102,7 @@
 			"scroll-thumb-bg-light": "rgba(0,0,0,0.15)",
 			"wip-status": "fade(@blue, 40%)",
 			"card__bg": "@panel__bg2",
-			"card-shadow": "@rgba(0,0,0,.2)",
+			"card-shadow": "rgba(0,0,0,.2)",
 			"statusbar__warning-bg": "mixLess(@graph-color-7, @app__bg0, 50%)",
 			"label__yellow-color": "#f2ca33",
 			"label__light-blue-color": "#15a0bf",
@@ -167,7 +167,7 @@
 			"conflict-right-border-color": "#f2ca33",
 			"conflict-right-color": "fade(@conflict-right-border-color, 25%)",
 			"conflict-output-border-color": "#c517b6",
-			"conflict-output-color": "fade(@conflict-output-border-color, 25%)",
+			"conflict-output-color": "fade(@conflict-output-border-color, 25%)"
 		},
 		// Override specific values just for the toolbar
 		"toolbar": {
@@ -178,7 +178,7 @@
 			"section-border": "rgba(255,255,255,.2)",
 			"input__bg": "#0A0A0A",
 			"link-color": "#40C5EC",
-			"btn-text": "var(--text-normal)",
+			"btn-text": "var(--text-normal)"
 		},
 		"tabsbar": {
 			"text-selected": "#FFFFFF",
@@ -188,7 +188,7 @@
 			"section-border": "rgba(255,255,255,.2)",
 			"input__bg": "#0A0A0A",
 			"link-color": "#40C5EC",
-			"btn-text": "var(--text-normal)",
-		},
-	},
+			"btn-text": "var(--text-normal)"
+		}
+	}
 }
