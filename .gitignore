@@ -24,5 +24,8 @@ packages/remote-worker/dist/
 # Git worktrees
 .worktrees/
 
+# Subagent-driven development scratch
+.superpowers/
+
 # Yarn
 .yarn/install-state.gz
