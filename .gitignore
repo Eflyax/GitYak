@@ -17,6 +17,7 @@ packages/remote-worker-rs/target/
 
 # Build artifacts
 packages/remote-worker/dist/
+packages/e2e/test-results/
 
 # Claude Code
 .claude/
