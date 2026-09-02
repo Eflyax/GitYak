@@ -1,6 +1,6 @@
 import {serve} from 'bun';
-import {ENetworkCommand} from './types';
-import type {IWsMessage} from './types';
+import {ENetworkCommand} from '@git-yak/protocol';
+import type {IWsRequest} from '@git-yak/protocol';
 import * as GitCall from './commands/GitCall';
 import * as ReadFile from './commands/ReadFile';
 import * as WriteFile from './commands/WriteFile';
@@ -24,10 +24,10 @@ serve({
 			ws.send(JSON.stringify({type: 'hello', message: 'Git Yak server ready'}));
 		},
 		async message(ws, message) {
-			let data: IWsMessage | undefined;
+			let data: IWsRequest | undefined;
 
 			try {
-				data = JSON.parse(message.toString()) as IWsMessage;
+				data = JSON.parse(message.toString()) as IWsRequest;
 
 				const {command} = data;
 

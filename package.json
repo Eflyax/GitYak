@@ -18,7 +18,9 @@
 		"tauri:dev": "yarn build:remote-worker && concurrently --kill-others \"yarn workspace @git-yak/server dev\" \"yarn workspace @git-yak/client tauri:dev\"",
 		"tauri:build": "yarn workspace @git-yak/client tauri:build",
 		"lint": "eslint --no-error-on-unmatched-pattern 'packages/*/src/**' packages/e2e scripts '*.config.js' '*.config.ts'",
-		"lint:fix": "eslint --fix --no-error-on-unmatched-pattern 'packages/*/src/**' packages/e2e scripts '*.config.js' '*.config.ts'"
+		"lint:fix": "eslint --fix --no-error-on-unmatched-pattern 'packages/*/src/**' packages/e2e scripts '*.config.js' '*.config.ts'",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9",
@@ -27,6 +29,7 @@
 		"eslint": "^9",
 		"eslint-plugin-vue": "^9",
 		"globals": "^15",
-		"typescript-eslint": "^8"
+		"typescript-eslint": "^8",
+		"vitest": "^3"
 	}
 }

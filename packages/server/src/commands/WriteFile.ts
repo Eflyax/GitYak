@@ -1,6 +1,6 @@
 import {resolve, dirname, isAbsolute} from 'path';
 import {promises as fs} from 'fs';
-import type {IWsMessage} from '../types';
+import type {IWsRequest} from '@git-yak/protocol';
 
 function resolveFilePath(repoPath: string, filePath: string): string {
 	const resolved = isAbsolute(filePath) ? filePath : resolve(repoPath, filePath);
@@ -19,7 +19,7 @@ interface IWriteFileOptions {
 	makeDirectory?: boolean;
 }
 
-export async function run(ws: {send: (msg: string) => void}, data: IWsMessage): Promise<void> {
+export async function run(ws: {send: (msg: string) => void}, data: IWsRequest): Promise<void> {
 	const {requestId, repo_path, file_path, content, options = {}} = data;
 
 	if (typeof repo_path !== 'string' || !repo_path) {

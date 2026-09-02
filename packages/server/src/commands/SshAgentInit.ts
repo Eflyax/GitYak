@@ -1,4 +1,4 @@
-import type {IWsMessage} from '../types';
+import type {IWsRequest} from '@git-yak/protocol';
 
 interface IAgentSession {
 	authSock: string;
@@ -74,7 +74,7 @@ export function destroyAgent(ws: object): void {
 	}
 }
 
-export async function run(ws: object, data: IWsMessage): Promise<void> {
+export async function run(ws: object, data: IWsRequest): Promise<void> {
 	const {requestId, privateKey} = data;
 
 	if (typeof privateKey !== 'string' || !privateKey) {

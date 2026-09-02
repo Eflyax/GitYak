@@ -11,7 +11,8 @@
 		"strictNullChecks": true,
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["src/*"]
+			"@/*": ["src/*"],
+			"@git-yak/protocol": ["../protocol/src/index.ts"]
 		},
 		"types": ["vite/client"]
 	},

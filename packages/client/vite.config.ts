@@ -16,6 +16,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'@': srcDir,
+			'@git-yak/protocol': join(currentDir, '..', 'protocol', 'src', 'index.ts'),
 		},
 		dedupe: ['vue', 'naive-ui'],
 	},
