@@ -1,9 +1,22 @@
+import {isErrorResponse, isSuccessResponse} from '@git-yak/protocol';
 import type {ITransportClient} from '../ITransportClient';
 
 type PendingRequest = {
 	resolve: (value: unknown) => void
 	reject: (reason: unknown) => void
 };
+
+// A frame that matches neither guard is still routed back to its caller (and rejected),
+// so a malformed error frame cannot leave a pending request hanging forever.
+function extractRequestId(value: unknown): string | undefined {
+	if (typeof value !== 'object' || value === null) {
+		return undefined;
+	}
+
+	const requestId = (value as {requestId?: unknown}).requestId;
+
+	return typeof requestId === 'string' ? requestId : undefined;
+}
 
 export class WebSocketClient implements ITransportClient {
 	private readonly ws: WebSocket;
@@ -21,29 +34,34 @@ export class WebSocketClient implements ITransportClient {
 		};
 
 		this.ws.onmessage = (event: MessageEvent) => {
-			let data: Record<string, unknown>;
+			let data: unknown;
 
 			try {
-				data = JSON.parse(event.data as string) as Record<string, unknown>;
+				data = JSON.parse(event.data as string);
 			}
 			catch {
 				return;
 			}
 
-			const requestId = data['requestId'] as string | undefined;
+			const requestId = extractRequestId(data);
 
-			if (requestId && this.pending.has(requestId)) {
-				const entry = this.pending.get(requestId)!;
-
-				if (data['status'] === 'success') {
-					entry.resolve(data['data']);
-				}
-				else {
-					entry.reject(new Error((data['message'] as string | undefined) ?? 'Server error'));
-				}
-
-				this.pending.delete(requestId);
+			if (!requestId || !this.pending.has(requestId)) {
+				return;
 			}
+
+			const entry = this.pending.get(requestId)!;
+
+			if (isSuccessResponse(data)) {
+				entry.resolve(data.data);
+			}
+			else if (isErrorResponse(data)) {
+				entry.reject(new Error(data.message));
+			}
+			else {
+				entry.reject(new Error('Server error'));
+			}
+
+			this.pending.delete(requestId);
 		};
 
 		this.ws.onclose = () => {

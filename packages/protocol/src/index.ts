@@ -28,6 +28,18 @@ export interface IWsErrorResponse {
 
 export type IWsResponse = IWsSuccessResponse | IWsErrorResponse;
 
-export function isErrorResponse(value: IWsResponse): value is IWsErrorResponse {
-	return value.status === 'error';
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
+export function isErrorResponse(value: unknown): value is IWsErrorResponse {
+	return isRecord(value)
+		&& value['status'] === 'error'
+		&& typeof value['message'] === 'string';
+}
+
+export function isSuccessResponse(value: unknown): value is IWsSuccessResponse {
+	return isRecord(value)
+		&& value['status'] === 'success'
+		&& typeof value['requestId'] === 'string';
 }
