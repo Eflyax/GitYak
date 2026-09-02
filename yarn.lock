@@ -303,12 +303,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@git-yak/remote-worker@workspace:packages/remote-worker":
-  version: 0.0.0-use.local
-  resolution: "@git-yak/remote-worker@workspace:packages/remote-worker"
-  languageName: unknown
-  linkType: soft
-
 "@git-yak/server@workspace:packages/server":
   version: 0.0.0-use.local
   resolution: "@git-yak/server@workspace:packages/server"

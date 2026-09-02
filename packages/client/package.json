@@ -7,6 +7,7 @@
 		"dev": "vite",
 		"build": "vue-tsc --noEmit && vite build",
 		"typecheck": "vue-tsc --noEmit",
+		"check:themes": "bun run scripts/check-themes.ts",
 		"tauri": "tauri",
 		"tauri:dev": "PATH=$HOME/.cargo/bin:$PATH tauri dev",
 		"tauri:build": "PATH=$HOME/.cargo/bin:$PATH tauri build"

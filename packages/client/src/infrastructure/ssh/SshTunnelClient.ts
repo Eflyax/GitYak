@@ -99,7 +99,7 @@ export class SshTunnelClient implements ITransportClient {
 			);
 			if (verifyOutput.trim() !== 'OK') {
 				const archInfo = await this.runSsh(`uname -m 2>/dev/null || echo unknown`).catch(() => 'unknown');
-				throw new Error(`Binary not executable on remote (arch: ${archInfo.trim()}). Build the correct binary with: yarn workspace @git-yak/remote-worker build:linux`);
+				throw new Error(`Binary not executable on remote (arch: ${archInfo.trim()}). Build the correct binary with: yarn build:remote-worker`);
 			}
 
 			this.log({type: 'ssh', status: 'success', direction: 'response', message: 'Remote worker provisioned'});
