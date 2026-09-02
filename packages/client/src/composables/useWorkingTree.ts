@@ -126,7 +126,9 @@ export function useWorkingTree() {
 				kind = operation;
 				break;
 			}
-			catch {}
+			catch {
+				// ignore: probe file does not exist, try the next one
+			}
 		}
 
 		operationKind.value = kind;
@@ -194,6 +196,6 @@ export function useWorkingTree() {
 		unstageAll,
 		discardFile,
 		discardAllChanges,
-		workingTreeStats
+		workingTreeStats,
 	};
 }

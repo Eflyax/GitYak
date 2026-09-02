@@ -70,7 +70,9 @@ export function createTempRepo(opts: {init?: boolean} = {init: true}): ITempRepo
 			try {
 				rmSync(path, {recursive: true, force: true});
 			}
-			catch {}
+			catch {
+				// ignore: dir may already be gone
+			}
 		},
 	};
 }
@@ -86,7 +88,9 @@ export function createBareRemote(): {path: string; cleanup: () => void} {
 			try {
 				rmSync(path, {recursive: true, force: true});
 			}
-			catch {}
+			catch {
+				// ignore: dir may already be gone
+			}
 		},
 	};
 }

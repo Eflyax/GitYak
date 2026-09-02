@@ -15,7 +15,10 @@
 	>
 		<Icon :name="isRemote ? 'mdi-cloud-outline' : 'mdi-laptop'" />
 		<span class="branch-item__name">{{ displayName }}</span>
-		<span v-if="isActive" class="branch-item__badge">HEAD</span>
+		<span
+			v-if="isActive"
+			class="branch-item__badge"
+		>HEAD</span>
 	</div>
 </template>
 

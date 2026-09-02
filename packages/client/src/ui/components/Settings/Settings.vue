@@ -1,7 +1,9 @@
 <template>
 	<div class="settings">
 		<section class="settings__section">
-			<h3 class="settings__section-title">Appearance</h3>
+			<h3 class="settings__section-title">
+				Appearance
+			</h3>
 			<div class="settings__row">
 				<theme-selector />
 			</div>

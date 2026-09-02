@@ -83,11 +83,11 @@ export class SshTunnelClient implements ITransportClient {
 			this.cs.setUploadTotal(localSize);
 			this.cs.setUploadProgress(0);
 
-			await this.runSsh(`mkdir -p ~/.local/bin`);
+			await this.runSsh('mkdir -p ~/.local/bin');
 			await this.runScpWithProgress(binaryPath, '/tmp/gityak-upload', localSize);
 
 			// Verify SCP actually created the file (SCP via SFTP can exit 0 without writing)
-			const uploadedSize = await this.runSsh(`stat -c%s /tmp/gityak-upload 2>/dev/null || echo 0`);
+			const uploadedSize = await this.runSsh('stat -c%s /tmp/gityak-upload 2>/dev/null || echo 0');
 			if (parseInt(uploadedSize.trim()) === 0) {
 				throw new Error('SCP failed: /tmp/gityak-upload missing on remote after transfer');
 			}
@@ -98,7 +98,7 @@ export class SshTunnelClient implements ITransportClient {
 				`test -x ${REMOTE_BINARY_PATH} && file ${REMOTE_BINARY_PATH} | grep -q ELF && echo OK || echo EXEC_FAILED`,
 			);
 			if (verifyOutput.trim() !== 'OK') {
-				const archInfo = await this.runSsh(`uname -m 2>/dev/null || echo unknown`).catch(() => 'unknown');
+				const archInfo = await this.runSsh('uname -m 2>/dev/null || echo unknown').catch(() => 'unknown');
 				throw new Error(`Binary not executable on remote (arch: ${archInfo.trim()}). Build the correct binary with: yarn build:remote-worker`);
 			}
 

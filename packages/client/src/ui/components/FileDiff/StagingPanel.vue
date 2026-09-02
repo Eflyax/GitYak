@@ -10,7 +10,9 @@
 				title="Discard all changes"
 				@click="showDiscardConfirm = true"
 			>
-				<template #icon><Icon name="mdi-trash-can" /></template>
+				<template #icon>
+					<Icon name="mdi-trash-can" />
+				</template>
 			</NButton>
 			<span class="staging-panel__branch-info">
 				<span>{{ totalCount }} file changes<template v-if="currentBranch"> on <strong>{{ currentBranch.name }}</strong></template></span>
@@ -24,19 +26,25 @@
 				<div
 					class="staging-panel__section-header"
 				>
-					<div test-id="unstaged-section-header" @click="unstagedExpanded = !unstagedExpanded">
+					<div
+						test-id="unstaged-section-header"
+						@click="unstagedExpanded = !unstagedExpanded"
+					>
 						<svg
 							class="staging-panel__chevron"
 							:class="{'staging-panel__chevron--open': unstagedExpanded}"
-							width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+							width="12"
+							height="12"
+							viewBox="0 0 24 24"
+							fill="currentColor"
 						>
-							<path d="M7 10l5 5 5-5z"/>
+							<path d="M7 10l5 5 5-5z" />
 						</svg>
 						<span>{{ conflictDetected ? 'Conflicted Files' : 'Unstaged Files' }} ({{ unstagedFiles.length }})</span>
 					</div>
 					<NButton
-						test-id="stage-all-btn"
 						v-if="unstagedFiles.length"
+						test-id="stage-all-btn"
 						class="staging-panel__stage-all"
 						size="tiny"
 						:type="conflictDetected ? 'warning' : 'success'"
@@ -47,7 +55,10 @@
 					</NButton>
 				</div>
 
-				<div v-if="unstagedExpanded" class="staging-panel__file-list">
+				<div
+					v-if="unstagedExpanded"
+					class="staging-panel__file-list"
+				>
 					<div
 						v-for="file in unstagedFiles"
 						:key="file.path"
@@ -82,19 +93,25 @@
 				<div
 					class="staging-panel__section-header"
 				>
-					<div test-id="staged-section-header" @click="stagedExpanded = !stagedExpanded">
+					<div
+						test-id="staged-section-header"
+						@click="stagedExpanded = !stagedExpanded"
+					>
 						<svg
 							class="staging-panel__chevron"
 							:class="{'staging-panel__chevron--open': stagedExpanded}"
-							width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+							width="12"
+							height="12"
+							viewBox="0 0 24 24"
+							fill="currentColor"
 						>
-							<path d="M7 10l5 5 5-5z"/>
+							<path d="M7 10l5 5 5-5z" />
 						</svg>
 						<span>{{ conflictDetected ? 'Resolved Files' : 'Staged Files' }} ({{ stagedFiles.length }})</span>
 					</div>
 					<NButton
-						test-id="unstage-all-btn"
 						v-if="stagedFiles.length"
+						test-id="unstage-all-btn"
 						size="tiny"
 						secondary
 						type="error"
@@ -105,7 +122,10 @@
 					</NButton>
 				</div>
 
-				<div v-if="stagedExpanded" class="staging-panel__file-list">
+				<div
+					v-if="stagedExpanded"
+					class="staging-panel__file-list"
+				>
 					<div
 						v-for="file in stagedFiles"
 						:key="file.path"
@@ -153,7 +173,7 @@
 						:checked="amendMode"
 						:disabled="amendDisabled"
 						@change="handleAmendToggle(($event.target as HTMLInputElement).checked)"
-					/>
+					>
 					<span>Amend previous commit</span>
 				</label>
 				<label
@@ -161,26 +181,26 @@
 					title="Bypass pre-commit and commit-msg hooks (--no-verify)"
 				>
 					<input
+						v-model="noVerify"
 						test-id="no-verify-checkbox"
 						type="checkbox"
-						v-model="noVerify"
-					/>
+					>
 					<span>No verify</span>
 				</label>
 			</div>
 
 			<n-input
 				ref="commitSummaryInput"
-				test-id="commit-summary-input"
 				v-model:value="commitSummary"
+				test-id="commit-summary-input"
 				placeholder="Commit summary"
 				size="small"
 				class="staging-panel__summary-input"
 			/>
 
 			<n-input
-				test-id="commit-description-input"
 				v-model:value="commitDescription"
+				test-id="commit-description-input"
 				type="textarea"
 				placeholder="Description"
 				size="small"

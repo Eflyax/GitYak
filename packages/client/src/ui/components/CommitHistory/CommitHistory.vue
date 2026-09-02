@@ -1,18 +1,27 @@
 <template>
 	<div class="commit-history">
 		<!-- Loading overlay -->
-		<div v-if="loading && !commits.length" class="commit-history__loading">
+		<div
+			v-if="loading && !commits.length"
+			class="commit-history__loading"
+		>
 			<n-spin size="small" />
 		</div>
 
 		<!-- Empty state – no project -->
-		<div v-else-if="!currentProject" class="commit-history__empty">
+		<div
+			v-else-if="!currentProject"
+			class="commit-history__empty"
+		>
 			<Icon name="mdi-source-repository" />
 			<span>No repository open</span>
 		</div>
 
 		<!-- Empty state – needs init -->
-		<div v-else-if="needsInit && !loading" class="commit-history__empty">
+		<div
+			v-else-if="needsInit && !loading"
+			class="commit-history__empty"
+		>
 			<Icon name="mdi-source-repository" />
 			<span>This folder is not a git repository.</span>
 			<NButton
@@ -26,14 +35,24 @@
 		</div>
 
 		<!-- Empty state – no commits yet -->
-		<div v-else-if="!commits.length && !loading" class="commit-history__empty">
+		<div
+			v-else-if="!commits.length && !loading"
+			class="commit-history__empty"
+		>
 			<Icon name="mdi-git" />
 			<span>No commits found</span>
 		</div>
 
 		<!-- Graph + rows -->
-		<div v-else class="commit-history__scroll" ref="scrollEl">
-			<div class="commit-history__content" :style="{height: visibleCommits.length * ROW_HEIGHT + 'px'}">
+		<div
+			v-else
+			ref="scrollEl"
+			class="commit-history__scroll"
+		>
+			<div
+				class="commit-history__content"
+				:style="{height: visibleCommits.length * ROW_HEIGHT + 'px'}"
+			>
 				<!-- References column (LEFT of graph) -->
 				<div class="commit-history__refs-col">
 					<CommitRefsRow
@@ -44,7 +63,10 @@
 				</div>
 
 				<!-- SVG graph overlay -->
-				<div class="commit-history__graph-col" :style="{left: REFS_WIDTH + 'px'}">
+				<div
+					class="commit-history__graph-col"
+					:style="{left: REFS_WIDTH + 'px'}"
+				>
 					<CommitGraph
 						:commits="visibleCommits"
 						:selected-hash="selectedHash"
@@ -52,7 +74,10 @@
 				</div>
 
 				<!-- Commit rows -->
-				<div class="commit-history__rows" :style="{marginLeft: totalLeftMargin + 'px'}">
+				<div
+					class="commit-history__rows"
+					:style="{marginLeft: totalLeftMargin + 'px'}"
+				>
 					<CommitRow
 						v-for="commit in visibleCommits"
 						:key="commit.hash"

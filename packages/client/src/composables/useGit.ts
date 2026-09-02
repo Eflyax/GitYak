@@ -91,7 +91,9 @@ export function useGit() {
 				}
 			}
 		}
-		catch {}
+		catch {
+			// ignore: no current branch (e.g. detached HEAD)
+		}
 
 		try {
 			const firstRemote = (await callGit('remote')).trim().split('\n')[0];
@@ -100,7 +102,9 @@ export function useGit() {
 				return firstRemote;
 			}
 		}
-		catch {}
+		catch {
+			// ignore: no remotes configured
+		}
 
 		return 'origin';
 	}

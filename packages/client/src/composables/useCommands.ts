@@ -2,136 +2,136 @@ import {ref, computed, readonly} from 'vue';
 import type {ComputedRef, Ref} from 'vue';
 
 export interface IKeybinding {
-    key: string;
-    code?: string;
-    meta?: boolean;
-    shift?: boolean;
-    ctrl?: boolean;
-    alt?: boolean;
+	key: string;
+	code?: string;
+	meta?: boolean;
+	shift?: boolean;
+	ctrl?: boolean;
+	alt?: boolean;
 }
 
 export interface ISubItem {
-    id: string;
-    label: string;
-    description?: string;
-    hint?: string;
-    hintIcon?: string;
-    color?: string;
-    action: () => void | Promise<void>;
+	id: string;
+	label: string;
+	description?: string;
+	hint?: string;
+	hintIcon?: string;
+	color?: string;
+	action: () => void | Promise<void>;
 }
 
 export interface ICommand {
-    id: string;
-    label: string;
-    shortcut?: string;
-    keybinding?: IKeybinding;
-    isEnabled?: () => boolean;
-    action?: () => void | Promise<void>;
-    getItems?: (query: string) => Array<ISubItem>;
-    priority?: number;
+	id: string;
+	label: string;
+	shortcut?: string;
+	keybinding?: IKeybinding;
+	isEnabled?: () => boolean;
+	action?: () => void | Promise<void>;
+	getItems?: (query: string) => Array<ISubItem>;
+	priority?: number;
 }
 
 export interface IUseCommands {
-    allCommands: ComputedRef<Array<ICommand>>;
-    paletteOpen: Ref<boolean>;
-    registerCommand: (cmd: ICommand) => void;
-    unregisterCommand: (id: string) => void;
-    executeCommand: (id: string) => Promise<void>;
-    matchKeybinding: (event: KeyboardEvent) => ICommand | undefined;
-    openPalette: () => void;
-    closePalette: () => void;
+	allCommands: ComputedRef<Array<ICommand>>;
+	paletteOpen: Ref<boolean>;
+	registerCommand: (cmd: ICommand) => void;
+	unregisterCommand: (id: string) => void;
+	executeCommand: (id: string) => Promise<void>;
+	matchKeybinding: (event: KeyboardEvent) => ICommand | undefined;
+	openPalette: () => void;
+	closePalette: () => void;
 }
 
 const commands = ref(new Map<string, ICommand>());
 const paletteOpen = ref(false);
 
 const allCommands = computed<Array<ICommand>>(() =>
-    Array.from(commands.value.values()).sort((a, b) => a.label.localeCompare(b.label))
+	Array.from(commands.value.values()).sort((a, b) => a.label.localeCompare(b.label)),
 );
 
 function registerCommand(cmd: ICommand): void {
-    commands.value = new Map(commands.value).set(cmd.id, cmd);
+	commands.value = new Map(commands.value).set(cmd.id, cmd);
 }
 
 function unregisterCommand(id: string): void {
-    const next = new Map(commands.value);
-    next.delete(id);
-    commands.value = next;
+	const next = new Map(commands.value);
+	next.delete(id);
+	commands.value = next;
 }
 
 async function executeCommand(id: string): Promise<void> {
-    const cmd = commands.value.get(id);
+	const cmd = commands.value.get(id);
 
-    if (!cmd) {
-        return;
-    }
+	if (!cmd) {
+		return;
+	}
 
-    if (cmd.isEnabled && !cmd.isEnabled()) {
-        return;
-    }
+	if (cmd.isEnabled && !cmd.isEnabled()) {
+		return;
+	}
 
-    await cmd.action?.();
+	await cmd.action?.();
 }
 
 function matchKeybinding(event: KeyboardEvent): ICommand | undefined {
-    const key = event.key.toLowerCase();
+	const key = event.key.toLowerCase();
 
-    for (const cmd of commands.value.values()) {
-        const kb = cmd.keybinding;
+	for (const cmd of commands.value.values()) {
+		const kb = cmd.keybinding;
 
-        if (!kb) {
-            continue;
-        }
+		if (!kb) {
+			continue;
+		}
 
-        if (kb.code) {
-            // On macOS, Option+letter yields a composed character, so event.key
-            // is unreliable for Alt chords. event.code is layout-position based
-            // and matches regardless.
-            if (kb.code !== event.code) {
-                continue;
-            }
-        }
-        else if (kb.key !== key) {
-            continue;
-        }
+		if (kb.code) {
+			// On macOS, Option+letter yields a composed character, so event.key
+			// is unreliable for Alt chords. event.code is layout-position based
+			// and matches regardless.
+			if (kb.code !== event.code) {
+				continue;
+			}
+		}
+		else if (kb.key !== key) {
+			continue;
+		}
 
-        if (!!kb.meta !== event.metaKey) {
-            continue;
-        }
+		if (!!kb.meta !== event.metaKey) {
+			continue;
+		}
 
-        if (!!kb.shift !== event.shiftKey) {
-            continue;
-        }
+		if (!!kb.shift !== event.shiftKey) {
+			continue;
+		}
 
-        if (!!kb.ctrl !== event.ctrlKey) {
-            continue;
-        }
+		if (!!kb.ctrl !== event.ctrlKey) {
+			continue;
+		}
 
-        if (!!kb.alt !== event.altKey) {
-            continue;
-        }
+		if (!!kb.alt !== event.altKey) {
+			continue;
+		}
 
-        return cmd;
-    }
+		return cmd;
+	}
 
-    return undefined;
+	return undefined;
 }
 
 function openPalette(): void {
-    paletteOpen.value = true;
+	paletteOpen.value = true;
 }
 
 function closePalette(): void {
-    paletteOpen.value = false;
+	paletteOpen.value = false;
 }
 
 export const useCommands: () => IUseCommands = () => ({
-    allCommands,
-    paletteOpen: readonly(paletteOpen) as typeof paletteOpen,
-    registerCommand,
-    unregisterCommand,
-    executeCommand,
-    matchKeybinding,
-    openPalette,
-    closePalette,
+	allCommands,
+	paletteOpen: readonly(paletteOpen) as typeof paletteOpen,
+	registerCommand,
+	unregisterCommand,
+	executeCommand,
+	matchKeybinding,
+	openPalette,
+	closePalette,
 });

@@ -1,35 +1,55 @@
 <template>
-<NModal
-	v-model:show="showModel"
-	preset="card"
-	title="Push rejected"
-	style="width: 520px;"
-	:mask-closable="false"
->
-	<div test-id="push-rejected-dialog" class="push-rejected__body">
-		<p class="push-rejected__message">
-			The remote branch has changes that you don't have locally. Choose how to proceed:
-		</p>
-		<ul class="push-rejected__list">
-			<li><strong>Force push</strong> — overwrite the remote branch (uses <code>--force-with-lease</code>).</li>
-			<li><strong>Pull</strong> — fast-forward only; aborts if a merge would be needed.</li>
-			<li><strong>Cancel</strong> — do nothing.</li>
-		</ul>
-		<pre
-			v-if="errorMessage"
-			test-id="push-rejected-stderr"
-			class="push-rejected__stderr"
-		>{{ errorMessage }}</pre>
-	</div>
-
-	<template #footer>
-		<div class="push-rejected__footer">
-			<NButton test-id="push-cancel-btn" @click="cancel">Cancel</NButton>
-			<NButton test-id="push-pull-btn" type="info" @click="choose('pull')">Pull (ff-only)</NButton>
-			<NButton test-id="push-force-btn" type="error" @click="choose('force')">Force push</NButton>
+	<NModal
+		v-model:show="showModel"
+		preset="card"
+		title="Push rejected"
+		style="width: 520px;"
+		:mask-closable="false"
+	>
+		<div
+			test-id="push-rejected-dialog"
+			class="push-rejected__body"
+		>
+			<p class="push-rejected__message">
+				The remote branch has changes that you don't have locally. Choose how to proceed:
+			</p>
+			<ul class="push-rejected__list">
+				<li><strong>Force push</strong> — overwrite the remote branch (uses <code>--force-with-lease</code>).</li>
+				<li><strong>Pull</strong> — fast-forward only; aborts if a merge would be needed.</li>
+				<li><strong>Cancel</strong> — do nothing.</li>
+			</ul>
+			<pre
+				v-if="errorMessage"
+				test-id="push-rejected-stderr"
+				class="push-rejected__stderr"
+			>{{ errorMessage }}</pre>
 		</div>
-	</template>
-</NModal>
+
+		<template #footer>
+			<div class="push-rejected__footer">
+				<NButton
+					test-id="push-cancel-btn"
+					@click="cancel"
+				>
+					Cancel
+				</NButton>
+				<NButton
+					test-id="push-pull-btn"
+					type="info"
+					@click="choose('pull')"
+				>
+					Pull (ff-only)
+				</NButton>
+				<NButton
+					test-id="push-force-btn"
+					type="error"
+					@click="choose('force')"
+				>
+					Force push
+				</NButton>
+			</div>
+		</template>
+	</NModal>
 </template>
 
 <script setup lang="ts">

@@ -5,8 +5,14 @@
 		:height="svgHeight"
 	>
 		<!-- Connection paths -->
-		 <g v-for="commit in commits" :key="'path-' + commit.hash">
-			<template v-for="parentHash in commit.parents" :key="parentHash">
+		<g
+			v-for="commit in commits"
+			:key="'path-' + commit.hash"
+		>
+			<template
+				v-for="parentHash in commit.parents"
+				:key="parentHash"
+			>
 				<path
 					v-if="commitMap.has(parentHash)"
 					:d="getPath(commit, parentHash)"
@@ -20,7 +26,10 @@
 		</g>
 
 		<!-- Commit nodes -->
-		<g v-for="commit in commits" :key="'node-' + commit.hash">
+		<g
+			v-for="commit in commits"
+			:key="'node-' + commit.hash"
+		>
 			<rect
 				:x="PADDING_LEFT + (commit.level ?? 0) * X_STEP - 1"
 				:y="(commit.index ?? 0) * Y_STEP"
@@ -66,7 +75,7 @@
 				:x1="PADDING_LEFT + (commit.level ?? 0) * X_STEP"
 				:y1="(PADDING_TOP + (commit.index ?? 0) * Y_STEP)- ROW_MARGIN"
 				:x2="PADDING_LEFT + (commit.level ?? 0) * X_STEP - (CIRCLE_R * 3 * (commit.level ?? 1))"
-			 	:y2="(PADDING_TOP + (commit.index ?? 0) * Y_STEP) - ROW_MARGIN"
+				:y2="(PADDING_TOP + (commit.index ?? 0) * Y_STEP) - ROW_MARGIN"
 				:stroke="getColor(commit.level ?? 0)"
 				:stroke-width="2"
 			/>
@@ -136,7 +145,8 @@ function getInitials(authorName: string): string {
 }
 
 function getColor(level: number): string {
-	themeVersion.value;
+	// Read to establish a reactive dependency on theme changes.
+	void themeVersion.value;
 	return getGraphColor(level);
 }
 

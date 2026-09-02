@@ -68,7 +68,7 @@
 						{{ initials(project.alias) }}
 					</button>
 				</template>
-				{{ project.alias }}<br />
+				{{ project.alias }}<br>
 				<span style="opacity: 0.6; font-size: 0.85em;">
 					{{ project.path }}
 				</span>

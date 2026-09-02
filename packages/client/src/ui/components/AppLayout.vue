@@ -2,7 +2,7 @@
 	<div class="app-layout">
 		<ProjectsSidebar />
 		<div class="repository">
-			 <Toolbar :hide-actions="isVisible" />
+			<Toolbar :hide-actions="isVisible" />
 
 			<ProjectManager
 				v-if="!currentProject"
@@ -10,7 +10,10 @@
 
 			<ConnectionStatus v-else-if="isVisible" />
 
-			<Splitpanes v-else class="layout-splitpanes">
+			<Splitpanes
+				v-else
+				class="layout-splitpanes"
+			>
 				<Pane
 					:size="sidebarCollapsed ? 2 : 17"
 					:min-size="sidebarCollapsed ? 2 : 12"
@@ -35,7 +38,12 @@
 					/>
 				</Pane>
 
-				<Pane :size="24" :min-size="18" :max-size="40" class="pane-right">
+				<Pane
+					:size="24"
+					:min-size="18"
+					:max-size="40"
+					class="pane-right"
+				>
 					<StagingPanel
 						v-if="isWorkingTreeSelected"
 						@open-diff="openFileDiff($event)"
@@ -57,7 +65,10 @@
 		resizable
 		placement="right"
 	>
-		<NDrawerContent title="Activity Log" closable>
+		<NDrawerContent
+			title="Activity Log"
+			closable
+		>
 			<ActivityLog />
 		</NDrawerContent>
 	</NDrawer>
@@ -68,7 +79,10 @@
 		test-id="settings-drawer"
 		placement="right"
 	>
-		<NDrawerContent title="Settings" closable>
+		<NDrawerContent
+			title="Settings"
+			closable
+		>
 			<Settings />
 		</NDrawerContent>
 	</NDrawer>

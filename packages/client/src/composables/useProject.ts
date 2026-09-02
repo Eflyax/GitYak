@@ -42,7 +42,9 @@ function saveGroups(): void {
 	try {
 		localStorage.setItem(GROUPS_KEY, JSON.stringify(groups.value));
 	}
-	catch {}
+	catch {
+		// ignore: localStorage may be unavailable or full
+	}
 }
 
 function generateId(): string {
@@ -183,6 +185,6 @@ export function useProject() {
 		removeGroup,
 		updateGroup,
 		assignProjectToGroup,
-		openLastOpenProject
+		openLastOpenProject,
 	};
 }

@@ -2,7 +2,13 @@
 	<div class="activity-log">
 		<div class="activity-log__header">
 			<span class="activity-log__title">Activity Log <span class="activity-log__count">({{ logs.length }})</span></span>
-			<NButton size="tiny" secondary @click="clearLogs">Clear</NButton>
+			<NButton
+				size="tiny"
+				secondary
+				@click="clearLogs"
+			>
+				Clear
+			</NButton>
 		</div>
 		<NDataTable
 			:data="[...logs]"

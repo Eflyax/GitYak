@@ -84,7 +84,7 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsMessage): 
 		catch (e: unknown) {
 			const message = e instanceof Error ? e.message : 'Unknown git error';
 
-			if (message.includes(`.git/index.lock': File exists`) && retries) {
+			if (message.includes('.git/index.lock\': File exists') && retries) {
 				await new Promise(r => setTimeout(r, delay));
 				retries--;
 				delay *= 2;
