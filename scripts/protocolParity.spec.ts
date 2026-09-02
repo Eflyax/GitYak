@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {extractRustCommands, findParityGaps} from './protocolParity';
+import {extractBunCommands, extractRustCommands, findParityGaps} from './protocolParity';
 
 const RUST_SAMPLE = `
 	match req.command.as_str() {
@@ -60,29 +60,88 @@ describe('extractRustCommands', () => {
 	});
 });
 
-describe('findParityGaps', () => {
-	it('reports a Rust command the TypeScript enum does not know', () => {
-		const gaps = findParityGaps(['gitCall', 'newThing'], ['gitCall'], []);
+const BUN_SAMPLE = `
+	switch (command) {
+		case ENetworkCommand.GitCall:
+			await GitCall.run(ws, data);
+			break;
 
-		expect(gaps.missingInTs).toEqual(['newThing']);
-		expect(gaps.missingInRust).toEqual([]);
+		case ENetworkCommand.ReadFile:
+			await ReadFile.run(ws, data);
+			break;
+
+		default:
+			ws.send(JSON.stringify({message: \`Unknown command: \${command}\`}));
+	}
+`;
+
+const ENUM_MEMBERS = {
+	GitCall: 'gitCall',
+	ReadFile: 'readFile',
+	WriteFile: 'writeFile',
+	Heartbeat: 'heartbeat',
+};
+
+describe('extractBunCommands', () => {
+	it('resolves each switch arm back to its wire value, in order', () => {
+		expect(extractBunCommands(BUN_SAMPLE, ENUM_MEMBERS)).toEqual(['gitCall', 'readFile']);
 	});
 
-	it('reports a TypeScript command the Rust worker does not implement', () => {
+	it('ignores the default arm and its error string', () => {
+		expect(extractBunCommands(BUN_SAMPLE, ENUM_MEMBERS)).not.toContain('Unknown command');
+	});
+
+	it('does not pick up a bare string-literal case arm', () => {
+		const sample = `
+			switch (command) {
+				case 'gitCall':
+					break;
+			}
+		`;
+		expect(extractBunCommands(sample, ENUM_MEMBERS)).toEqual([]);
+	});
+
+	it('throws when the server dispatches a member the enum does not declare', () => {
+		const sample = `
+			switch (command) {
+				case ENetworkCommand.WatchRepo:
+					break;
+			}
+		`;
+		expect(() => extractBunCommands(sample, ENUM_MEMBERS)).toThrow(/WatchRepo/);
+	});
+
+	it('catches drift: a command the enum declares but the switch never handles', () => {
+		const bunCommands = extractBunCommands(BUN_SAMPLE, ENUM_MEMBERS);
+		const gaps = findParityGaps(bunCommands, Object.values(ENUM_MEMBERS), ['heartbeat']);
+
+		expect(gaps.unhandledByBackend).toEqual(['writeFile']);
+	});
+});
+
+describe('findParityGaps', () => {
+	it('reports a backend command the TypeScript enum does not know', () => {
+		const gaps = findParityGaps(['gitCall', 'newThing'], ['gitCall'], []);
+
+		expect(gaps.unknownToProtocol).toEqual(['newThing']);
+		expect(gaps.unhandledByBackend).toEqual([]);
+	});
+
+	it('reports a TypeScript command the backend does not implement', () => {
 		const gaps = findParityGaps(['gitCall'], ['gitCall', 'writeFile'], []);
 
-		expect(gaps.missingInRust).toEqual(['writeFile']);
+		expect(gaps.unhandledByBackend).toEqual(['writeFile']);
 	});
 
 	it('honours the exemption list', () => {
 		const gaps = findParityGaps(['gitCall'], ['gitCall', 'sshAgentInit'], ['sshAgentInit']);
 
-		expect(gaps.missingInRust).toEqual([]);
+		expect(gaps.unhandledByBackend).toEqual([]);
 	});
 
 	it('reports nothing when both sides agree', () => {
 		const gaps = findParityGaps(['gitCall'], ['gitCall'], []);
 
-		expect(gaps).toEqual({missingInTs: [], missingInRust: []});
+		expect(gaps).toEqual({unknownToProtocol: [], unhandledByBackend: []});
 	});
 });
