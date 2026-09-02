@@ -18,6 +18,46 @@ describe('extractRustCommands', () => {
 	it('ignores the catch-all arm and its format string', () => {
 		expect(extractRustCommands(RUST_SAMPLE)).not.toContain('Unknown command: {unknown}');
 	});
+
+	it('extracts a command containing an underscore', () => {
+		const sample = `
+			match req.command.as_str() {
+				"ssh_agent_init" => ssh_agent::run(&req),
+				unknown => protocol::error(&req.request_id, &format!("Unknown command: {unknown}")),
+			}
+		`;
+		expect(extractRustCommands(sample)).toContain('ssh_agent_init');
+	});
+
+	it('extracts a command containing a hyphen', () => {
+		const sample = `
+			match req.command.as_str() {
+				"legacy-cmd" => legacy::run(&req),
+				unknown => protocol::error(&req.request_id, &format!("Unknown command: {unknown}")),
+			}
+		`;
+		expect(extractRustCommands(sample)).toContain('legacy-cmd');
+	});
+
+	it('extracts both literals from a multi-pattern arm in order', () => {
+		const sample = `
+			match req.command.as_str() {
+				"gitCall" | "gitCallLegacy" => git_call::run(&req).await,
+				unknown => protocol::error(&req.request_id, &format!("Unknown command: {unknown}")),
+			}
+		`;
+		expect(extractRustCommands(sample)).toEqual(['gitCall', 'gitCallLegacy']);
+	});
+
+	it('still does not extract the format string from multi-pattern arms', () => {
+		const sample = `
+			match req.command.as_str() {
+				"gitCall" | "gitCallLegacy" => git_call::run(&req).await,
+				unknown => protocol::error(&req.request_id, &format!("Unknown command: {unknown}")),
+			}
+		`;
+		expect(extractRustCommands(sample)).not.toContain('Unknown command: {unknown}');
+	});
 });
 
 describe('findParityGaps', () => {

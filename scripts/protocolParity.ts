@@ -3,12 +3,21 @@ export interface IParityGaps {
 	missingInRust: Array<string>;
 }
 
-// Matches the `"commandName" =>` arms of the Rust dispatch. The catch-all arm binds an
-// identifier rather than a literal, so it never matches.
-const MATCH_ARM = /"([A-Za-z][A-Za-z0-9]*)"\s*=>/g;
+// Matches the entire pattern group before => in a Rust match arm, including multi-pattern
+// arms joined with |. Extracts each command literal. The catch-all arm binds an identifier
+// rather than a literal, so it never matches.
+const MATCH_ARM = /("[^"]+"(?:\s*\|\s*"[^"]+")*)\s*=>/g;
+const EXTRACT_LITERAL = /"([^"]+)"/g;
 
 export function extractRustCommands(source: string): Array<string> {
-	return [...source.matchAll(MATCH_ARM)].map(m => m[1]);
+	const commands: Array<string> = [];
+	for (const match of source.matchAll(MATCH_ARM)) {
+		const patternGroup = match[1];
+		for (const literalMatch of patternGroup.matchAll(EXTRACT_LITERAL)) {
+			commands.push(literalMatch[1]);
+		}
+	}
+	return commands;
 }
 
 export function findParityGaps(
