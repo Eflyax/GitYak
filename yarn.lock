@@ -273,10 +273,12 @@ __metadata:
     "@tauri-apps/cli": "npm:^2.0.0"
     "@tauri-apps/plugin-deep-link": "npm:^2"
     "@tauri-apps/plugin-shell": "npm:^2.0.0"
+    "@types/bun": "npm:^1"
     "@types/chroma-js": "npm:^3.1.2"
     "@types/d3-force": "npm:^3.0.10"
     "@vitejs/plugin-vue": "npm:^6.0.3"
     "@vue/tsconfig": "npm:^0.7.0"
+    bun: "npm:^1.3.8"
     chroma-js: "npm:^3.2.0"
     d3-force: "npm:^3.0.0"
     lodash-es: "npm:^4.17.23"
@@ -979,6 +981,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/bun@npm:^1":
+  version: 1.4.0
+  resolution: "@types/bun@npm:1.4.0"
+  dependencies:
+    bun-types: "npm:1.4.0"
+  checksum: 10c0/1a5748aaa4ec9a78f50169d0488b1203ad72ff81523b0f0dd901d55e7fc84696879f96ba6e9793d06b07aca07fb4b97cd4d9a10291b78d4774650cdabf7fe74e
+  languageName: node
+  linkType: hard
+
 "@types/chroma-js@npm:^3.1.2":
   version: 3.1.2
   resolution: "@types/chroma-js@npm:3.1.2"
@@ -1276,6 +1287,15 @@ __metadata:
   dependencies:
     balanced-match: "npm:^1.0.0"
   checksum: 10c0/63b5ddce608b70b50a76817c0526faf8ea67a9180073d88bb402f6bbc22a22da6b1dfac4f65efc53e5faa80222fb7d44bbf2fc638c3f55365975573f671d0ccb
+  languageName: node
+  linkType: hard
+
+"bun-types@npm:1.4.0":
+  version: 1.4.0
+  resolution: "bun-types@npm:1.4.0"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/9311b8aa78b3118a6be8fb0612d5074de511ea4330a10c2d4490d0cacf2c61da476c6743985ac1a8f8b49d66e2b3e31faea798ffd7d3cbd61154e78c866361f1
   languageName: node
   linkType: hard
 
