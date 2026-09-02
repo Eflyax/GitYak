@@ -1,5 +1,4 @@
 {
-	"extends": "@vue/tsconfig/tsconfig.dom.json",
 	"compilerOptions": {
 		"target": "ES2022",
 		"module": "ESNext",
@@ -9,22 +8,16 @@
 		"noUnusedParameters": true,
 		"noImplicitAny": true,
 		"strictNullChecks": true,
-		"baseUrl": ".",
-		"paths": {
-			"@/*": ["src/*"],
-			"@git-yak/protocol": ["../protocol/src/index.ts"]
-		},
-		"types": ["vite/client"]
+		"skipLibCheck": true,
+		"noEmit": true,
+		"types": ["node"]
 	},
 	"include": [
-		"src/**/*.ts",
-		"src/**/*.d.ts",
-		"src/**/*.vue",
 		"scripts/**/*.ts",
-		"vite.config.ts"
+		"vitest.config.ts",
+		"packages/protocol/src/**/*.ts"
 	],
 	"exclude": [
-		"node_modules",
-		"dist"
+		"node_modules"
 	]
 }
