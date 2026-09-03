@@ -65,5 +65,6 @@ export function isRepoChangedEvent(value: unknown): value is IWsEvent {
 	return isRecord(value)
 		&& value['type'] === 'event'
 		&& value['event'] === 'repoChanged'
-		&& Array.isArray(value['paths']);
+		&& Array.isArray(value['paths'])
+		&& value['paths'].every(path => typeof path === 'string');
 }

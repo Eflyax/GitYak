@@ -125,4 +125,16 @@ describe('isRepoChangedEvent', () => {
 	it('does not mistake a response frame for an event', () => {
 		expect(isRepoChangedEvent({requestId: '1', status: 'success'})).toBe(false);
 	});
+
+	it('rejects paths containing a non-string', () => {
+		expect(isRepoChangedEvent({type: 'event', event: 'repoChanged', paths: ['a.txt', 42]})).toBe(false);
+	});
+
+	it('rejects paths containing null', () => {
+		expect(isRepoChangedEvent({type: 'event', event: 'repoChanged', paths: [null]})).toBe(false);
+	});
+
+	it('rejects paths containing an object', () => {
+		expect(isRepoChangedEvent({type: 'event', event: 'repoChanged', paths: [{}]})).toBe(false);
+	});
 });
