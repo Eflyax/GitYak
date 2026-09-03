@@ -58,6 +58,10 @@ function buildArgs(action: string, repoRoot: string, data: IWsRequest): Array<st
 		throw new Error('upstream must be a non-empty string');
 	}
 
+	if (upstream.startsWith('-')) {
+		throw new Error('upstream must not start with "-"');
+	}
+
 	const todo = validateTodoPath(repoRoot, data['todo_path']);
 
 	// Our pre-written todo is copied over git's generated one via sequence.editor, and
@@ -66,7 +70,7 @@ function buildArgs(action: string, repoRoot: string, data: IWsRequest): Array<st
 		'-c', 'core.editor=false',
 		'-c', 'rebase.missingCommitsCheck=ignore',
 		'-c', `sequence.editor=cp '${todo}'`,
-		'rebase', '-i', '--autostash', upstream,
+		'rebase', '-i', '--autostash', '--', upstream,
 	];
 }
 

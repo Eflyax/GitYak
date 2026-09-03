@@ -26,6 +26,10 @@ fn build_args(
 		.filter(|s| !s.is_empty())
 		.ok_or("upstream must be a non-empty string")?;
 
+	if upstream.starts_with('-') {
+		return Err("upstream must not start with \"-\"".into());
+	}
+
 	let todo_raw = req
 		.payload
 		.get("todo_path")
@@ -55,6 +59,7 @@ fn build_args(
 		"rebase".into(),
 		"-i".into(),
 		"--autostash".into(),
+		"--".into(),
 		upstream.to_string(),
 	])
 }
