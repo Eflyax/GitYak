@@ -29,6 +29,7 @@ export default defineConfig({
 		include: [
 			'packages/client/src/**/*.spec.ts',
 			'packages/protocol/src/**/*.spec.ts',
+			'packages/server/src/**/*.spec.ts',
 			'scripts/**/*.spec.ts',
 		],
 	},

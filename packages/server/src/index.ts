@@ -1,6 +1,7 @@
 import {serve} from 'bun';
-import {ENetworkCommand} from '@git-yak/protocol';
+import {ENetworkCommand, isAuthRequest} from '@git-yak/protocol';
 import type {IWsRequest} from '@git-yak/protocol';
+import {BIND_HOST, defaultAllowlist, isOriginAllowed, resolveToken} from './auth';
 import * as GitCall from './commands/GitCall';
 import * as GitRebase from './commands/GitRebase';
 import * as ReadFile from './commands/ReadFile';
@@ -10,9 +11,28 @@ import * as SshAgentInit from './commands/SshAgentInit';
 
 const PORT = Number(process.env.PORT ?? 3_000);
 
+const
+	TOKEN = resolveToken(),
+	ALLOWED_ORIGINS = defaultAllowlist(),
+	AUTH_TIMEOUT_MS = 5_000;
+
+// Sockets start unauthenticated. A socket that has not sent a valid auth frame within
+// AUTH_TIMEOUT_MS is closed, and any command sent before authentication is refused.
+const authenticated = new WeakSet<object>();
+const authTimers = new WeakMap<object, ReturnType<typeof setTimeout>>();
+
 serve({
+	hostname: BIND_HOST,
 	port: PORT,
 	fetch(req, server) {
+		if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+			if (!isOriginAllowed(req.headers.get('origin'), ALLOWED_ORIGINS)) {
+				console.warn('[ws] refused upgrade from origin:', req.headers.get('origin'));
+
+				return new Response('Forbidden origin', {status: 403});
+			}
+		}
+
 		if (server.upgrade(req)) {
 			return;
 		}
@@ -22,13 +42,54 @@ serve({
 	websocket: {
 		open(ws) {
 			console.log('[ws] client connected');
+			authTimers.set(ws, setTimeout(() => {
+				if (!authenticated.has(ws)) {
+					console.warn('[ws] closing socket that never authenticated');
+					ws.close();
+				}
+			}, AUTH_TIMEOUT_MS));
 			ws.send(JSON.stringify({type: 'hello', message: 'Git Yak server ready'}));
 		},
 		async message(ws, message) {
 			let data: IWsRequest | undefined;
 
+			let parsed: unknown;
+
 			try {
-				data = JSON.parse(message.toString()) as IWsRequest;
+				parsed = JSON.parse(message.toString());
+			}
+			catch {
+				ws.send(JSON.stringify({status: 'error', message: 'Failed to parse message'}));
+
+				return;
+			}
+
+			if (isAuthRequest(parsed)) {
+				if (parsed.token === TOKEN) {
+					authenticated.add(ws);
+					clearTimeout(authTimers.get(ws));
+					ws.send(JSON.stringify({type: 'auth', status: 'success'}));
+				}
+				else {
+					console.warn('[ws] rejected a bad token');
+					ws.send(JSON.stringify({status: 'error', message: 'Invalid token'}));
+					ws.close();
+				}
+
+				return;
+			}
+
+			if (!authenticated.has(ws)) {
+				const requestId = (parsed as {requestId?: string} | null)?.requestId;
+
+				ws.send(JSON.stringify({requestId, status: 'error', message: 'Not authenticated'}));
+				ws.close();
+
+				return;
+			}
+
+			try {
+				data = parsed as IWsRequest;
 
 				const {command} = data;
 
@@ -79,9 +140,10 @@ serve({
 		},
 		close(ws) {
 			console.log('[ws] client disconnected');
+			clearTimeout(authTimers.get(ws));
 			SshAgentInit.destroyAgent(ws);
 		},
 	},
 });
 
-console.log(`[server] running on port ${PORT}`);
+console.log(`[server] running on ${BIND_HOST}:${PORT}`);
