@@ -1,5 +1,5 @@
 import {test, expect} from '../fixtures/test';
-import {byTestId, waitForRepoLoaded, waitForCommitRow} from '../fixtures/ui';
+import {byTestId, waitForRepoLoaded, waitForCommitRow, selectWorkingTree} from '../fixtures/ui';
 
 test('multi-select two consecutive commits and squash via context menu', async ({page, repo, openRepo}) => {
 	repo.commit('Initial', {'README.md': '# repo\n'});
@@ -34,6 +34,8 @@ test('multi-select two consecutive commits and squash via context menu', async (
 	await expect(squashItem).not.toHaveClass(/mx-disabled/);
 
 	await squashItem.click();
+
+	await selectWorkingTree(page);
 
 	// Commit form is prefilled — fill summary if blank and commit
 	const summaryInput = byTestId(page, 'commit-summary-input').locator('input');

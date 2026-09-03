@@ -1,5 +1,5 @@
 import {test, expect} from '../fixtures/test';
-import {byTestId, waitForRepoLoaded, waitForCommitRow} from '../fixtures/ui';
+import {byTestId, waitForRepoLoaded, waitForCommitRow, selectWorkingTree} from '../fixtures/ui';
 
 test('stash pop with conflict shows Monaco conflict editor with Accept buttons', async ({page, repo, openRepo}) => {
 	repo.commit('Initial', {'README.md': '# repo\n'});
@@ -9,8 +9,10 @@ test('stash pop with conflict shows Monaco conflict editor with Accept buttons',
 	repo.writeFile('file.txt', 'line ONE\nline two\nline three\n');
 	repo.run('stash push -m "wip"');
 
-	// Modify same line differently → will cause conflict on pop
-	repo.writeFile('file.txt', 'line ALT\nline two\nline three\n');
+	// Commit a conflicting change to the same line → stash pop now has to merge
+	// instead of refusing outright (git aborts a pop early when the working tree
+	// simply has uncommitted local edits to the same path).
+	repo.commit('Conflicting change', {'file.txt': 'line ALT\nline two\nline three\n'});
 
 	await openRepo(page, repo.path);
 	await waitForRepoLoaded(page);
@@ -24,6 +26,8 @@ test('stash pop with conflict shows Monaco conflict editor with Accept buttons',
 
 	// Wait for context menu and click "Pop stash"
 	await page.locator('.mx-context-menu-item:has-text("Pop stash")').first().click();
+
+	await selectWorkingTree(page);
 
 	// Open the conflicted file in the staging panel
 	const conflictedFile = page.locator('[test-id="unstaged-file"]').first();
