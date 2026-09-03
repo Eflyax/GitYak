@@ -8,7 +8,6 @@ import {ENetworkCommand} from '@/domain';
 const REFRESH_DEBOUNCE_MS = 250;
 
 let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-let started = false;
 
 export function useRepoWatch() {
 	const
@@ -33,17 +32,17 @@ export function useRepoWatch() {
 			return;
 		}
 
-		if (!started) {
-			onEvent(scheduleRefresh);
-			started = true;
-		}
+		// Registered on every start, not once per session: connect() installs a NEW transport
+		// client for each project, and a callback registered on the previous one would never
+		// fire again. The slot is a single idempotent overwrite, so re-registering is free.
+		onEvent(scheduleRefresh);
 
 		try {
 			await call(ENetworkCommand.WatchRepo, {repo_path: currentProject.value.path});
 		}
 		catch {
-			// A backend without watch support (or a transport with no socket) simply does
-			// not push events; the window-focus refresh remains the fallback.
+			// A backend or transport without watch support simply pushes no events; the
+			// window-focus refresh remains the fallback.
 		}
 	}
 
