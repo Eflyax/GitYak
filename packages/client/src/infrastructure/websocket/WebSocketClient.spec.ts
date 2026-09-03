@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {ENetworkCommand} from '@git-yak/protocol';
 import {WebSocketClient} from './WebSocketClient';
+import {useConnectionStatus} from '@/composables/useConnectionStatus';
 
 class FakeSocket {
 	static OPEN = 1;
@@ -172,5 +173,35 @@ describe('WebSocketClient reconnect', () => {
 		vi.advanceTimersByTime(30_000);
 
 		expect(socket).toBe(first);
+	});
+});
+
+describe('WebSocketClient after a deliberate close', () => {
+	it('clears the reconnecting indicator instead of leaving it lit', () => {
+		const cs = useConnectionStatus();
+		const client = new WebSocketClient('ws://x', 'secret');
+
+		socket.onopen?.();
+		accept();
+
+		// A drop lights the indicator and schedules a retry.
+		socket.onclose?.();
+		expect(cs.isReconnecting.value).toBe(true);
+
+		client.close();
+		socket.onclose?.();
+
+		expect(cs.isReconnecting.value).toBe(false);
+	});
+
+	it('rejects a call made after close() instead of queueing it forever', async () => {
+		const client = new WebSocketClient('ws://x', 'secret');
+
+		socket.onopen?.();
+		accept();
+		client.close();
+
+		await expect(client.call(ENetworkCommand.GitCall, {args: ['status']}))
+			.rejects.toThrow('WebSocket connection closed');
 	});
 });

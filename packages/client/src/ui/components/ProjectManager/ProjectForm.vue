@@ -79,7 +79,10 @@
 						<n-input
 							v-model:value="form.token"
 							test-id="token-input"
+							type="password"
+							show-password-on="click"
 							placeholder="Server token"
+							:input-props="{spellcheck: false, autocomplete: 'off'}"
 						/>
 					</n-form-item>
 

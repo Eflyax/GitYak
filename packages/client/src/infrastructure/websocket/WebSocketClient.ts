@@ -155,6 +155,11 @@ export class WebSocketClient implements ITransportClient {
 			this.queue.length = 0;
 
 			if (this.closedByUser) {
+				// The indicator belongs to the retry loop that is not going to run — leaving
+				// it lit would keep "Reconnecting…" on screen between closeProject() and the
+				// next connect().
+				this.cs.setReconnecting(false);
+
 				return;
 			}
 
@@ -181,6 +186,14 @@ export class WebSocketClient implements ITransportClient {
 		return new Promise((resolve, reject) => {
 			if (this.authFailed) {
 				reject(new Error('Authentication failed'));
+
+				return;
+			}
+
+			// Nothing will ever flush the queue on a socket the caller has closed, so a call
+			// made after close() would hang forever instead of failing.
+			if (this.closedByUser) {
+				reject(new Error('WebSocket connection closed'));
 
 				return;
 			}
