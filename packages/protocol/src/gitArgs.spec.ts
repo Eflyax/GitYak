@@ -40,4 +40,20 @@ describe('findForbiddenGitOption', () => {
 	it('allows a leading option that is not on the list', () => {
 		expect(findForbiddenGitOption(['--no-pager', 'log'])).toBeUndefined();
 	});
+
+	it('refuses an executing option even after the subcommand', () => {
+		expect(findForbiddenGitOption(['fetch', '--upload-pack=touch /tmp/x', 'origin']))
+			.toBe('--upload-pack=touch /tmp/x');
+		expect(findForbiddenGitOption(['push', '--receive-pack=touch /tmp/x', 'origin']))
+			.toBe('--receive-pack=touch /tmp/x');
+		expect(findForbiddenGitOption(['rebase', '--exec=touch /tmp/x', 'HEAD~1']))
+			.toBe('--exec=touch /tmp/x');
+		expect(findForbiddenGitOption(['rebase', '-x', 'touch /tmp/x'])).toBe('-x');
+	});
+
+	it('still allows the ordinary fetch and push the client sends', () => {
+		expect(findForbiddenGitOption(['fetch', '--prune', '--all'])).toBeUndefined();
+		expect(findForbiddenGitOption(['push', '--set-upstream', 'origin', 'main'])).toBeUndefined();
+		expect(findForbiddenGitOption(['push', 'origin', '--delete', 'branch'])).toBeUndefined();
+	});
 });
