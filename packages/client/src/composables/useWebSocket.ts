@@ -1,5 +1,6 @@
 import {ref, readonly} from 'vue';
 import {WebSocketClient} from '@/infrastructure/websocket/WebSocketClient';
+import {getServerToken} from '@/infrastructure/serverToken';
 import {TauriLocalClient} from '@/infrastructure/tauri/TauriLocalClient';
 import {sshConnectionPool} from '@/infrastructure/ssh/SshConnectionPool';
 import type {ITransportClient} from '@/infrastructure/ITransportClient';
@@ -40,7 +41,9 @@ export function useWebSocket() {
 				return;
 			}
 			else {
-				newClient = new WebSocketClient(`ws://${project.server}:${project.port}`);
+				const token = await getServerToken(project);
+
+				newClient = new WebSocketClient(`ws://${project.server}:${project.port}`, token);
 			}
 
 			client.value = newClient;

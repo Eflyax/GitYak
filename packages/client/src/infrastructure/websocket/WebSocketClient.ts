@@ -19,19 +19,34 @@ function extractRequestId(value: unknown): string | undefined {
 	return typeof requestId === 'string' ? requestId : undefined;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
 export class WebSocketClient implements ITransportClient {
 	private readonly ws: WebSocket;
 	private readonly pending = new Map<string, PendingRequest>();
 	private readonly queue: string[] = [];
 	private connected = false;
 
-	constructor(url: string) {
+	constructor(url: string, private readonly token = '') {
 		this.ws = new WebSocket(url);
 
 		this.ws.onopen = () => {
-			this.connected = true;
-			this.queue.forEach(msg => this.ws.send(msg));
-			this.queue.length = 0;
+			// An empty token means this peer has no auth gate — the Rust remote worker,
+			// which is reachable only through the SSH tunnel and deliberately has none.
+			// Sending an auth frame there would wait forever for an ack that never comes.
+			if (!this.token) {
+				this.connected = true;
+				this.queue.forEach(msg => this.ws.send(msg));
+				this.queue.length = 0;
+
+				return;
+			}
+
+			// Otherwise the auth frame goes first, alone. Queued calls are released only
+			// once the server has accepted it.
+			this.ws.send(JSON.stringify({type: 'auth', token: this.token}));
 		};
 
 		this.ws.onmessage = (event: MessageEvent) => {
@@ -41,6 +56,16 @@ export class WebSocketClient implements ITransportClient {
 				data = JSON.parse(event.data as string);
 			}
 			catch {
+				return;
+			}
+
+			if (isRecord(data) && data['type'] === 'auth') {
+				if (data['status'] === 'success') {
+					this.connected = true;
+					this.queue.forEach(msg => this.ws.send(msg));
+					this.queue.length = 0;
+				}
+
 				return;
 			}
 

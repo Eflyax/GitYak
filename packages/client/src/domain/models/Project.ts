@@ -15,6 +15,7 @@ export interface IProject {
 	sshPrivateKey?: string
 	color?: string
 	groupId?: string
+	token?: string
 }
 
 export interface IProjectGroup {

@@ -72,6 +72,17 @@
 						</n-input-group>
 					</n-form-item>
 
+					<n-form-item
+						label="Server token"
+						feedback="Only needed for a server exposed beyond localhost."
+					>
+						<n-input
+							v-model:value="form.token"
+							test-id="token-input"
+							placeholder="Server token"
+						/>
+					</n-form-item>
+
 					<n-form-item label="SSH Private Key">
 						<n-input
 							v-model:value="form.sshPrivateKey"
@@ -287,6 +298,7 @@ interface IFormData {
 	sshUser: string;
 	sshKeyPath: string;
 	sshPrivateKey: string;
+	token: string;
 	groupId: string | null;
 	color: string;
 }
@@ -330,6 +342,7 @@ function makeForm(project?: IProject | null): IFormData {
 		sshUser: project?.sshUser ?? 'root',
 		sshKeyPath: project?.sshKeyPath ?? '',
 		sshPrivateKey: project?.sshPrivateKey ?? '',
+		token: project?.token ?? '',
 		groupId: project?.groupId ?? null,
 		color: project?.color ?? PRESET_COLORS[0],
 	};
@@ -398,6 +411,7 @@ function handleSave(): void {
 		sshUser: isSsh ? (form.sshUser || undefined) : undefined,
 		sshKeyPath: isSsh ? (form.sshKeyPath || undefined) : undefined,
 		sshPrivateKey: !isSsh ? (form.sshPrivateKey || undefined) : undefined,
+		token: form.token || undefined,
 		groupId: form.groupId ?? undefined,
 		color: form.color,
 	};
