@@ -58,7 +58,11 @@ export default defineConfig(({command}) => ({
 		exclude: ['fsevents', '@vitejs/plugin-vue'],
 	},
 	server: {
-		host: true,
+		// Loopback only. The dev bundle carries the user's server token (see readDevToken
+		// above), and the Bun server's Origin allowlist accepts only localhost/127.0.0.1
+		// anyway, so binding every interface published a 0600 secret to the LAN and bought
+		// nothing. Tauri's devUrl and the e2e suite both use http://localhost:5173.
+		host: 'localhost',
 		port: 5173,
 		cors: true,
 		strictPort: true,
