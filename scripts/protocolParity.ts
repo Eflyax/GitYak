@@ -11,10 +11,11 @@ export interface IParityGaps {
 const MATCH_ARM = /("[^"]+"(?:\s*\|\s*"[^"]+")*)\s*=>/g;
 const EXTRACT_LITERAL = /"([^"]+)"/g;
 
-// Matches a `case ENetworkCommand.Member:` arm of the Bun server's dispatch switch. The
-// server switches on enum members rather than string literals, so the member name is
-// resolved back to its wire value through the enum itself.
-const BUN_CASE_ARM = /case\s+ENetworkCommand\.(\w+)\s*:/g;
+// Matches a `case ENetworkCommand.Member:` arm of a TypeScript dispatch switch — the Bun
+// server's, and the desktop app's TauriLocalClient, which is the third transport. Both
+// switch on enum members rather than string literals, so the member name is resolved back
+// to its wire value through the enum itself.
+const TS_CASE_ARM = /case\s+ENetworkCommand\.(\w+)\s*:/g;
 
 export function extractRustCommands(source: string): Array<string> {
 	const commands: Array<string> = [];
@@ -27,13 +28,13 @@ export function extractRustCommands(source: string): Array<string> {
 	return commands;
 }
 
-export function extractBunCommands(source: string, enumMembers: Record<string, string>): Array<string> {
+export function extractTsSwitchCommands(source: string, enumMembers: Record<string, string>): Array<string> {
 	const commands: Array<string> = [];
-	for (const match of source.matchAll(BUN_CASE_ARM)) {
+	for (const match of source.matchAll(TS_CASE_ARM)) {
 		const member = match[1];
 		const value = enumMembers[member];
 		if (value === undefined) {
-			throw new Error(`Bun server dispatches ENetworkCommand.${member}, which the enum does not declare`);
+			throw new Error(`A switch dispatches ENetworkCommand.${member}, which the enum does not declare`);
 		}
 		commands.push(value);
 	}

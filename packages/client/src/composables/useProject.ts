@@ -53,7 +53,7 @@ function generateId(): string {
 
 export function useProject() {
 	const
-		{connect} = useWebSocket();
+		{connect, disconnect} = useWebSocket();
 
 	async function openProject(project: IProject): Promise<void> {
 		const
@@ -67,6 +67,7 @@ export function useProject() {
 	}
 
 	function closeProject(): void {
+		disconnect();
 		currentProject.value = null;
 		localStorage.removeItem(LAST_OPEN_PROJECT);
 	}

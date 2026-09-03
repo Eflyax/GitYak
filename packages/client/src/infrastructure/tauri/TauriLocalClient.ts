@@ -2,6 +2,7 @@ import {Command} from '@tauri-apps/plugin-shell';
 import {invoke} from '@tauri-apps/api/core';
 import type {ITransportClient} from '../ITransportClient';
 import {getShellPath} from './shellPath';
+import {buildRebasePlan, validateRepoPath} from './rebaseArgs';
 import {ENetworkCommand} from '@/domain';
 
 interface IDirEntry {
@@ -10,7 +11,7 @@ interface IDirEntry {
 }
 
 export class TauriLocalClient implements ITransportClient {
-	async call(command: string, payload: Record<string, unknown>): Promise<unknown> {
+	async call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
 		switch (command) {
 			case ENetworkCommand.GitCall: {
 				const repoPath = payload['repo_path'] as string;
@@ -22,6 +23,38 @@ export class TauriLocalClient implements ITransportClient {
 
 				if (result.code !== 0) {
 					throw new Error(result.stderr || result.stdout || 'Git command failed');
+				}
+
+				return result.stdout;
+			}
+
+			// Interactive rebase is a separate command precisely because its argument vector
+			// contains `-c` flags that the generic GitCall route refuses. The vector is
+			// composed here from validated parts, never from a client-supplied string.
+			case ENetworkCommand.GitRebase: {
+				const repoRoot = validateRepoPath(payload['repo_path']);
+				const plan = buildRebasePlan(repoRoot, String(payload['action'] ?? ''), payload);
+
+				// browse_directory fails on anything that is not an existing directory, so it
+				// stands in for the server's existsSync on the repository root.
+				await invoke('browse_directory', {path: repoRoot});
+
+				if (plan.todoPath !== undefined) {
+					const todo = await invoke<string | null>('read_file_at', {
+						path: plan.todoPath,
+						nullIfNotExists: true,
+					});
+
+					if (todo === null) {
+						throw new Error(`Todo file does not exist: ${plan.todoPath}`);
+					}
+				}
+
+				const path = await getShellPath();
+				const result = await Command.create('git', plan.args, {env: {PATH: path}}).execute();
+
+				if (result.code !== 0) {
+					throw new Error(result.stderr.trim() || result.stdout.trim() || `git rebase exited ${result.code}`);
 				}
 
 				return result.stdout;

@@ -244,11 +244,14 @@ reference resolution, dependency cycles), `parseGitError`, `projectSearch` and
 
 ### Cross-scope theme references
 
-`resolveScope` resolves each scope in isolation, so `@ltblue` in `light-color-blind`'s
-`toolbar` scope and `@.base03` in `1984-theme`'s survive into the CSS as literal text.
-Resolution takes the root scope as its base so scope overrides can reference root tokens.
-This changes rendered output for those two themes, which is why it lands behind the unit
-tests above.
+The theme checker (`check-themes.ts`) resolved each scope in isolation, so it flagged
+`@ltblue` in `light-color-blind`'s `toolbar` scope and `@.base03` in `1984-theme`'s as
+unresolved references, even though the application never rendered them that way — `useTheme`
+always passes root as `inherited` when resolving every other scope, so both references
+already resolved correctly at runtime. The fix corrects the checker to mirror `useTheme`:
+resolve root first, then resolve every other scope with root's values inherited. This
+changes no rendered output for either theme; `themeExpressionEvaluator` itself needed no
+change.
 
 ### Splitting `useContextMenu`
 
@@ -268,8 +271,9 @@ of scope.
 ## Acceptance
 
 1. `yarn verify` passes: typecheck, lint, unit tests, protocol parity, theme validation.
-2. The full e2e suite passes — the 13 existing tests, including the three fixed in phase 3,
-   plus the two added in phase 2.
+2. The full e2e suite passes — 16 tests: the 13 existing (through `12-repo-location`,
+   including the three fixed in phase 3), plus the three added in phase 2 across
+   `13-auth-required` (two tests) and `14-live-refresh`.
 3. A connection to the Bun server without a valid token is refused.
 4. `git -c …` sent through `gitCall` is refused, while interactive rebase still works
    through `rebaseInteractive`.

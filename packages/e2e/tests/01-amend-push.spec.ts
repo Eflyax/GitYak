@@ -1,5 +1,5 @@
 import {test, expect} from '../fixtures/test';
-import {byTestId, waitForRepoLoaded, waitForCommitRow} from '../fixtures/ui';
+import {byTestId, waitForRepoLoaded, waitForCommitRow, selectWorkingTree} from '../fixtures/ui';
 
 test('amend previous commit prefills form and creates an amended commit', async ({page, repo, openRepo}) => {
 	repo.commit('Initial', {'README.md': '# repo\n'});
@@ -9,18 +9,19 @@ test('amend previous commit prefills form and creates an amended commit', async 
 	await waitForRepoLoaded(page);
 	await waitForCommitRow(page, 'Original subject');
 
-	// Initially amend checkbox is unchecked and form is empty
-	const amend = byTestId(page, 'amend-checkbox');
-
-	await expect(amend).toBeVisible();
-	await expect(amend).not.toBeChecked();
-
-	// Stage a new change so commit button can fire
+	// Stage a new change so the working tree row (and staging panel) renders
 	repo.writeFile('file.txt', 'changed content\n');
 
 	// Reload to pick up filesystem changes
 	await page.reload();
 	await waitForRepoLoaded(page);
+	await selectWorkingTree(page);
+
+	// Initially amend checkbox is unchecked and form is empty
+	const amend = byTestId(page, 'amend-checkbox');
+
+	await expect(amend).toBeVisible();
+	await expect(amend).not.toBeChecked();
 
 	await amend.check();
 

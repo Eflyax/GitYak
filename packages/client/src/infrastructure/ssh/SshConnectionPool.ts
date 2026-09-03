@@ -23,7 +23,13 @@ export const sshConnectionPool = {
 		}
 
 		const client = new SshTunnelClient(host, port, user, keyPath);
-		client.onDead = () => pool.delete(key);
+		// The pool entry alone is not enough: the dead tunnel's inner WebSocketClient still has
+		// closedByUser === false, so without close() it reconnects forever against a worker
+		// that is gone, keeps the reconnecting indicator lit and leaks its ssh children.
+		client.onDead = () => {
+			pool.delete(key);
+			client.close();
+		};
 		await client.connect();
 		pool.set(key, client);
 		return client;

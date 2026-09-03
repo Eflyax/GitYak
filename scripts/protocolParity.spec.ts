@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {extractBunCommands, extractRustCommands, findParityGaps} from './protocolParity';
+import {extractTsSwitchCommands, extractRustCommands, findParityGaps} from './protocolParity';
 
 const RUST_SAMPLE = `
 	match req.command.as_str() {
@@ -82,13 +82,13 @@ const ENUM_MEMBERS = {
 	Heartbeat: 'heartbeat',
 };
 
-describe('extractBunCommands', () => {
+describe('extractTsSwitchCommands', () => {
 	it('resolves each switch arm back to its wire value, in order', () => {
-		expect(extractBunCommands(BUN_SAMPLE, ENUM_MEMBERS)).toEqual(['gitCall', 'readFile']);
+		expect(extractTsSwitchCommands(BUN_SAMPLE, ENUM_MEMBERS)).toEqual(['gitCall', 'readFile']);
 	});
 
 	it('ignores the default arm and its error string', () => {
-		expect(extractBunCommands(BUN_SAMPLE, ENUM_MEMBERS)).not.toContain('Unknown command');
+		expect(extractTsSwitchCommands(BUN_SAMPLE, ENUM_MEMBERS)).not.toContain('Unknown command');
 	});
 
 	it('does not pick up a bare string-literal case arm', () => {
@@ -98,7 +98,7 @@ describe('extractBunCommands', () => {
 					break;
 			}
 		`;
-		expect(extractBunCommands(sample, ENUM_MEMBERS)).toEqual([]);
+		expect(extractTsSwitchCommands(sample, ENUM_MEMBERS)).toEqual([]);
 	});
 
 	it('throws when the server dispatches a member the enum does not declare', () => {
@@ -108,11 +108,11 @@ describe('extractBunCommands', () => {
 					break;
 			}
 		`;
-		expect(() => extractBunCommands(sample, ENUM_MEMBERS)).toThrow(/WatchRepo/);
+		expect(() => extractTsSwitchCommands(sample, ENUM_MEMBERS)).toThrow(/WatchRepo/);
 	});
 
 	it('catches drift: a command the enum declares but the switch never handles', () => {
-		const bunCommands = extractBunCommands(BUN_SAMPLE, ENUM_MEMBERS);
+		const bunCommands = extractTsSwitchCommands(BUN_SAMPLE, ENUM_MEMBERS);
 		const gaps = findParityGaps(bunCommands, Object.values(ENUM_MEMBERS), ['heartbeat']);
 
 		expect(gaps.unhandledByBackend).toEqual(['writeFile']);

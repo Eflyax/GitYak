@@ -24,6 +24,10 @@ pub async fn run(req: &WsRequest) -> String {
 		None => return protocol::error(request_id, "args must be a string[]"),
 	};
 
+	if let Some(forbidden) = crate::git_args::find_forbidden_git_option(&args) {
+		return protocol::error(request_id, &crate::git_args::describe_forbidden_git_option(forbidden));
+	}
+
 	let resolved = if std::path::Path::new(&repo_path).is_absolute() {
 		std::path::PathBuf::from(&repo_path)
 	} else {

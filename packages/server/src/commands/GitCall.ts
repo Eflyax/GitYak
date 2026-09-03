@@ -2,6 +2,7 @@ import {resolve, isAbsolute} from 'path';
 import {existsSync} from 'fs';
 import {getAgentEnv} from './SshAgentInit';
 import type {IWsRequest} from '@git-yak/protocol';
+import {describeForbiddenGitOption, findForbiddenGitOption} from '@git-yak/protocol';
 
 function validateRepoPath(repoPath: unknown): string {
 	if (typeof repoPath !== 'string' || !repoPath) {
@@ -22,6 +23,18 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsRequest): 
 
 	if (!Array.isArray(args) || !args.every((a): a is string => typeof a === 'string')) {
 		ws.send(JSON.stringify({requestId, status: 'error', message: 'args must be a string[]'}));
+		return;
+	}
+
+	const forbidden = findForbiddenGitOption(args);
+
+	if (forbidden) {
+		ws.send(JSON.stringify({
+			requestId,
+			status: 'error',
+			message: describeForbiddenGitOption(forbidden),
+		}));
+
 		return;
 	}
 

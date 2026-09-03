@@ -1,36 +1,45 @@
 mod browse_files;
 mod git_call;
+mod git_rebase;
 mod heartbeat;
 mod read_file;
 mod write_file;
+pub mod watch_repo;
 
 use std::path::{Component, Path, PathBuf};
+
+use tokio::sync::mpsc::UnboundedSender;
 
 use crate::protocol;
 use crate::server::AppState;
 
-pub async fn dispatch(raw: &str, state: &AppState) -> String {
+pub async fn dispatch(raw: &str, state: &AppState, tx: &UnboundedSender<String>) -> Option<String> {
 	let req: protocol::WsRequest = match serde_json::from_str(raw) {
 		Ok(r) => r,
 		Err(e) => {
-			return serde_json::json!({
+			return Some(serde_json::json!({
 				"requestId": serde_json::Value::Null,
 				"status": "error",
 				"message": "Failed to parse message",
 				"details": e.to_string()
 			})
-			.to_string();
+			.to_string());
 		}
 	};
 
-	match req.command.as_str() {
+	let response = match req.command.as_str() {
 		"gitCall" => git_call::run(&req).await,
+		"gitRebase" => git_rebase::run(&req).await,
 		"readFile" => read_file::run(&req).await,
 		"writeFile" => write_file::run(&req).await,
 		"browseFiles" => browse_files::run(&req),
 		"heartbeat" => heartbeat::run(&req, state),
+		"watchRepo" => watch_repo::run(&req, state, tx),
+		"unwatchRepo" => watch_repo::unwatch(&req, state),
 		unknown => protocol::error(&req.request_id, &format!("Unknown command: {unknown}")),
-	}
+	};
+
+	Some(response)
 }
 
 pub fn normalize_path(path: &Path) -> PathBuf {

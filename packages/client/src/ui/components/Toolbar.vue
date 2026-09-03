@@ -11,6 +11,18 @@
 					<Icon :name="location.icon" />
 					{{ location.label }}
 				</span>
+				<span
+					v-if="isReconnecting"
+					test-id="reconnecting-indicator"
+					class="toolbar__reconnecting"
+					title="Connection dropped — reconnecting…"
+				>
+					<Icon
+						name="mdi-loading"
+						class="toolbar__reconnecting-icon"
+					/>
+					Reconnecting…
+				</span>
 				<span class="toolbar__sep">›</span>
 				<span class="toolbar__project">
 					{{ currentProject.alias }}
@@ -102,7 +114,7 @@ const
 	{stashes, stashSave, stashPop} = useStash(),
 	{loadStatus} = useWorkingTree(),
 	{toggleActivityLog, toggleSettings} = useLayout(),
-	{isConnecting} = useConnectionStatus(),
+	{isConnecting, isReconnecting} = useConnectionStatus(),
 	{registerCommand, unregisterCommand} = useCommands();
 
 const notify = useNotify();
@@ -404,6 +416,23 @@ const actions = computed(() => [{
 		font-weight: 500;
 	}
 
+	&__reconnecting {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		margin-left: 8px;
+		color: $color-danger;
+		font-size: 12px;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	&__reconnecting-icon {
+		width: 13px;
+		height: 13px;
+		animation: toolbar-spin 1s linear infinite;
+	}
+
 	&__sep {
 		color: $text-white;
 		font-size: 14px;
@@ -463,5 +492,10 @@ const actions = computed(() => [{
 			color: $text-white;
 		}
 	}
+}
+
+@keyframes toolbar-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
 }
 </style>

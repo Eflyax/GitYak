@@ -1,6 +1,7 @@
 import {Command} from '@tauri-apps/plugin-shell';
 import type {Child} from '@tauri-apps/plugin-shell';
 import {invoke} from '@tauri-apps/api/core';
+import type {IWsEvent} from '@git-yak/protocol';
 import {WebSocketClient} from '../websocket/WebSocketClient';
 import type {ITransportClient} from '../ITransportClient';
 import {ENetworkCommand} from '@/domain';
@@ -19,6 +20,8 @@ export class SshTunnelClient implements ITransportClient {
 	private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 	private dead = false;
 	private consecutiveHeartbeatFailures = 0;
+	private eventCallback?: (event: IWsEvent) => void;
+	private reconnectCallback?: () => void;
 	onDead?: () => void;
 	private readonly log = useActivityLog().addLog;
 	private readonly cs = useConnectionStatus();
@@ -48,6 +51,12 @@ export class SshTunnelClient implements ITransportClient {
 			await this.createTunnel(remotePort);
 
 			this.wsClient = new WebSocketClient(`ws://127.0.0.1:${this.localPort}`);
+			if (this.eventCallback) {
+				this.wsClient.onEvent(this.eventCallback);
+			}
+			if (this.reconnectCallback) {
+				this.wsClient.onReconnect(this.reconnectCallback);
+			}
 
 			this.startHeartbeat();
 			this.cs.reset();
@@ -314,9 +323,19 @@ export class SshTunnelClient implements ITransportClient {
 		this.cs.setUploadProgress(100);
 	}
 
-	call(command: string, payload: Record<string, unknown>): Promise<unknown> {
+	call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
 		if (!this.wsClient) return Promise.reject(new Error('Not connected'));
 		return this.wsClient.call(command, payload);
+	}
+
+	onEvent(callback: (event: IWsEvent) => void): void {
+		this.eventCallback = callback;
+		this.wsClient?.onEvent(callback);
+	}
+
+	onReconnect(callback: () => void): void {
+		this.reconnectCallback = callback;
+		this.wsClient?.onReconnect(callback);
 	}
 
 	close(): void {

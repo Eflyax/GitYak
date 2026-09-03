@@ -132,6 +132,7 @@ import RepositoryGraph from './RepositoryGraph/RepositoryGraph.vue';
 import HookOutputDialog from './HookOutputDialog.vue';
 import {useCommitAction} from '@/composables/useCommitAction';
 import {useProject} from '@/composables/useProject';
+import {useRepoWatch} from '@/composables/useRepoWatch';
 import {useCommits} from '@/composables/useCommits';
 import {useLayout} from '@/composables/useLayout';
 import {useGit} from '@/composables/useGit';
@@ -158,6 +159,7 @@ const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKIN
 
 const windowFocus = useWindowFocus();
 const {loadStatus, status, conflictDetected} = useWorkingTree();
+const {start: startRepoWatch, stop: stopRepoWatch} = useRepoWatch();
 
 interface IProjectLocation {
 	server: string;
@@ -295,11 +297,21 @@ onMounted(() => {
 onUnmounted(() => {
 	keyboard.unmount();
 	windowFocus.destroy();
+	stopRepoWatch();
 	unregisterCommand('commit');
 	unregisterCommand('open-repo');
 	unregisterCommand('toggle-tooltips');
 	unregisterCommand('open-graph');
 });
+
+watch(currentProject, project => {
+	if (project) {
+		void startRepoWatch();
+	}
+	else {
+		stopRepoWatch();
+	}
+}, {immediate: true});
 
 watch(
 	() => status.value.staged.length + status.value.unstaged.length,
