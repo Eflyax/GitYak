@@ -31,6 +31,14 @@ async fn ws_handler(ws: WebSocketUpgrade, State(state): State<AppState>) -> Resp
 }
 
 async fn handle_socket(socket: WebSocket, state: AppState) {
+	// Each connection owns its own watcher slot. The AppState injected by axum is shared
+	// across every socket, so writing the watcher into it would let one client clobber
+	// another's watch and let any disconnect stop everyone's.
+	let state = AppState {
+		watcher: Arc::new(Mutex::new(None)),
+		..state
+	};
+
 	eprintln!("[ws] client connected");
 
 	let (mut sink, mut stream) = socket.split();

@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::time::Duration;
 
 use notify::RecursiveMode;
@@ -34,9 +35,13 @@ pub fn run(req: &protocol::WsRequest, state: &AppState, tx: &UnboundedSender<Str
 
 	let mut debouncer = match new_debouncer(DEBOUNCE, move |res: DebounceEventResult| {
 		let paths: Vec<String> = match res {
+			// Deduplicated and ordered: a recursive watch of the repository root can report
+			// the same path many times inside one debounce window.
 			Ok(events) => events
 				.into_iter()
 				.map(|e: DebouncedEvent| e.path.display().to_string())
+				.collect::<BTreeSet<String>>()
+				.into_iter()
 				.collect(),
 			Err(_) => Vec::new(),
 		};
