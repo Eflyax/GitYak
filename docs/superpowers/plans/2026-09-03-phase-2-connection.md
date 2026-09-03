@@ -1213,12 +1213,23 @@ Add the field to `packages/client/src/domain/models/Project.ts`:
 Give the constructor a second parameter and hold every message until the server accepts the token. Replace the constructor's `onopen` and the top of `onmessage`:
 
 ```ts
-	constructor(url: string, private readonly token: string) {
+	constructor(url: string, private readonly token = '') {
 		this.ws = new WebSocket(url);
 
 		this.ws.onopen = () => {
-			// The auth frame goes first, alone. Queued calls are released only once the
-			// server has accepted it.
+			// An empty token means this peer has no auth gate — the Rust remote worker,
+			// which is reachable only through the SSH tunnel and deliberately has none.
+			// Sending an auth frame there would wait forever for an ack that never comes.
+			if (!this.token) {
+				this.connected = true;
+				this.queue.forEach(msg => this.ws.send(msg));
+				this.queue.length = 0;
+
+				return;
+			}
+
+			// Otherwise the auth frame goes first, alone. Queued calls are released only
+			// once the server has accepted it.
 			this.ws.send(JSON.stringify({type: 'auth', token: this.token}));
 		};
 
@@ -1265,7 +1276,10 @@ In `packages/client/src/composables/useWebSocket.ts`, `connect(project)` becomes
 			}
 ```
 
-Import `getServerToken` at the top. `SshTunnelClient` builds its own inner `WebSocketClient` against the tunnel — pass the same token there too, resolving it via `getServerToken` where the tunnel client is constructed.
+Import `getServerToken` at the top. `SshTunnelClient` builds its own inner `WebSocketClient` against the tunnel. It must construct it
+with **no token** — the Rust remote worker has no auth gate, so an auth frame there would never be
+acknowledged and every call would queue forever. Leave that construction site as
+`new WebSocketClient(...)` with a single argument.
 
 - [ ] **Step 5: Expose the field in the project form**
 
@@ -1340,6 +1354,18 @@ describe('WebSocketClient auth gate', () => {
 
 		expect(socket.sent).toHaveLength(2);
 		expect(socket.sent[1]).toContain('"command":"gitCall"');
+	});
+
+	it('skips the handshake entirely when no token is given', () => {
+		const client = new WebSocketClient('ws://x');
+
+		socket.onopen?.();
+		void client.call(ENetworkCommand.GitCall, {args: ['status']});
+
+		// No auth frame, and the call goes out immediately: this is the SSH tunnel path,
+		// where the Rust worker has no auth gate and would never send an ack.
+		expect(socket.sent).toHaveLength(1);
+		expect(socket.sent[0]).toContain('"command":"gitCall"');
 	});
 
 	it('resolves a call routed back after authentication', async () => {
