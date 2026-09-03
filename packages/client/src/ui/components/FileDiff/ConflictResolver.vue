@@ -37,7 +37,10 @@
 
 		<!-- Blocks -->
 		<div class="conflict-resolver__body">
-			<template v-for="(block, i) in blocks" :key="i">
+			<template
+				v-for="(block, i) in blocks"
+				:key="i"
+			>
 				<!-- Unchanged context -->
 				<pre
 					v-if="block.type === 'context'"
@@ -59,7 +62,10 @@
 					>
 						<div class="conflict-resolver__side-head">
 							<span class="conflict-resolver__checkbox">
-								<svg v-if="selections[conflictIndex(i)]?.ours" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+								<svg
+									v-if="selections[conflictIndex(i)]?.ours"
+									viewBox="0 0 24 24"
+								><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
 							</span>
 							<span class="conflict-resolver__side-label">Current</span>
 							<span class="conflict-resolver__side-sub">{{ block.oursLabel }}</span>
@@ -75,7 +81,10 @@
 					>
 						<div class="conflict-resolver__side-head">
 							<span class="conflict-resolver__checkbox">
-								<svg v-if="selections[conflictIndex(i)]?.theirs" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+								<svg
+									v-if="selections[conflictIndex(i)]?.theirs"
+									viewBox="0 0 24 24"
+								><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" /></svg>
 							</span>
 							<span class="conflict-resolver__side-label">Incoming</span>
 							<span class="conflict-resolver__side-sub">{{ block.theirsLabel }}</span>

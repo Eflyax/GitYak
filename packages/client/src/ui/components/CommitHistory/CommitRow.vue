@@ -17,7 +17,10 @@
 		<div class="commit-row__body">
 			<template v-if="commit.hash === 'WORKING_TREE'">
 				<template v-if="hasUnresolvedConflicts">
-					<Icon name="mdi-alert" class="commit-row__conflict-icon" />
+					<Icon
+						name="mdi-alert"
+						class="commit-row__conflict-icon"
+					/>
 					<span class="commit-row__conflict-message">A file conflict was found when attempting to merge into {{ currentBranch?.name }}</span>
 				</template>
 				<CommitFileStats
@@ -28,7 +31,10 @@
 					:R="workingTreeStats.R"
 				/>
 			</template>
-			<span v-else class="commit-row__message">{{ commit.subject }}</span>
+			<span
+				v-else
+				class="commit-row__message"
+			>{{ commit.subject }}</span>
 		</div>
 
 		<!-- Meta -->
@@ -83,8 +89,8 @@ const _authorInitial = computed(() =>
 	props.commit.authorName?.charAt(0)?.toUpperCase() ?? '?',
 );
 
-void _authorColor;
-void _authorInitial;
+void _authorColor.value;
+void _authorInitial.value;
 
 
 const {workingTreeStats, hasUnresolvedConflicts} = useWorkingTree();

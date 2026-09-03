@@ -9,23 +9,32 @@
 				@click="toggle"
 			/>
 			<n-input
-				test-id="filter-branches-input"
 				v-if="!sidebarCollapsed"
 				v-model:value="searchQuery"
+				test-id="filter-branches-input"
 				placeholder="Filter branches…"
 				size="small"
 				clearable
 			>
 				<template #prefix>
-					<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.5">
-						<path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/>
+					<svg
+						width="13"
+						height="13"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+						style="opacity:0.5"
+					>
+						<path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z" />
 					</svg>
 				</template>
 			</n-input>
 		</div>
 
 		<!-- Branch list -->
-		<div v-if="!sidebarCollapsed" class="sidebar__branches">
+		<div
+			v-if="!sidebarCollapsed"
+			class="sidebar__branches"
+		>
 			<!-- LOCAL -->
 			<div class="sidebar__section">
 				<div
@@ -36,9 +45,12 @@
 					<svg
 						class="sidebar__chevron"
 						:class="{'sidebar__chevron--open': localExpanded}"
-						width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+						width="12"
+						height="12"
+						viewBox="0 0 24 24"
+						fill="currentColor"
 					>
-						<path d="M7 10l5 5 5-5z"/>
+						<path d="M7 10l5 5 5-5z" />
 					</svg>
 					<span>LOCAL</span>
 					<span class="sidebar__section-count">({{ filteredLocalBranches.length }})</span>
@@ -67,9 +79,12 @@
 					<svg
 						class="sidebar__chevron"
 						:class="{'sidebar__chevron--open': remoteExpanded}"
-						width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+						width="12"
+						height="12"
+						viewBox="0 0 24 24"
+						fill="currentColor"
 					>
-						<path d="M7 10l5 5 5-5z"/>
+						<path d="M7 10l5 5 5-5z" />
 					</svg>
 					<span>REMOTE</span>
 					<span class="sidebar__section-count">({{ filteredRemoteBranches.length }})</span>
@@ -105,9 +120,12 @@
 					<svg
 						class="sidebar__chevron"
 						:class="{'sidebar__chevron--open': tagsExpanded}"
-						width="12" height="12" viewBox="0 0 24 24" fill="currentColor"
+						width="12"
+						height="12"
+						viewBox="0 0 24 24"
+						fill="currentColor"
 					>
-						<path d="M7 10l5 5 5-5z"/>
+						<path d="M7 10l5 5 5-5z" />
 					</svg>
 					<span>TAGS</span>
 					<span class="sidebar__section-count">({{ filteredTags.length }})</span>
@@ -121,9 +139,21 @@
 						class="sidebar__tag-item"
 						@contextmenu.prevent="contextMenuRef($event, {name: tag.name, isLocal: true, remotes: remoteTags.includes(tag.name) ? ['origin'] : [], isTag: true})"
 					>
-						<Icon name="mdi-tag-outline" class="sidebar__tag-icon" />
-						<Icon name="mdi-laptop" class="sidebar__tag-icon" title="Local" />
-						<Icon v-if="remoteTags.includes(tag.name)" name="mdi-cloud-outline" class="sidebar__tag-icon" title="Remote" />
+						<Icon
+							name="mdi-tag-outline"
+							class="sidebar__tag-icon"
+						/>
+						<Icon
+							name="mdi-laptop"
+							class="sidebar__tag-icon"
+							title="Local"
+						/>
+						<Icon
+							v-if="remoteTags.includes(tag.name)"
+							name="mdi-cloud-outline"
+							class="sidebar__tag-icon"
+							title="Remote"
+						/>
 						<span class="sidebar__tag-name">{{ tag.name }}</span>
 					</div>
 				</template>
@@ -153,7 +183,12 @@ const {tags, remoteTags, loadTags, loadRemoteTags} = useTags();
 const {contextMenuRef} = useContextMenu();
 
 function toggle(): void {
-	sidebarCollapsed.value ? expandSidebar() : collapseSidebar();
+	if (sidebarCollapsed.value) {
+		expandSidebar();
+	}
+	else {
+		collapseSidebar();
+	}
 }
 
 const COLORS = [

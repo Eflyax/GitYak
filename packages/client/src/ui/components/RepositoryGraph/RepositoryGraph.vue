@@ -79,7 +79,7 @@
 						min="50"
 						max="2000"
 						step="50"
-					/>
+					>
 				</label>
 				<label class="control">
 					<span class="control-label">Gather</span>
@@ -89,7 +89,7 @@
 						min="0"
 						max="0.4"
 						step="0.01"
-					/>
+					>
 				</label>
 				<button
 					test-id="repository-graph-reset"
@@ -126,7 +126,7 @@ interface IGraphNode extends SimulationNodeDatum {
 	groupId?: string;
 }
 
-interface IGraphLink extends SimulationLinkDatum<IGraphNode> {}
+type IGraphLink = SimulationLinkDatum<IGraphNode>;
 
 const SERVER_COLOR = '#8a8f98';
 const GROUP_COLOR = '#c98a3a';

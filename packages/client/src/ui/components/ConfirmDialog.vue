@@ -1,20 +1,33 @@
 <template>
-<NModal
-	v-model:show="showModel"
-	preset="card"
-	:title="title"
-	style="width: 380px;"
-	:mask-closable="false"
->
-	<p class="confirm-dialog__message">{{ message }}</p>
+	<NModal
+		v-model:show="showModel"
+		preset="card"
+		:title="title"
+		style="width: 380px;"
+		:mask-closable="false"
+	>
+		<p class="confirm-dialog__message">
+			{{ message }}
+		</p>
 
-	<template #footer>
-		<div class="confirm-dialog__footer">
-			<NButton test-id="confirm-dialog-no-btn" @click="cancel">No</NButton>
-			<NButton test-id="confirm-dialog-yes-btn" type="error" @click="confirm">Yes</NButton>
-		</div>
-	</template>
-</NModal>
+		<template #footer>
+			<div class="confirm-dialog__footer">
+				<NButton
+					test-id="confirm-dialog-no-btn"
+					@click="cancel"
+				>
+					No
+				</NButton>
+				<NButton
+					test-id="confirm-dialog-yes-btn"
+					type="error"
+					@click="confirm"
+				>
+					Yes
+				</NButton>
+			</div>
+		</template>
+	</NModal>
 </template>
 
 <script setup lang="ts">

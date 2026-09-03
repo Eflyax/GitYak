@@ -1,5 +1,5 @@
 import {test, expect} from '../fixtures/test';
-import {byTestId, waitForRepoLoaded, waitForCommitRow} from '../fixtures/ui';
+import {waitForRepoLoaded, waitForCommitRow} from '../fixtures/ui';
 
 test('cherry-pick a feature commit onto master via context menu', async ({page, repo, openRepo}) => {
 	repo.commit('Initial', {'README.md': '# repo\n'});

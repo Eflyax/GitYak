@@ -14,11 +14,27 @@
 		"dev": "concurrently \"yarn workspace @git-yak/client dev\" \"yarn workspace @git-yak/server dev\"",
 		"test:e2e": "yarn workspace @git-yak/e2e test",
 		"test:e2e:install": "yarn workspace @git-yak/e2e install:browsers",
-		"build:remote-worker": "cargo zigbuild --manifest-path packages/remote-worker-rs/Cargo.toml --target x86_64-unknown-linux-musl --release && mkdir -p packages/remote-worker/dist && cp packages/remote-worker-rs/target/x86_64-unknown-linux-musl/release/remote-worker-rs packages/remote-worker/dist/remote-worker-linux-x64",
+		"build:remote-worker": "PATH=$HOME/.cargo/bin:$PATH cargo zigbuild --manifest-path packages/remote-worker-rs/Cargo.toml --target x86_64-unknown-linux-musl --release && mkdir -p packages/remote-worker/dist && cp packages/remote-worker-rs/target/x86_64-unknown-linux-musl/release/remote-worker-rs packages/remote-worker/dist/remote-worker-linux-x64",
 		"tauri:dev": "yarn build:remote-worker && concurrently --kill-others \"yarn workspace @git-yak/server dev\" \"yarn workspace @git-yak/client tauri:dev\"",
-		"tauri:build": "yarn workspace @git-yak/client tauri:build"
+		"tauri:build": "yarn build:remote-worker && yarn workspace @git-yak/client tauri:build",
+		"lint": "eslint --no-error-on-unmatched-pattern 'packages/*/src/**' 'packages/*/scripts/**' 'packages/*/*.config.ts' packages/e2e scripts '*.config.js' '*.config.ts'",
+		"lint:fix": "eslint --fix --no-error-on-unmatched-pattern 'packages/*/src/**' 'packages/*/scripts/**' 'packages/*/*.config.ts' packages/e2e scripts '*.config.js' '*.config.ts'",
+		"typecheck:scripts": "tsc -p tsconfig.scripts.json",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"check:protocol": "bun run scripts/check-protocol-parity.ts",
+		"verify": "yarn workspace @git-yak/client typecheck && yarn workspace @git-yak/server typecheck && yarn typecheck:scripts && yarn lint && yarn test && yarn check:protocol && yarn workspace @git-yak/client check:themes"
 	},
 	"devDependencies": {
-		"concurrently": "^9.1.2"
+		"@eslint/js": "^9",
+		"@stylistic/eslint-plugin": "^2",
+		"bun": "^1.3.8",
+		"concurrently": "^9.1.2",
+		"eslint": "^9",
+		"eslint-plugin-vue": "^9",
+		"globals": "^15",
+		"typescript": "^5.7.3",
+		"typescript-eslint": "^8",
+		"vitest": "^3"
 	}
 }

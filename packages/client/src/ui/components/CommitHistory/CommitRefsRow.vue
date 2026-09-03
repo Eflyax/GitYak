@@ -1,5 +1,8 @@
 <template>
-	<div class="commit-refs-row" :style="{height: ROW_HEIGHT + 'px'}">
+	<div
+		class="commit-refs-row"
+		:style="{height: ROW_HEIGHT + 'px'}"
+	>
 		<!-- Horizontal connector line -->
 		<svg
 			v-if="mergedRefs.length && !commit.isStash"
@@ -46,7 +49,10 @@
 				<!-- Branch: ikony local + remote -->
 				<template v-if="ref.isBranch">
 					<div class="ref-icons">
-						<Icon name="mdi-source-branch" class="ref-icon" />
+						<Icon
+							name="mdi-source-branch"
+							class="ref-icon"
+						/>
 						<Icon
 							v-if="ref.isLocal"
 							name="mdi-laptop"
@@ -65,7 +71,10 @@
 				<!-- Tag a ostatní -->
 				<template v-else>
 					<div class="ref-icons">
-						<Icon name="mdi-tag-outline" class="ref-icon" />
+						<Icon
+							name="mdi-tag-outline"
+							class="ref-icon"
+						/>
 						<Icon
 							v-if="ref.isLocal"
 							name="mdi-laptop"

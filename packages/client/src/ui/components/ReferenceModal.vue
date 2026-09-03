@@ -1,35 +1,40 @@
 <template>
-<NModal
-	v-model:show="showModel"
-	preset="card"
-	:title="title"
-	style="width: 420px;"
-	:mask-closable="false"
-	@after-enter="inputRef?.focus()"
->
-	<NInput
-		test-id="reference-name-input"
-		ref="inputRef"
-		v-model:value="name"
-		:placeholder="placeholder"
-		@keydown.enter="confirm"
-	/>
+	<NModal
+		v-model:show="showModel"
+		preset="card"
+		:title="title"
+		style="width: 420px;"
+		:mask-closable="false"
+		@after-enter="inputRef?.focus()"
+	>
+		<NInput
+			ref="inputRef"
+			v-model:value="name"
+			test-id="reference-name-input"
+			:placeholder="placeholder"
+			@keydown.enter="confirm"
+		/>
 
-	<template #footer>
-		<div class="modal-footer">
-			<NButton test-id="reference-modal-cancel-btn" @click="cancel">Cancel</NButton>
-			<NButton
-				test-id="reference-modal-confirm-btn"
-				type="primary"
-				:disabled="!name.trim() || submitting"
-				:loading="submitting"
-				@click="confirm"
-			>
-				Confirm
-			</NButton>
-		</div>
-	</template>
-</NModal>
+		<template #footer>
+			<div class="modal-footer">
+				<NButton
+					test-id="reference-modal-cancel-btn"
+					@click="cancel"
+				>
+					Cancel
+				</NButton>
+				<NButton
+					test-id="reference-modal-confirm-btn"
+					type="primary"
+					:disabled="!name.trim() || submitting"
+					:loading="submitting"
+					@click="confirm"
+				>
+					Confirm
+				</NButton>
+			</div>
+		</template>
+	</NModal>
 </template>
 
 <script setup lang="ts">

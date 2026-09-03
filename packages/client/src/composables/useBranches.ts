@@ -45,8 +45,8 @@ export function useBranches() {
 		checkoutNewBranch,
 		deleteBranch: gitDeleteBranch,
 		deleteRemoteBranch: gitDeleteRemoteBranch,
-	 	renameBranch: gitRenameBranch,
-		pushBranch: gitPushBranch
+		renameBranch: gitRenameBranch,
+		pushBranch: gitPushBranch,
 	} = useGit();
 
 	async function loadBranches(): Promise<void> {

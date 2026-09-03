@@ -1,5 +1,8 @@
 <template>
-	<svg class="fill-current" viewBox="0 0 24 24">
+	<svg
+		class="fill-current"
+		viewBox="0 0 24 24"
+	>
 		<path :d="iconPath" />
 	</svg>
 </template>

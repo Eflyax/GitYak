@@ -1,7 +1,7 @@
 import {resolve, isAbsolute} from 'path';
 import {existsSync} from 'fs';
 import {getAgentEnv} from './SshAgentInit';
-import type {IWsMessage} from '../types';
+import type {IWsRequest} from '@git-yak/protocol';
 
 function validateRepoPath(repoPath: unknown): string {
 	if (typeof repoPath !== 'string' || !repoPath) {
@@ -17,7 +17,7 @@ function validateRepoPath(repoPath: unknown): string {
 	return resolved;
 }
 
-export async function run(ws: {send: (msg: string) => void}, data: IWsMessage): Promise<void> {
+export async function run(ws: {send: (msg: string) => void}, data: IWsRequest): Promise<void> {
 	const {requestId, repo_path, args} = data;
 
 	if (!Array.isArray(args) || !args.every((a): a is string => typeof a === 'string')) {
@@ -84,7 +84,7 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsMessage): 
 		catch (e: unknown) {
 			const message = e instanceof Error ? e.message : 'Unknown git error';
 
-			if (message.includes(`.git/index.lock': File exists`) && retries) {
+			if (message.includes('.git/index.lock\': File exists') && retries) {
 				await new Promise(r => setTimeout(r, delay));
 				retries--;
 				delay *= 2;

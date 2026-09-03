@@ -5,11 +5,14 @@
 		size="huge"
 		class="project-form"
 	>
-		<n-form label-placement="left" label-width="120">
+		<n-form
+			label-placement="left"
+			label-width="120"
+		>
 			<n-form-item label="Alias">
 				<n-input
-					test-id="alias-input"
 					v-model:value="form.alias"
+					test-id="alias-input"
 					placeholder="My project"
 					:maxlength="40"
 				/>
@@ -17,11 +20,17 @@
 
 			<n-form-item label="Location">
 				<n-radio-group v-model:value="isLocal">
-					<n-radio-button test-id="location-this-pc-radio" :value="true">
+					<n-radio-button
+						test-id="location-this-pc-radio"
+						:value="true"
+					>
 						<Icon name="mdi-laptop" />
 						This PC
 					</n-radio-button>
-					<n-radio-button test-id="location-remote-server-radio" :value="false">
+					<n-radio-button
+						test-id="location-remote-server-radio"
+						:value="false"
+					>
 						<Icon name="mdi-server" />
 						Remote server
 					</n-radio-button>
@@ -29,7 +38,10 @@
 			</n-form-item>
 
 			<template v-if="!isLocal">
-				<n-form-item v-if="isTauri" label="Connection">
+				<n-form-item
+					v-if="isTauri"
+					label="Connection"
+				>
 					<n-radio-group v-model:value="form.serverType">
 						<n-radio-button :value="EServerType.Bun">
 							Bun server
@@ -44,14 +56,14 @@
 					<n-form-item label="Server">
 						<n-input-group>
 							<n-input
-								test-id="server-input"
 								v-model:value="form.server"
+								test-id="server-input"
 								placeholder="192.168.1.100"
 								style="flex: 1;"
 							/>
 							<n-input-number
-								test-id="port-input"
 								v-model:value="form.port"
+								test-id="port-input"
 								placeholder="3000"
 								:min="1"
 								:max="65535"
@@ -62,8 +74,8 @@
 
 					<n-form-item label="SSH Private Key">
 						<n-input
-							test-id="ssh-key-input"
 							v-model:value="form.sshPrivateKey"
+							test-id="ssh-key-input"
 							type="textarea"
 							placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
 							:autosize="{minRows: 3, maxRows: 8}"
@@ -76,14 +88,14 @@
 					<n-form-item label="SSH Host">
 						<n-input-group>
 							<n-input
-								test-id="server-input"
 								v-model:value="form.server"
+								test-id="server-input"
 								placeholder="192.168.1.100"
 								style="flex: 1;"
 							/>
 							<n-input-number
-								test-id="port-input"
 								v-model:value="form.port"
+								test-id="port-input"
 								placeholder="22"
 								:min="1"
 								:max="65535"
@@ -94,8 +106,8 @@
 
 					<n-form-item label="SSH User">
 						<n-input
-							test-id="ssh-user-input"
 							v-model:value="form.sshUser"
+							test-id="ssh-user-input"
 							placeholder="root"
 						/>
 					</n-form-item>
@@ -103,8 +115,8 @@
 					<n-form-item label="SSH Key Path">
 						<n-input-group>
 							<n-input
-								test-id="ssh-key-path-input"
 								v-model:value="form.sshKeyPath"
+								test-id="ssh-key-path-input"
 								placeholder="~/.ssh/id_ed25519"
 								style="flex: 1;"
 							/>
@@ -169,8 +181,8 @@
 
 			<n-form-item label="Group">
 				<n-select
-					test-id="group-select"
 					v-model:value="form.groupId"
+					test-id="group-select"
 					:options="groupOptions"
 					placeholder="No group"
 					clearable
@@ -193,7 +205,12 @@
 
 		<template #footer>
 			<div class="form-actions">
-				<n-button test-id="project-form-cancel-btn" @click="emit('cancel')">Cancel</n-button>
+				<n-button
+					test-id="project-form-cancel-btn"
+					@click="emit('cancel')"
+				>
+					Cancel
+				</n-button>
 				<n-button
 					test-id="project-form-save-btn"
 					type="primary"

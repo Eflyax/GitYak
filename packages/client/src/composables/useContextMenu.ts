@@ -291,7 +291,7 @@ export function useContextMenu() {
 			x: e.x,
 			y: e.y,
 			items: withHeader(commit.subject || commit.hashAbbr, items),
-			theme: THEME
+			theme: THEME,
 		});
 	}
 
@@ -405,7 +405,7 @@ export function useContextMenu() {
 			}
 
 			items.push({
-				label: `Delete`,
+				label: 'Delete',
 				icon: menuIcon('mdi-trash-can'),
 				onClick: async () => {
 					await deleteTag(target.name);
@@ -462,14 +462,14 @@ export function useContextMenu() {
 
 			if (deleteChildren.length === 1) {
 				items.push({
-					label: `Delete`,
+					label: 'Delete',
 					icon: menuIcon('mdi-trash-can'),
 					onClick: deleteChildren[0]!.onClick,
 				});
 			}
 			else if (deleteChildren.length > 1) {
 				items.push({
-					label: `Delete`,
+					label: 'Delete',
 					icon: menuIcon('mdi-trash-can'),
 					children: deleteChildren,
 				});

@@ -277,7 +277,7 @@ export function useCommits() {
 			headHash = (await callGit('rev-parse', 'HEAD')).trim();
 		}
 		catch {
-
+			// ignore: no HEAD yet (e.g. freshly initialised repo)
 		}
 
 		let mergeHeadHash = '';
@@ -286,7 +286,7 @@ export function useCommits() {
 			mergeHeadHash = (await callGit('rev-parse', 'MERGE_HEAD')).trim();
 		}
 		catch {
-
+			// ignore: not mid-merge
 		}
 
 		const workingTreeParents = headHash ? [headHash, ...(mergeHeadHash ? [mergeHeadHash] : [])] : [];

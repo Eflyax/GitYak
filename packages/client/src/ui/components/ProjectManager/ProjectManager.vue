@@ -1,15 +1,21 @@
 <template>
 	<div class="project-manager">
 		<!-- Tabs: Projects / Groups -->
-		<n-tabs v-model:value="activeTab" type="line" animated>
-
+		<n-tabs
+			v-model:value="activeTab"
+			type="line"
+			animated
+		>
 			<!-- ── Projects tab ─────────────────────────── -->
-			<n-tab-pane name="projects" tab="Projects">
+			<n-tab-pane
+				name="projects"
+				tab="Projects"
+			>
 				<div class="tab-content">
 					<div class="toolbar">
 						<n-input
-							test-id="search-projects-input"
 							v-model:value="filterText"
+							test-id="search-projects-input"
 							placeholder="Search projects…"
 							clearable
 						>
@@ -17,15 +23,21 @@
 								<Icon name="mdi-magnify" />
 							</template>
 						</n-input>
-						<n-button test-id="add-project-btn" type="primary" @click="openAdd">
-							<template #icon><Icon name="mdi-plus" /></template>
+						<n-button
+							test-id="add-project-btn"
+							type="primary"
+							@click="openAdd"
+						>
+							<template #icon>
+								<Icon name="mdi-plus" />
+							</template>
 							Add Project
 						</n-button>
 					</div>
 
 					<n-select
-						test-id="group-filter-select"
 						v-model:value="selectedGroupFilter"
+						test-id="group-filter-select"
 						:options="groupFilterOptions"
 						clearable
 						placeholder="All groups"
@@ -33,7 +45,10 @@
 
 					<div class="project-list">
 						<!-- Grouped projects -->
-						<template v-for="group in groups" :key="group.id">
+						<template
+							v-for="group in groups"
+							:key="group.id"
+						>
 							<div
 								v-if="projectsByGroup[group.id]?.length"
 								class="group-section"
@@ -59,8 +74,14 @@
 						</template>
 
 						<!-- Ungrouped projects -->
-						<div v-if="ungrouped.length" class="group-section">
-							<div v-if="groups.length" class="group-header">
+						<div
+							v-if="ungrouped.length"
+							class="group-section"
+						>
+							<div
+								v-if="groups.length"
+								class="group-header"
+							>
 								<span class="group-name group-name--dim">Ungrouped</span>
 							</div>
 
@@ -75,7 +96,10 @@
 							/>
 						</div>
 
-						<div v-if="filteredProjects.length === 0" class="empty">
+						<div
+							v-if="filteredProjects.length === 0"
+							class="empty"
+						>
 							No projects found
 						</div>
 					</div>
@@ -83,11 +107,20 @@
 			</n-tab-pane>
 
 			<!-- ── Groups tab ─────────────────────────────── -->
-			<n-tab-pane name="groups" tab="Groups">
+			<n-tab-pane
+				name="groups"
+				tab="Groups"
+			>
 				<div class="tab-content">
 					<div class="toolbar">
-						<n-button test-id="add-group-btn" type="primary" @click="openAddGroup">
-							<template #icon><Icon name="mdi-plus" /></template>
+						<n-button
+							test-id="add-group-btn"
+							type="primary"
+							@click="openAddGroup"
+						>
+							<template #icon>
+								<Icon name="mdi-plus" />
+							</template>
 							Add Group
 						</n-button>
 					</div>
@@ -111,7 +144,9 @@
 									type="info"
 									@click="openEditGroup(group)"
 								>
-									<template #icon><Icon name="mdi-pencil" /></template>
+									<template #icon>
+										<Icon name="mdi-pencil" />
+									</template>
 								</n-button>
 								<n-button
 									test-id="delete-group-btn"
@@ -119,12 +154,17 @@
 									type="error"
 									@click="confirmDeleteGroup(group)"
 								>
-									<template #icon><Icon name="mdi-trash-can" /></template>
+									<template #icon>
+										<Icon name="mdi-trash-can" />
+									</template>
 								</n-button>
 							</div>
 						</div>
 
-						<div v-if="!groups.length" class="empty">
+						<div
+							v-if="!groups.length"
+							class="empty"
+						>
 							No groups yet
 						</div>
 					</div>
@@ -154,9 +194,16 @@
 			:title="editableGroup?.id ? 'Edit Group' : 'Add Group'"
 			style="width: 400px;"
 		>
-			<n-form v-if="editableGroup" label-placement="left" label-width="80">
+			<n-form
+				v-if="editableGroup"
+				label-placement="left"
+				label-width="80"
+			>
 				<n-form-item label="Name">
-					<n-input v-model:value="editableGroup.name" placeholder="Group name" />
+					<n-input
+						v-model:value="editableGroup.name"
+						placeholder="Group name"
+					/>
 				</n-form-item>
 				<n-form-item label="Color">
 					<div class="color-picker">
@@ -173,7 +220,12 @@
 			</n-form>
 			<template #footer>
 				<div class="form-actions">
-					<n-button test-id="group-form-cancel-btn" @click="showGroupForm = false">Cancel</n-button>
+					<n-button
+						test-id="group-form-cancel-btn"
+						@click="showGroupForm = false"
+					>
+						Cancel
+					</n-button>
 					<n-button
 						test-id="group-form-save-btn"
 						type="primary"

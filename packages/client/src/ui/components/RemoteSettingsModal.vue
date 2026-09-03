@@ -1,69 +1,77 @@
 <template>
-<NModal
-	v-model:show="showModel"
-	preset="card"
-	title="Remote settings"
-	style="width: 480px;"
-	:mask-closable="false"
-	@after-enter="onOpen"
->
-	<div class="remote-settings">
-		<div v-if="remotes.length > 1" class="remote-settings__field">
-			<span class="remote-settings__label">Remote</span>
-			<NSelect
-				v-model:value="selectedName"
-				:options="remoteOptions"
-				size="small"
-				@update:value="selectRemote"
-			/>
-		</div>
-
-		<div class="remote-settings__field">
-			<span class="remote-settings__label">Name</span>
-			<NInput
-				test-id="remote-name-input"
-				v-model:value="name"
-				placeholder="origin"
-				size="small"
-			/>
-		</div>
-
-		<div class="remote-settings__field">
-			<span class="remote-settings__label">Pull URL</span>
-			<NInput
-				test-id="remote-pull-url-input"
-				v-model:value="fetchUrl"
-				placeholder="git@github.com:user/repo.git"
-				size="small"
-			/>
-		</div>
-
-		<div class="remote-settings__field">
-			<span class="remote-settings__label">Push URL</span>
-			<NInput
-				test-id="remote-push-url-input"
-				v-model:value="pushUrl"
-				placeholder="Same as Pull URL if left empty"
-				size="small"
-			/>
-		</div>
-	</div>
-
-	<template #footer>
-		<div class="modal-footer">
-			<NButton test-id="remote-settings-cancel-btn" @click="cancel">Cancel</NButton>
-			<NButton
-				test-id="remote-settings-save-btn"
-				type="primary"
-				:disabled="!canSave || submitting"
-				:loading="submitting"
-				@click="save"
+	<NModal
+		v-model:show="showModel"
+		preset="card"
+		title="Remote settings"
+		style="width: 480px;"
+		:mask-closable="false"
+		@after-enter="onOpen"
+	>
+		<div class="remote-settings">
+			<div
+				v-if="remotes.length > 1"
+				class="remote-settings__field"
 			>
-				Save
-			</NButton>
+				<span class="remote-settings__label">Remote</span>
+				<NSelect
+					v-model:value="selectedName"
+					:options="remoteOptions"
+					size="small"
+					@update:value="selectRemote"
+				/>
+			</div>
+
+			<div class="remote-settings__field">
+				<span class="remote-settings__label">Name</span>
+				<NInput
+					v-model:value="name"
+					test-id="remote-name-input"
+					placeholder="origin"
+					size="small"
+				/>
+			</div>
+
+			<div class="remote-settings__field">
+				<span class="remote-settings__label">Pull URL</span>
+				<NInput
+					v-model:value="fetchUrl"
+					test-id="remote-pull-url-input"
+					placeholder="git@github.com:user/repo.git"
+					size="small"
+				/>
+			</div>
+
+			<div class="remote-settings__field">
+				<span class="remote-settings__label">Push URL</span>
+				<NInput
+					v-model:value="pushUrl"
+					test-id="remote-push-url-input"
+					placeholder="Same as Pull URL if left empty"
+					size="small"
+				/>
+			</div>
 		</div>
-	</template>
-</NModal>
+
+		<template #footer>
+			<div class="modal-footer">
+				<NButton
+					test-id="remote-settings-cancel-btn"
+					@click="cancel"
+				>
+					Cancel
+				</NButton>
+				<NButton
+					test-id="remote-settings-save-btn"
+					type="primary"
+					:disabled="!canSave || submitting"
+					:loading="submitting"
+					@click="save"
+				>
+					Save
+				</NButton>
+			</div>
+		</template>
+	</NModal>
 </template>
 
 <script setup lang="ts">

@@ -17,12 +17,16 @@ packages/remote-worker-rs/target/
 
 # Build artifacts
 packages/remote-worker/dist/
+packages/e2e/test-results/
 
 # Claude Code
 .claude/
 
 # Git worktrees
 .worktrees/
+
+# Subagent-driven development scratch
+.superpowers/
 
 # Yarn
 .yarn/install-state.gz

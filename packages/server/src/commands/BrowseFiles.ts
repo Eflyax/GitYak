@@ -1,13 +1,13 @@
 import {join} from 'path';
 import {readdirSync, statSync} from 'fs';
-import type {IWsMessage} from '../types';
+import type {IWsRequest} from '@git-yak/protocol';
 
 interface IDirEntry {
 	name: string;
 	isDirectory: boolean;
 }
 
-export async function run(ws: {send: (msg: string) => void}, data: IWsMessage): Promise<void> {
+export async function run(ws: {send: (msg: string) => void}, data: IWsRequest): Promise<void> {
 	const {requestId, path: dirPath = '/'} = data;
 
 	if (typeof dirPath !== 'string' || !dirPath) {

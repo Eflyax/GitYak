@@ -1,3 +1,5 @@
+export {ENetworkCommand} from '@git-yak/protocol';
+
 export enum EReferenceType {
 	Branch = 'branch',
 	RemoteBranch = 'remote',
@@ -21,15 +23,6 @@ export enum EFileArea {
 	Staged = 'staged',
 	Unstaged = 'unstaged',
 	Committed = 'committed',
-}
-
-export enum ENetworkCommand {
-	GitCall = 'gitCall',
-	WriteFile = 'writeFile',
-	ReadFile = 'readFile',
-	BrowseFiles = 'browseFiles',
-	SshAgentInit = 'sshAgentInit',
-	Heartbeat = 'heartbeat',
 }
 
 export enum EGitErrorCode {

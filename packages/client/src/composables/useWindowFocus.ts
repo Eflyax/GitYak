@@ -3,7 +3,7 @@ export interface IUseWindowFocus {
 	destroy: () => void;
 }
 
-function debounce(fn: () => void, ms: number): { call: () => void; cancel: () => void } {
+function debounce(fn: () => void, ms: number): {call: () => void; cancel: () => void} {
 	let timer: ReturnType<typeof setTimeout> | undefined;
 	return {
 		call: () => {

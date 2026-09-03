@@ -16,16 +16,35 @@
 					:class="`connection-status__step--${stepState(step.key)}`"
 				>
 					<span class="connection-status__step-icon">
-						<Icon v-if="stepState(step.key) === 'done'" name="mdi-check-circle" class="icon-done" />
-						<Icon v-else-if="stepState(step.key) === 'active'" name="mdi-loading" class="icon-active icon-spin" />
-						<Icon v-else-if="stepState(step.key) === 'error'" name="mdi-close-circle" class="icon-error" />
-						<Icon v-else name="mdi-circle-outline" class="icon-pending" />
+						<Icon
+							v-if="stepState(step.key) === 'done'"
+							name="mdi-check-circle"
+							class="icon-done"
+						/>
+						<Icon
+							v-else-if="stepState(step.key) === 'active'"
+							name="mdi-loading"
+							class="icon-active icon-spin"
+						/>
+						<Icon
+							v-else-if="stepState(step.key) === 'error'"
+							name="mdi-close-circle"
+							class="icon-error"
+						/>
+						<Icon
+							v-else
+							name="mdi-circle-outline"
+							class="icon-pending"
+						/>
 					</span>
 					<span class="connection-status__step-label">{{ step.label }}</span>
 				</div>
 			</div>
 
-			<div v-if="phase === 'uploading'" class="connection-status__progress">
+			<div
+				v-if="phase === 'uploading'"
+				class="connection-status__progress"
+			>
 				<NProgress
 					type="line"
 					:percentage="uploadProgress"
@@ -42,8 +61,14 @@
 				</span>
 			</div>
 
-			<div v-if="phase === 'error'" class="connection-status__error">
-				<Icon name="mdi-alert-circle" class="icon-error" />
+			<div
+				v-if="phase === 'error'"
+				class="connection-status__error"
+			>
+				<Icon
+					name="mdi-alert-circle"
+					class="icon-error"
+				/>
 				<span>{{ errorMessage }}</span>
 			</div>
 		</div>
@@ -59,12 +84,12 @@ import type {ConnectionPhase} from '@/composables/useConnectionStatus';
 
 const {phase, uploadProgress, uploadTotal, errorMessage, connectingTo} = useConnectionStatus();
 
-interface Step {
+interface IStep {
 	key: Exclude<ConnectionPhase, 'idle' | 'error'>;
 	label: string;
 }
 
-const steps: Step[] = [
+const steps: IStep[] = [
 	{key: 'connecting', label: 'SSH handshake'},
 	{key: 'checking', label: 'Checking remote worker'},
 	{key: 'uploading', label: 'Uploading remote worker'},
@@ -78,7 +103,7 @@ const currentPhaseIndex = computed(() => phaseOrder.indexOf(phase.value as Exclu
 
 type StepState = 'done' | 'active' | 'pending' | 'error';
 
-function stepState(key: Step['key']): StepState {
+function stepState(key: IStep['key']): StepState {
 	const stepIndex = phaseOrder.indexOf(key);
 	const curr = currentPhaseIndex.value;
 

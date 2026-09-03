@@ -1,10 +1,16 @@
 <template>
 	<div class="file-browser">
-		<div v-if="initializing" class="state-msg">
+		<div
+			v-if="initializing"
+			class="state-msg"
+		>
 			Connecting to server…
 		</div>
 
-		<div v-else-if="errorMsg" class="state-msg state-msg--error">
+		<div
+			v-else-if="errorMsg"
+			class="state-msg state-msg--error"
+		>
 			{{ errorMsg }}
 		</div>
 
@@ -17,12 +23,20 @@
 					class="segment"
 					@click="navigateTo(pathUpTo(i))"
 				>
-					{{ segment || '/' }}<span v-if="i < pathSegments.length - 1" class="sep">/</span>
+					{{ segment || '/' }}<span
+						v-if="i < pathSegments.length - 1"
+						class="sep"
+					>/</span>
 				</span>
 			</div>
 
 			<div class="file-list">
-				<div v-if="loading" class="state-msg">Loading…</div>
+				<div
+					v-if="loading"
+					class="state-msg"
+				>
+					Loading…
+				</div>
 
 				<template v-else>
 					<div
@@ -47,13 +61,23 @@
 						<span>{{ entry.name }}</span>
 					</div>
 
-					<div v-if="entries.length === 0" class="state-msg">Empty directory</div>
+					<div
+						v-if="entries.length === 0"
+						class="state-msg"
+					>
+						Empty directory
+					</div>
 				</template>
 			</div>
 
 			<div class="footer">
 				<span class="current-path">{{ currentPath }}</span>
-				<n-button test-id="select-folder-btn" type="success" size="small" @click="emit('select', currentPath)">
+				<n-button
+					test-id="select-folder-btn"
+					type="success"
+					size="small"
+					@click="emit('select', currentPath)"
+				>
 					Select this folder
 				</n-button>
 			</div>

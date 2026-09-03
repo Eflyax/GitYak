@@ -1,76 +1,80 @@
 <template>
-<div class="toolbar">
-	<span class="toolbar__branch-path">
-		<template v-if="currentProject && !hideActions">
-			<span
-				test-id="repo-location"
-				class="toolbar__location"
-				:class="{'toolbar__location--remote': location.isRemote}"
-				:title="location.title"
-			>
-				<Icon :name="location.icon" />
-				{{ location.label }}
-			</span>
-			<span class="toolbar__sep">›</span>
-			<span class="toolbar__project">
-				{{ currentProject.alias }}
-			</span>
-			<span class="toolbar__sep">›</span>
-			<span class="toolbar__branch">{{ currentBranch?.name }}</span>
-		</template>
-	</span>
+	<div class="toolbar">
+		<span class="toolbar__branch-path">
+			<template v-if="currentProject && !hideActions">
+				<span
+					test-id="repo-location"
+					class="toolbar__location"
+					:class="{'toolbar__location--remote': location.isRemote}"
+					:title="location.title"
+				>
+					<Icon :name="location.icon" />
+					{{ location.label }}
+				</span>
+				<span class="toolbar__sep">›</span>
+				<span class="toolbar__project">
+					{{ currentProject.alias }}
+				</span>
+				<span class="toolbar__sep">›</span>
+				<span class="toolbar__branch">{{ currentBranch?.name }}</span>
+			</template>
+		</span>
 
-	<div class="toolbar__actions">
-		<template v-if="currentProject && !isConnecting && !hideActions">
+		<div class="toolbar__actions">
+			<template v-if="currentProject && !isConnecting && !hideActions">
+				<NButton
+					v-for="action of actions"
+					:key="action.label"
+					:test-id="`toolbar-${action.label.toLowerCase()}-btn`"
+					class="toolbar__action-btn"
+					:title="action.label"
+					:disabled="action.disabled || action.loading"
+					:loading="action.loading"
+					secondary
+					size="small"
+					@click="action.onClick?.()"
+				>
+					<div class="content">
+						<p>{{ action.label }}</p>
+						<Icon :name="action.icon" />
+					</div>
+				</NButton>
+			</template>
+		</div>
+
+		<div class="profile">
 			<NButton
-				v-for="action of actions"
-				:key="action.label"
-				:test-id="`toolbar-${action.label.toLowerCase()}-btn`"
-				class="toolbar__action-btn"
-				:title="action.label"
-				:disabled="action.disabled || action.loading"
-				:loading="action.loading"
-				secondary
-				size="small"
-				@click="action.onClick?.()"
+				text
+				title="Activity Log"
+				@click="toggleActivityLog"
 			>
-				<div class="content">
-					<p>{{ action.label }}</p>
-					<Icon :name="action.icon" />
-				</div>
+				<Icon name="mdi-text-box-outline" />
 			</NButton>
-		</template>
+			<NButton
+				text
+				test-id="settings"
+				title="Settings"
+				@click="toggleSettings"
+			>
+				<Icon name="mdi-cog-outline" />
+			</NButton>
+			<Icon name="mdi-account" />
+		</div>
+
+		<ReferenceModal
+			v-model:show="showBranchModal"
+			:type="EReferenceModalType.Branch"
+			mode="create"
+			:commit-hash="selectedHashes[0]"
+			@done="loadCommits()"
+		/>
+
+		<PushRejectedDialog
+			v-model:show="showPushRejectedDialog"
+			:error-message="pushRejectedStderr"
+			@choose="handlePushRejectedChoice"
+		/>
 	</div>
-
-	<div class="profile">
-		<NButton text title="Activity Log" @click="toggleActivityLog">
-			<Icon name="mdi-text-box-outline" />
-		</NButton>
-		<NButton
-			text
-			test-id="settings"
-			title="Settings"
-			@click="toggleSettings"
-		>
-			<Icon name="mdi-cog-outline" />
-		</NButton>
-		<Icon name="mdi-account" />
-	</div>
-
-	<ReferenceModal
-		v-model:show="showBranchModal"
-		:type="EReferenceModalType.Branch"
-		mode="create"
-		:commit-hash="selectedHashes[0]"
-		@done="loadCommits()"
-	/>
-
-	<PushRejectedDialog
-		v-model:show="showPushRejectedDialog"
-		:error-message="pushRejectedStderr"
-		@choose="handlePushRejectedChoice"
-	/>
-</div>
 </template>
 
 <script setup lang="ts">
@@ -110,7 +114,7 @@ const isPulling = ref(false);
 const isPushing = ref(false);
 
 defineProps<{
-	hideActions: Boolean
+	hideActions: boolean
 }>();
 
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '::1'];
@@ -319,31 +323,31 @@ onUnmounted(() => {
 });
 
 const actions = computed(() => [{
-	icon: "mdi-cloud-download-outline",
-	label: "Fetch",
+	icon: 'mdi-cloud-download-outline',
+	label: 'Fetch',
 	loading: isFetching.value,
 	onClick: handleFetch,
 }, {
-	icon: "mdi-arrow-down-bold",
-	label: "Pull",
+	icon: 'mdi-arrow-down-bold',
+	label: 'Pull',
 	loading: isPulling.value,
 	onClick: handlePull,
 }, {
-	icon: "mdi-arrow-up-bold",
-	label: "Push",
+	icon: 'mdi-arrow-up-bold',
+	label: 'Push',
 	loading: isPushing.value,
 	onClick: handlePush,
 }, {
-	icon: "mdi-source-branch",
-	label: "Branch",
+	icon: 'mdi-source-branch',
+	label: 'Branch',
 	onClick: () => { showBranchModal.value = true; },
 }, {
-	icon: "mdi-archive-arrow-down-outline",
-	label: "Stash",
+	icon: 'mdi-archive-arrow-down-outline',
+	label: 'Stash',
 	disabled: false,
 	onClick: handleStash,
 }, {
-	icon: "mdi-archive-arrow-up-outline",
+	icon: 'mdi-archive-arrow-up-outline',
 	label: 'Pop',
 	disabled: popDisabled.value,
 	onClick: handlePop,

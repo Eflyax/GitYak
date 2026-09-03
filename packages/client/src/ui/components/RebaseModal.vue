@@ -1,85 +1,107 @@
 <template>
-<NModal
-	:show="show"
-	preset="card"
-	title="Interactive rebase"
-	style="width: 660px;"
-	:mask-closable="false"
-	@update:show="onUpdateShow"
->
-	<div class="rebase">
-		<div class="rebase__intro">
-			Rebasing <strong>{{ source }}</strong> onto <strong>{{ target }}</strong>
-			<span class="rebase__hint">— top row is applied first</span>
-		</div>
+	<NModal
+		:show="show"
+		preset="card"
+		title="Interactive rebase"
+		style="width: 660px;"
+		:mask-closable="false"
+		@update:show="onUpdateShow"
+	>
+		<div class="rebase">
+			<div class="rebase__intro">
+				Rebasing <strong>{{ source }}</strong> onto <strong>{{ target }}</strong>
+				<span class="rebase__hint">— top row is applied first</span>
+			</div>
 
-		<div class="rebase__list">
-			<div
-				v-for="(step, index) in steps"
-				:key="step.hash"
-				class="rebase__row"
-				:class="{'rebase__row--drop': step.action === 'drop', 'rebase__row--drag': dragIndex === index}"
-				draggable="true"
-				@dragstart="onDragStart(index)"
-				@dragover.prevent="onDragOver(index)"
-				@drop.prevent="onDrop(index)"
-				@dragend="dragIndex = null"
-			>
-				<Icon name="mdi-drag" class="rebase__handle" />
+			<div class="rebase__list">
+				<div
+					v-for="(step, index) in steps"
+					:key="step.hash"
+					class="rebase__row"
+					:class="{'rebase__row--drop': step.action === 'drop', 'rebase__row--drag': dragIndex === index}"
+					draggable="true"
+					@dragstart="onDragStart(index)"
+					@dragover.prevent="onDragOver(index)"
+					@drop.prevent="onDrop(index)"
+					@dragend="dragIndex = null"
+				>
+					<Icon
+						name="mdi-drag"
+						class="rebase__handle"
+					/>
 
-				<div class="rebase__actions">
-					<button
-						v-for="action in actionOptions"
-						:key="action.value"
-						class="rebase__action"
-						:class="[`rebase__action--${action.value}`, {'rebase__action--on': step.action === action.value}]"
-						:disabled="isActionDisabled(action.value, index)"
-						:title="action.title"
-						@click="setAction(step, action.value)"
-					>
-						{{ action.label }}
-					</button>
-				</div>
+					<div class="rebase__actions">
+						<button
+							v-for="action in actionOptions"
+							:key="action.value"
+							class="rebase__action"
+							:class="[`rebase__action--${action.value}`, {'rebase__action--on': step.action === action.value}]"
+							:disabled="isActionDisabled(action.value, index)"
+							:title="action.title"
+							@click="setAction(step, action.value)"
+						>
+							{{ action.label }}
+						</button>
+					</div>
 
-				<span class="rebase__hash">{{ step.shortHash }}</span>
+					<span class="rebase__hash">{{ step.shortHash }}</span>
 
-				<NInput
-					v-if="step.action === 'reword'"
-					v-model:value="step.message"
-					size="tiny"
-					class="rebase__message"
-					placeholder="New commit message"
-				/>
-				<span v-else class="rebase__subject">{{ step.subject }}</span>
+					<NInput
+						v-if="step.action === 'reword'"
+						v-model:value="step.message"
+						size="tiny"
+						class="rebase__message"
+						placeholder="New commit message"
+					/>
+					<span
+						v-else
+						class="rebase__subject"
+					>{{ step.subject }}</span>
 
-				<div class="rebase__move">
-					<button class="rebase__move-btn" :disabled="index === 0" title="Move up" @click="move(index, -1)">
-						<Icon name="mdi-chevron-up" />
-					</button>
-					<button class="rebase__move-btn" :disabled="index === steps.length - 1" title="Move down" @click="move(index, 1)">
-						<Icon name="mdi-chevron-down" />
-					</button>
+					<div class="rebase__move">
+						<button
+							class="rebase__move-btn"
+							:disabled="index === 0"
+							title="Move up"
+							@click="move(index, -1)"
+						>
+							<Icon name="mdi-chevron-up" />
+						</button>
+						<button
+							class="rebase__move-btn"
+							:disabled="index === steps.length - 1"
+							title="Move down"
+							@click="move(index, 1)"
+						>
+							<Icon name="mdi-chevron-down" />
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
-	</div>
 
-	<template #footer>
-		<div class="rebase__footer">
-			<span class="rebase__summary">{{ keptCount }} of {{ steps.length }} commits kept</span>
-			<NButton test-id="rebase-cancel-btn" :disabled="running" @click="close">Cancel</NButton>
-			<NButton
-				test-id="rebase-start-btn"
-				type="primary"
-				:loading="running"
-				:disabled="running || keptCount === 0"
-				@click="execute"
-			>
-				Start rebase
-			</NButton>
-		</div>
-	</template>
-</NModal>
+		<template #footer>
+			<div class="rebase__footer">
+				<span class="rebase__summary">{{ keptCount }} of {{ steps.length }} commits kept</span>
+				<NButton
+					test-id="rebase-cancel-btn"
+					:disabled="running"
+					@click="close"
+				>
+					Cancel
+				</NButton>
+				<NButton
+					test-id="rebase-start-btn"
+					type="primary"
+					:loading="running"
+					:disabled="running || keptCount === 0"
+					@click="execute"
+				>
+					Start rebase
+				</NButton>
+			</div>
+		</template>
+	</NModal>
 </template>
 
 <script setup lang="ts">
