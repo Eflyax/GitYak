@@ -32,6 +32,13 @@ describe('parseGitError', () => {
 			.toBe(EGitErrorCode.CherryPickConflict);
 	});
 
+	it('recognises "Merge conflict in" on its own, without the word CONFLICT', () => {
+		// This fixture must not contain the literal "CONFLICT" — otherwise it would be caught by
+		// the first half of the `||` chain and prove nothing about the second half.
+		expect(parseGitError('Auto-merging a.txt\nMerge conflict in a.txt', 1).code)
+			.toBe(EGitErrorCode.MergeConflict);
+	});
+
 	it('recognises every push-rejection phrasing', () => {
 		for (const text of [
 			'! [rejected] main -> main',
@@ -39,7 +46,9 @@ describe('parseGitError', () => {
 			'error: failed to push some refs',
 			'hint: (fetch first)',
 			'error: cannot lock ref: stale info',
-			'! [rejected] main -> main (non-fast-forward)',
+			// Must not contain "[rejected]" or any of the other four phrases above — otherwise
+			// it would be caught by an earlier sub-condition and prove nothing about this one.
+			'to origin: (non-fast-forward)',
 		]) {
 			expect(parseGitError(text, 1).code).toBe(EGitErrorCode.PushRejected);
 		}
