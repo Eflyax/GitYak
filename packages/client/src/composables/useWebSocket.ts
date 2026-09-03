@@ -76,6 +76,10 @@ export function useWebSocket() {
 		client.value?.onEvent?.(callback);
 	}
 
+	function onReconnect(callback: () => void): void {
+		client.value?.onReconnect?.(callback);
+	}
+
 	return {
 		client: readonly(client),
 		status: readonly(status),
@@ -83,5 +87,6 @@ export function useWebSocket() {
 		disconnect,
 		call,
 		onEvent,
+		onReconnect,
 	};
 }

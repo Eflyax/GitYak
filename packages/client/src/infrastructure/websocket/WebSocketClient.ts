@@ -1,6 +1,8 @@
 import type {ENetworkCommand, IWsEvent} from '@git-yak/protocol';
 import {isErrorResponse, isSuccessResponse, isRepoChangedEvent} from '@git-yak/protocol';
 import type {ITransportClient} from '../ITransportClient';
+import {nextBackoffDelay} from '../backoff';
+import {useConnectionStatus} from '@/composables/useConnectionStatus';
 
 type PendingRequest = {
 	resolve: (value: unknown) => void
@@ -24,24 +26,42 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export class WebSocketClient implements ITransportClient {
-	private readonly ws: WebSocket;
+	private ws!: WebSocket;
 	private readonly pending = new Map<string, PendingRequest>();
 	private readonly queue: string[] = [];
 	private connected = false;
 	private authFailed = false;
 	private eventCallback?: (event: IWsEvent) => void;
+	private reconnectCallback?: () => void;
+	private attempt = 0;
+	private closedByUser = false;
+	private readonly url: string;
+	private readonly cs = useConnectionStatus();
 
 	constructor(url: string, private readonly token = '') {
-		this.ws = new WebSocket(url);
+		this.url = url;
+		this.open();
+	}
+
+	private open(): void {
+		this.ws = new WebSocket(this.url);
 
 		this.ws.onopen = () => {
 			// An empty token means this peer has no auth gate — the Rust remote worker,
 			// which is reachable only through the SSH tunnel and deliberately has none.
 			// Sending an auth frame there would wait forever for an ack that never comes.
 			if (!this.token) {
+				const wasReconnect = this.attempt > 0;
+
+				this.attempt = 0;
 				this.connected = true;
 				this.queue.forEach(msg => this.ws.send(msg));
 				this.queue.length = 0;
+
+				if (wasReconnect) {
+					this.cs.setReconnecting(false);
+					this.reconnectCallback?.();
+				}
 
 				return;
 			}
@@ -63,9 +83,17 @@ export class WebSocketClient implements ITransportClient {
 
 			if (isRecord(data) && data['type'] === 'auth') {
 				if (data['status'] === 'success') {
+					const wasReconnect = this.attempt > 0;
+
+					this.attempt = 0;
 					this.connected = true;
 					this.queue.forEach(msg => this.ws.send(msg));
 					this.queue.length = 0;
+
+					if (wasReconnect) {
+						this.cs.setReconnecting(false);
+						this.reconnectCallback?.();
+					}
 
 					return;
 				}
@@ -113,6 +141,26 @@ export class WebSocketClient implements ITransportClient {
 			this.connected = false;
 			this.pending.forEach(({reject}) => reject(new Error('WebSocket connection closed')));
 			this.pending.clear();
+
+			// Anything still queued (calls waiting on the auth handshake) belongs to a
+			// promise that was just rejected above — sending it on the next socket would
+			// execute the command with nobody left to receive the response.
+			this.queue.length = 0;
+
+			if (this.closedByUser) {
+				return;
+			}
+
+			// A rejected token is not retried: hammering the server every few seconds with
+			// a credential it has already refused would never succeed and just adds noise.
+			if (this.authFailed) {
+				return;
+			}
+
+			// In-flight requests are deliberately NOT retried: replaying a git command
+			// risks applying it twice. They reject above; the socket alone comes back.
+			this.cs.setReconnecting(true);
+			setTimeout(() => this.open(), nextBackoffDelay(this.attempt++));
 		};
 
 		this.ws.onerror = () => {
@@ -148,11 +196,16 @@ export class WebSocketClient implements ITransportClient {
 		this.eventCallback = callback;
 	}
 
+	onReconnect(callback: () => void): void {
+		this.reconnectCallback = callback;
+	}
+
 	isOpen(): boolean {
 		return this.ws.readyState === WebSocket.OPEN;
 	}
 
 	close(): void {
+		this.closedByUser = true;
 		this.ws.close();
 	}
 }

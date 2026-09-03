@@ -21,6 +21,7 @@ export class SshTunnelClient implements ITransportClient {
 	private dead = false;
 	private consecutiveHeartbeatFailures = 0;
 	private eventCallback?: (event: IWsEvent) => void;
+	private reconnectCallback?: () => void;
 	onDead?: () => void;
 	private readonly log = useActivityLog().addLog;
 	private readonly cs = useConnectionStatus();
@@ -52,6 +53,9 @@ export class SshTunnelClient implements ITransportClient {
 			this.wsClient = new WebSocketClient(`ws://127.0.0.1:${this.localPort}`);
 			if (this.eventCallback) {
 				this.wsClient.onEvent(this.eventCallback);
+			}
+			if (this.reconnectCallback) {
+				this.wsClient.onReconnect(this.reconnectCallback);
 			}
 
 			this.startHeartbeat();
@@ -327,6 +331,11 @@ export class SshTunnelClient implements ITransportClient {
 	onEvent(callback: (event: IWsEvent) => void): void {
 		this.eventCallback = callback;
 		this.wsClient?.onEvent(callback);
+	}
+
+	onReconnect(callback: () => void): void {
+		this.reconnectCallback = callback;
+		this.wsClient?.onReconnect(callback);
 	}
 
 	close(): void {

@@ -11,7 +11,7 @@ let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function useRepoWatch() {
 	const
-		{call, onEvent} = useWebSocket(),
+		{call, onEvent, onReconnect} = useWebSocket(),
 		{currentProject} = useProject(),
 		{loadCommits} = useCommits(),
 		{loadBranches} = useBranches(),
@@ -36,6 +36,13 @@ export function useRepoWatch() {
 		// client for each project, and a callback registered on the previous one would never
 		// fire again. The slot is a single idempotent overwrite, so re-registering is free.
 		onEvent(scheduleRefresh);
+
+		// Re-issue the watch once the transport reconnects — the server-side watcher
+		// state is gone with the old socket, so a fresh watchRepo call is needed or
+		// live refresh silently stops working after a drop.
+		onReconnect(() => {
+			void start();
+		});
 
 		try {
 			await call(ENetworkCommand.WatchRepo, {repo_path: currentProject.value.path});
