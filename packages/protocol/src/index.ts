@@ -69,3 +69,5 @@ export function isRepoChangedEvent(value: unknown): value is IWsEvent {
 		&& Array.isArray(value['paths'])
 		&& value['paths'].every(path => typeof path === 'string');
 }
+
+export {findForbiddenGitOption} from './gitArgs';
