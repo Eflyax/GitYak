@@ -10,7 +10,7 @@ interface IDirEntry {
 }
 
 export class TauriLocalClient implements ITransportClient {
-	async call(command: string, payload: Record<string, unknown>): Promise<unknown> {
+	async call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
 		switch (command) {
 			case ENetworkCommand.GitCall: {
 				const repoPath = payload['repo_path'] as string;

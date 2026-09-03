@@ -9,7 +9,7 @@ export enum ENetworkCommand {
 
 export interface IWsRequest {
 	requestId: string;
-	command: string;
+	command: ENetworkCommand;
 	[key: string]: unknown;
 }
 
@@ -42,4 +42,28 @@ export function isSuccessResponse(value: unknown): value is IWsSuccessResponse {
 	return isRecord(value)
 		&& value['status'] === 'success'
 		&& typeof value['requestId'] === 'string';
+}
+
+export interface IWsAuthRequest {
+	type: 'auth';
+	token: string;
+}
+
+export interface IWsEvent {
+	type: 'event';
+	event: 'repoChanged';
+	paths: Array<string>;
+}
+
+export function isAuthRequest(value: unknown): value is IWsAuthRequest {
+	return isRecord(value)
+		&& value['type'] === 'auth'
+		&& typeof value['token'] === 'string';
+}
+
+export function isRepoChangedEvent(value: unknown): value is IWsEvent {
+	return isRecord(value)
+		&& value['type'] === 'event'
+		&& value['event'] === 'repoChanged'
+		&& Array.isArray(value['paths']);
 }

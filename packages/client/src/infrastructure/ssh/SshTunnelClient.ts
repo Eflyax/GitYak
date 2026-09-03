@@ -314,7 +314,7 @@ export class SshTunnelClient implements ITransportClient {
 		this.cs.setUploadProgress(100);
 	}
 
-	call(command: string, payload: Record<string, unknown>): Promise<unknown> {
+	call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
 		if (!this.wsClient) return Promise.reject(new Error('Not connected'));
 		return this.wsClient.call(command, payload);
 	}

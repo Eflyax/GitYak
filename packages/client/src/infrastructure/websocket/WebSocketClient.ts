@@ -1,3 +1,4 @@
+import type {ENetworkCommand} from '@git-yak/protocol';
 import {isErrorResponse, isSuccessResponse} from '@git-yak/protocol';
 import type {ITransportClient} from '../ITransportClient';
 
@@ -76,7 +77,7 @@ export class WebSocketClient implements ITransportClient {
 		};
 	}
 
-	call(command: string, payload: Record<string, unknown>): Promise<unknown> {
+	call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
 		return new Promise((resolve, reject) => {
 			const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
