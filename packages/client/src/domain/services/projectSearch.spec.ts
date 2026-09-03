@@ -75,4 +75,15 @@ describe('filterProjects', () => {
 
 		expect(filterProjects(items, 'same').map(p => p.alias)).toEqual(['Same A', 'Same B']);
 	});
+
+	it('ranks an alias substring below an alias prefix and above a path segment', () => {
+		const items = [
+			project('Zebra tools', '/unrelated/one'),   // alias substring  -> 3
+			project('Alpha', '/home/me/tools'),         // last path segment -> 2
+			project('Tools kit', '/unrelated/two'),     // alias prefix      -> 4
+		];
+
+		expect(filterProjects(items, 'tools').map(p => p.alias))
+			.toEqual(['Tools kit', 'Zebra tools', 'Alpha']);
+	});
 });

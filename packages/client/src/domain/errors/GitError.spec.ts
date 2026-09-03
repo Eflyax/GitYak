@@ -39,6 +39,7 @@ describe('parseGitError', () => {
 			'error: failed to push some refs',
 			'hint: (fetch first)',
 			'error: cannot lock ref: stale info',
+			'! [rejected] main -> main (non-fast-forward)',
 		]) {
 			expect(parseGitError(text, 1).code).toBe(EGitErrorCode.PushRejected);
 		}
@@ -61,6 +62,19 @@ describe('parseGitError', () => {
 		expect(parseGitError('fatal: Could not resolve host: github.com', 128).code)
 			.toBe(EGitErrorCode.NetworkError);
 		expect(parseGitError('Connection refused', 128).code).toBe(EGitErrorCode.NetworkError);
+	});
+
+	it('recognises the remaining permission and network phrasings', () => {
+		expect(parseGitError('remote: access denied', 1).code).toBe(EGitErrorCode.PermissionDenied);
+		expect(parseGitError('fatal: unable to access: Network is unreachable', 128).code)
+			.toBe(EGitErrorCode.NetworkError);
+	});
+
+	it('recognises an overwrite refusal that does not mention local changes', () => {
+		// "would be overwritten" must select the branch on its own; today it is only ever
+		// tested next to "Your local changes", so deleting it would go unnoticed.
+		expect(parseGitError('error: The following untracked files would be overwritten by merge', 1).code)
+			.toBe(EGitErrorCode.UncommittedChanges);
 	});
 
 	it('falls back to Unknown and keeps the raw message', () => {
