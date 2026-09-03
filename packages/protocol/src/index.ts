@@ -76,4 +76,4 @@ export function isRepoChangedEvent(value: unknown): value is IWsEvent {
 		&& value['paths'].every(path => typeof path === 'string');
 }
 
-export {findForbiddenGitOption} from './gitArgs';
+export {describeForbiddenGitOption, findForbiddenGitOption} from './gitArgs';

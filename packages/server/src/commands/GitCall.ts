@@ -2,7 +2,7 @@ import {resolve, isAbsolute} from 'path';
 import {existsSync} from 'fs';
 import {getAgentEnv} from './SshAgentInit';
 import type {IWsRequest} from '@git-yak/protocol';
-import {findForbiddenGitOption} from '@git-yak/protocol';
+import {describeForbiddenGitOption, findForbiddenGitOption} from '@git-yak/protocol';
 
 function validateRepoPath(repoPath: unknown): string {
 	if (typeof repoPath !== 'string' || !repoPath) {
@@ -32,7 +32,7 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsRequest): 
 		ws.send(JSON.stringify({
 			requestId,
 			status: 'error',
-			message: `Refused: "${forbidden}" is a git global option and is not allowed here`,
+			message: describeForbiddenGitOption(forbidden),
 		}));
 
 		return;

@@ -25,10 +25,7 @@ pub async fn run(req: &WsRequest) -> String {
 	};
 
 	if let Some(forbidden) = crate::git_args::find_forbidden_git_option(&args) {
-		return protocol::error(
-			request_id,
-			&format!("Refused: \"{forbidden}\" is a git global option and is not allowed here"),
-		);
+		return protocol::error(request_id, &crate::git_args::describe_forbidden_git_option(forbidden));
 	}
 
 	let resolved = if std::path::Path::new(&repo_path).is_absolute() {

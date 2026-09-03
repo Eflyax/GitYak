@@ -48,3 +48,16 @@ export function findForbiddenGitOption(args: Array<string>): string | undefined 
 
 	return undefined;
 }
+
+// The two lists are refused for different reasons, so the refusal must say which applied:
+// reporting `--exec` as "a git global option" is simply false — it is a subcommand option.
+// The lists do not overlap, so the option name alone determines the reason.
+export function describeForbiddenGitOption(option: string): string {
+	const name = option.split('=')[0];
+
+	if (FORBIDDEN_ANYWHERE.includes(name)) {
+		return `Refused: "${option}" makes git run a command of the caller's choosing and is not allowed here`;
+	}
+
+	return `Refused: "${option}" is a git global option and is not allowed here`;
+}

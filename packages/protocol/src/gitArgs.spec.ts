@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {findForbiddenGitOption} from './gitArgs';
+import {describeForbiddenGitOption, findForbiddenGitOption} from './gitArgs';
 
 describe('findForbiddenGitOption', () => {
 	it('rejects -c, the command-injection vector', () => {
@@ -55,5 +55,23 @@ describe('findForbiddenGitOption', () => {
 		expect(findForbiddenGitOption(['fetch', '--prune', '--all'])).toBeUndefined();
 		expect(findForbiddenGitOption(['push', '--set-upstream', 'origin', 'main'])).toBeUndefined();
 		expect(findForbiddenGitOption(['push', 'origin', '--delete', 'branch'])).toBeUndefined();
+	});
+});
+
+describe('describeForbiddenGitOption', () => {
+	it('describes a global option as a global option', () => {
+		expect(describeForbiddenGitOption('-c'))
+			.toBe('Refused: "-c" is a git global option and is not allowed here');
+		expect(describeForbiddenGitOption('--git-dir=/tmp'))
+			.toBe('Refused: "--git-dir=/tmp" is a git global option and is not allowed here');
+	});
+
+	it('describes an anywhere-refused option by what it does, not as a global option', () => {
+		expect(describeForbiddenGitOption('--exec=touch /tmp/x'))
+			.toBe('Refused: "--exec=touch /tmp/x" makes git run a command of the caller\'s choosing and is not allowed here');
+		expect(describeForbiddenGitOption('-x'))
+			.toBe('Refused: "-x" makes git run a command of the caller\'s choosing and is not allowed here');
+		expect(describeForbiddenGitOption('--upload-pack=x')).not.toContain('global option');
+		expect(describeForbiddenGitOption('--receive-pack=x')).not.toContain('global option');
 	});
 });

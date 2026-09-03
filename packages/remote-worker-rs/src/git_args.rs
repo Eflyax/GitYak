@@ -40,6 +40,19 @@ pub fn find_forbidden_git_option(args: &[String]) -> Option<&str> {
 	None
 }
 
+/// The two lists are refused for different reasons, so the refusal must say which applied:
+/// reporting `--exec` as "a git global option" is simply false — it is a subcommand option.
+/// The lists do not overlap, so the option name alone determines the reason.
+pub fn describe_forbidden_git_option(option: &str) -> String {
+	let name = option.split('=').next().unwrap_or(option);
+
+	if FORBIDDEN_ANYWHERE.contains(&name) {
+		return format!("Refused: \"{option}\" makes git run a command of the caller's choosing and is not allowed here");
+	}
+
+	format!("Refused: \"{option}\" is a git global option and is not allowed here")
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -86,6 +99,26 @@ mod tests {
 			Some("--exec=touch /tmp/x")
 		);
 		assert_eq!(find_forbidden_git_option(&v(&["rebase", "-x", "touch /tmp/x"])), Some("-x"));
+	}
+
+	#[test]
+	fn describes_a_global_option_as_a_global_option() {
+		assert_eq!(
+			describe_forbidden_git_option("-c"),
+			"Refused: \"-c\" is a git global option and is not allowed here"
+		);
+	}
+
+	#[test]
+	fn describes_an_executing_option_by_what_it_does() {
+		assert_eq!(
+			describe_forbidden_git_option("--exec=touch /tmp/x"),
+			"Refused: \"--exec=touch /tmp/x\" makes git run a command of the caller's choosing and is not allowed here"
+		);
+		assert_eq!(
+			describe_forbidden_git_option("-x"),
+			"Refused: \"-x\" makes git run a command of the caller's choosing and is not allowed here"
+		);
 	}
 
 	#[test]

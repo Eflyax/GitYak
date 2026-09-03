@@ -29,6 +29,17 @@ pub fn run(req: &protocol::WsRequest, state: &AppState, tx: &UnboundedSender<Str
 		);
 	}
 
+	// Without this an authenticated peer could start a recursive watch of any directory it
+	// names — an entire filesystem included. A repository always has a `.git` entry (a
+	// directory, or a file in a worktree or submodule), so requiring one bounds the watch to
+	// something the app has a reason to observe.
+	if !repo_path.join(".git").exists() {
+		return protocol::error(
+			request_id,
+			&format!("Not a git repository (no .git entry): {}", repo_path.display()),
+		);
+	}
+
 	stop(state);
 
 	let sender = tx.clone();
