@@ -1,4 +1,5 @@
 import {ref, readonly} from 'vue';
+import type {IWsEvent} from '@git-yak/protocol';
 import {WebSocketClient} from '@/infrastructure/websocket/WebSocketClient';
 import {getServerToken} from '@/infrastructure/serverToken';
 import {TauriLocalClient} from '@/infrastructure/tauri/TauriLocalClient';
@@ -71,11 +72,16 @@ export function useWebSocket() {
 		return client.value.call(command, payload);
 	}
 
+	function onEvent(callback: (event: IWsEvent) => void): void {
+		client.value?.onEvent?.(callback);
+	}
+
 	return {
 		client: readonly(client),
 		status: readonly(status),
 		connect,
 		disconnect,
 		call,
+		onEvent,
 	};
 }

@@ -55,6 +55,10 @@ export interface IWsAuthRequest {
 export interface IWsEvent {
 	type: 'event';
 	event: 'repoChanged';
+	// Backend-dependent and not directly comparable: the Bun server reports names relative
+	// to whichever watched directory raised them (so a bare "HEAD" may be the repository
+	// root's or .git's), while the Rust worker reports absolute paths. Treat this as a hint
+	// that something changed, not as an addressable path, until it is normalised.
 	paths: Array<string>;
 }
 

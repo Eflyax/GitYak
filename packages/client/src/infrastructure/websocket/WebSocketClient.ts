@@ -1,5 +1,5 @@
-import type {ENetworkCommand} from '@git-yak/protocol';
-import {isErrorResponse, isSuccessResponse} from '@git-yak/protocol';
+import type {ENetworkCommand, IWsEvent} from '@git-yak/protocol';
+import {isErrorResponse, isSuccessResponse, isRepoChangedEvent} from '@git-yak/protocol';
 import type {ITransportClient} from '../ITransportClient';
 
 type PendingRequest = {
@@ -29,6 +29,7 @@ export class WebSocketClient implements ITransportClient {
 	private readonly queue: string[] = [];
 	private connected = false;
 	private authFailed = false;
+	private eventCallback?: (event: IWsEvent) => void;
 
 	constructor(url: string, private readonly token = '') {
 		this.ws = new WebSocket(url);
@@ -77,6 +78,12 @@ export class WebSocketClient implements ITransportClient {
 				this.pending.forEach(({reject}) => reject(new Error(message)));
 				this.pending.clear();
 				this.queue.length = 0;
+
+				return;
+			}
+
+			if (isRepoChangedEvent(data)) {
+				this.eventCallback?.(data);
 
 				return;
 			}
@@ -135,6 +142,10 @@ export class WebSocketClient implements ITransportClient {
 				this.queue.push(message);
 			}
 		});
+	}
+
+	onEvent(callback: (event: IWsEvent) => void): void {
+		this.eventCallback = callback;
 	}
 
 	isOpen(): boolean {
