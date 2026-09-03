@@ -71,6 +71,14 @@ describe('resolveScope', () => {
 		expect(lighter).not.toBe('#808080');
 		expect(darker).not.toBe('#808080');
 		expect(lighter.toLowerCase()).not.toBe(darker.toLowerCase());
+
+		// Assert the direction, not just that the two differ — otherwise a swapped
+		// implementation, or two unrelated colours, would still pass.
+		const lighterRed = parseInt(lighter.slice(1, 3), 16);
+		const darkerRed = parseInt(darker.slice(1, 3), 16);
+
+		expect(lighterRed).toBeGreaterThan(0x80);
+		expect(0x80).toBeGreaterThan(darkerRed);
 	});
 
 	it('evaluates mixLess() to a colour between its two endpoints', () => {
@@ -95,6 +103,10 @@ describe('resolveScope', () => {
 	});
 
 	it('passes rgba() through', () => {
+		// This short-circuits at the `startsWith('rgb')` guard earlier in resolveExpression
+		// (themeExpressionEvaluator.ts:93), which returns the value unchanged before the
+		// function-call parsing runs. The `fn === 'rgba'` branch further down (line 116) is
+		// unreachable for that reason — this test covers the guard, not that branch.
 		expect(resolveScope({x: 'rgba(0,0,0,.5)'}).x).toBe('rgba(0,0,0,.5)');
 	});
 

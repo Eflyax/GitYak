@@ -30,7 +30,7 @@ describe('getGraphColor', () => {
 	it('falls back to the built-in palette when the property is empty', () => {
 		stubCss({});
 
-		expect(getGraphColor(0)).toMatch(/^#[0-9a-f]{6}$/i);
+		expect(getGraphColor(0)).toBe('#3b82f6');
 	});
 
 	it('is stable for the same lane', () => {
