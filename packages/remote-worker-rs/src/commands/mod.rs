@@ -31,6 +31,11 @@ pub async fn dispatch(raw: &str, state: &AppState) -> String {
 		"writeFile" => write_file::run(&req).await,
 		"browseFiles" => browse_files::run(&req),
 		"heartbeat" => heartbeat::run(&req, state),
+		// Implemented in the next task; answered explicitly so the command is genuinely
+		// routed rather than falling through to "Unknown command".
+		"watchRepo" | "unwatchRepo" => {
+			protocol::error(&req.request_id, "Repository watching is not yet supported by the remote worker")
+		}
 		unknown => protocol::error(&req.request_id, &format!("Unknown command: {unknown}")),
 	}
 }

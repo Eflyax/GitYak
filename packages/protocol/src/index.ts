@@ -6,6 +6,8 @@ export enum ENetworkCommand {
 	BrowseFiles = 'browseFiles',
 	SshAgentInit = 'sshAgentInit',
 	Heartbeat = 'heartbeat',
+	WatchRepo = 'watchRepo',
+	UnwatchRepo = 'unwatchRepo',
 }
 
 export interface IWsRequest {

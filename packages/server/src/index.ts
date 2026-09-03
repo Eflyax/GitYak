@@ -8,6 +8,7 @@ import * as ReadFile from './commands/ReadFile';
 import * as WriteFile from './commands/WriteFile';
 import * as BrowseFiles from './commands/BrowseFiles';
 import * as SshAgentInit from './commands/SshAgentInit';
+import * as WatchRepo from './commands/WatchRepo';
 
 const PORT = Number(process.env.PORT ?? 3_000);
 
@@ -118,6 +119,14 @@ serve({
 						await SshAgentInit.run(ws, data);
 						break;
 
+					case ENetworkCommand.WatchRepo:
+						WatchRepo.run(ws, data);
+						break;
+
+					case ENetworkCommand.UnwatchRepo:
+						WatchRepo.unwatch(ws, data);
+						break;
+
 					default:
 						ws.send(JSON.stringify({
 							requestId: data.requestId,
@@ -142,6 +151,7 @@ serve({
 			console.log('[ws] client disconnected');
 			clearTimeout(authTimers.get(ws));
 			SshAgentInit.destroyAgent(ws);
+			WatchRepo.stop(ws);
 		},
 	},
 });
