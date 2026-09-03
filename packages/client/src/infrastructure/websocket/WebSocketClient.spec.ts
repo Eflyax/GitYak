@@ -86,4 +86,25 @@ describe('WebSocketClient auth gate', () => {
 
 		await expect(pending).resolves.toBe('ok');
 	});
+
+	it('rejects a queued call with the server\'s reason when the token is wrong', async () => {
+		const client = new WebSocketClient('ws://x', 'wrong');
+
+		socket.onopen?.();
+
+		const pending = client.call(ENetworkCommand.GitCall, {args: ['status']});
+
+		socket.onmessage?.({data: JSON.stringify({type: 'auth', status: 'error', message: 'Invalid token'})});
+
+		await expect(pending).rejects.toThrow('Invalid token');
+	});
+
+	it('rejects a call made after a failed authentication', async () => {
+		const client = new WebSocketClient('ws://x', 'wrong');
+
+		socket.onopen?.();
+		socket.onmessage?.({data: JSON.stringify({type: 'auth', status: 'error', message: 'Invalid token'})});
+
+		await expect(client.call(ENetworkCommand.GitCall, {args: ['status']})).rejects.toThrow('Authentication failed');
+	});
 });

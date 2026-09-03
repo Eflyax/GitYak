@@ -28,6 +28,7 @@ export class WebSocketClient implements ITransportClient {
 	private readonly pending = new Map<string, PendingRequest>();
 	private readonly queue: string[] = [];
 	private connected = false;
+	private authFailed = false;
 
 	constructor(url: string, private readonly token = '') {
 		this.ws = new WebSocket(url);
@@ -64,7 +65,18 @@ export class WebSocketClient implements ITransportClient {
 					this.connected = true;
 					this.queue.forEach(msg => this.ws.send(msg));
 					this.queue.length = 0;
+
+					return;
 				}
+
+				// Authentication failed: fail every queued and in-flight call with the real
+				// reason, or the socket close below surfaces only "connection closed".
+				const message = typeof data['message'] === 'string' ? data['message'] : 'Authentication failed';
+
+				this.authFailed = true;
+				this.pending.forEach(({reject}) => reject(new Error(message)));
+				this.pending.clear();
+				this.queue.length = 0;
 
 				return;
 			}
@@ -104,6 +116,12 @@ export class WebSocketClient implements ITransportClient {
 
 	call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
 		return new Promise((resolve, reject) => {
+			if (this.authFailed) {
+				reject(new Error('Authentication failed'));
+
+				return;
+			}
+
 			const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 			this.pending.set(requestId, {resolve, reject});

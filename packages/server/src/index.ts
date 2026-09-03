@@ -72,7 +72,7 @@ serve({
 				}
 				else {
 					console.warn('[ws] rejected a bad token');
-					ws.send(JSON.stringify({status: 'error', message: 'Invalid token'}));
+					ws.send(JSON.stringify({type: 'auth', status: 'error', message: 'Invalid token'}));
 					ws.close();
 				}
 
