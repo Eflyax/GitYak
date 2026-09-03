@@ -35,6 +35,7 @@ export class WebSocketClient implements ITransportClient {
 	private reconnectCallback?: () => void;
 	private attempt = 0;
 	private closedByUser = false;
+	private reconnectTimer?: ReturnType<typeof setTimeout>;
 	private readonly url: string;
 	private readonly cs = useConnectionStatus();
 
@@ -44,6 +45,12 @@ export class WebSocketClient implements ITransportClient {
 	}
 
 	private open(): void {
+		// A retry can still be in flight when close() runs; never resurrect a socket the
+		// caller deliberately shut.
+		if (this.closedByUser) {
+			return;
+		}
+
 		this.ws = new WebSocket(this.url);
 
 		this.ws.onopen = () => {
@@ -160,12 +167,13 @@ export class WebSocketClient implements ITransportClient {
 			// In-flight requests are deliberately NOT retried: replaying a git command
 			// risks applying it twice. They reject above; the socket alone comes back.
 			this.cs.setReconnecting(true);
-			setTimeout(() => this.open(), nextBackoffDelay(this.attempt++));
+			this.reconnectTimer = setTimeout(() => this.open(), nextBackoffDelay(this.attempt++));
 		};
 
 		this.ws.onerror = () => {
 			this.pending.forEach(({reject}) => reject(new Error('WebSocket error')));
 			this.pending.clear();
+			this.queue.length = 0;
 		};
 	}
 
@@ -206,6 +214,8 @@ export class WebSocketClient implements ITransportClient {
 
 	close(): void {
 		this.closedByUser = true;
+		clearTimeout(this.reconnectTimer);
+		this.reconnectTimer = undefined;
 		this.ws.close();
 	}
 }

@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {ENetworkCommand} from '@git-yak/protocol';
 import {WebSocketClient} from './WebSocketClient';
 
@@ -21,8 +21,12 @@ class FakeSocket {
 let socket: FakeSocket;
 
 beforeEach(() => {
-	socket = new FakeSocket();
+	// Each `new WebSocket(...)` call — including the ones a reconnect makes internally via
+	// open() — returns a fresh FakeSocket and reassigns the outer `socket` binding to it, so
+	// a reconnect test can tell a genuine new connection apart from the original by identity.
 	vi.stubGlobal('WebSocket', function (this: unknown) {
+		socket = new FakeSocket();
+
 		return socket;
 	} as unknown as typeof WebSocket);
 	(globalThis.WebSocket as unknown as {OPEN: number}).OPEN = FakeSocket.OPEN;
@@ -106,5 +110,67 @@ describe('WebSocketClient auth gate', () => {
 		socket.onmessage?.({data: JSON.stringify({type: 'auth', status: 'error', message: 'Invalid token'})});
 
 		await expect(client.call(ENetworkCommand.GitCall, {args: ['status']})).rejects.toThrow('Authentication failed');
+	});
+});
+
+describe('WebSocketClient reconnect', () => {
+	beforeEach(() => {
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it('does not reconnect after the caller closes it', () => {
+		const client = new WebSocketClient('ws://x', 'secret');
+
+		socket.onopen?.();
+		socket.onmessage?.({data: JSON.stringify({type: 'auth', status: 'success'})});
+
+		const first = socket;
+
+		client.close();
+		socket.onclose?.();
+
+		vi.advanceTimersByTime(30_000);
+
+		// Still the same socket instance: no replacement was opened.
+		expect(socket).toBe(first);
+	});
+
+	it('does not reconnect after authentication was rejected', () => {
+		const client = new WebSocketClient('ws://x', 'wrong');
+
+		socket.onopen?.();
+		socket.onmessage?.({data: JSON.stringify({type: 'auth', status: 'error', message: 'Invalid token'})});
+
+		const first = socket;
+
+		socket.onclose?.();
+		vi.advanceTimersByTime(30_000);
+
+		expect(socket).toBe(first);
+		void client;
+	});
+
+	it('reconnects with a new socket after an unintentional close, and cancels a pending retry on close()', () => {
+		const client = new WebSocketClient('ws://x', 'secret');
+
+		socket.onopen?.();
+		socket.onmessage?.({data: JSON.stringify({type: 'auth', status: 'success'})});
+
+		const first = socket;
+
+		// Unintentional close: not closedByUser, not authFailed — a retry is scheduled.
+		socket.onclose?.();
+
+		// A retry is scheduled but not due yet — close() before it fires must cancel it,
+		// not let it resurrect a socket nobody holds a reference to (Critical 1).
+		client.close();
+
+		vi.advanceTimersByTime(30_000);
+
+		expect(socket).toBe(first);
 	});
 });
