@@ -1,5 +1,6 @@
 mod browse_files;
 mod git_call;
+mod git_rebase;
 mod heartbeat;
 mod read_file;
 mod write_file;
@@ -25,6 +26,7 @@ pub async fn dispatch(raw: &str, state: &AppState) -> String {
 
 	match req.command.as_str() {
 		"gitCall" => git_call::run(&req).await,
+		"gitRebase" => git_rebase::run(&req).await,
 		"readFile" => read_file::run(&req).await,
 		"writeFile" => write_file::run(&req).await,
 		"browseFiles" => browse_files::run(&req),

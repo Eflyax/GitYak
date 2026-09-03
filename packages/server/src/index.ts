@@ -2,6 +2,7 @@ import {serve} from 'bun';
 import {ENetworkCommand} from '@git-yak/protocol';
 import type {IWsRequest} from '@git-yak/protocol';
 import * as GitCall from './commands/GitCall';
+import * as GitRebase from './commands/GitRebase';
 import * as ReadFile from './commands/ReadFile';
 import * as WriteFile from './commands/WriteFile';
 import * as BrowseFiles from './commands/BrowseFiles';
@@ -34,6 +35,10 @@ serve({
 				switch (command) {
 					case ENetworkCommand.GitCall:
 						await GitCall.run(ws, data);
+						break;
+
+					case ENetworkCommand.GitRebase:
+						await GitRebase.run(ws, data);
 						break;
 
 					case ENetworkCommand.ReadFile:

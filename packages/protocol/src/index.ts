@@ -1,5 +1,6 @@
 export enum ENetworkCommand {
 	GitCall = 'gitCall',
+	GitRebase = 'gitRebase',
 	WriteFile = 'writeFile',
 	ReadFile = 'readFile',
 	BrowseFiles = 'browseFiles',

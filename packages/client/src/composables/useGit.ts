@@ -295,22 +295,40 @@ export function useGit() {
 			});
 	}
 
-	// Runs `git rebase -i <upstream>` headlessly: our pre-written todo file is
-	// copied over git's generated one via `sequence.editor`, and `core.editor` is
-	// disabled so no action ever opens an interactive editor (reword/squash
-	// messages are applied by `exec` lines in the todo instead).
+	async function callRebase(payload: Record<string, unknown>): Promise<string> {
+		setLoading(true);
+		const cmdLabel = `git rebase (${String(payload['action'])})`;
+		addLog({type: 'git', status: 'info', direction: 'request', message: cmdLabel});
+
+		try {
+			const result = await call(ENetworkCommand.GitRebase, {
+				repo_path: repoPath(),
+				...payload,
+			});
+
+			addLog({type: 'git', status: 'success', direction: 'response', message: cmdLabel});
+
+			return result as string;
+		}
+		catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			addLog({type: 'git', status: 'error', direction: 'response', message});
+			throw parseGitError(message, -1);
+		}
+		finally {
+			setLoading(false);
+		}
+	}
+
+	// Runs `git rebase -i <upstream>` headlessly. The server composes every `-c` flag from
+	// a todo path it has validated against the repository, so no client string reaches
+	// `git -c`.
 	async function rebaseInteractive(upstream: string, todoRelPath: string): Promise<void> {
-		await callGit(
-			'-c', 'core.editor=false',
-			'-c', 'rebase.missingCommitsCheck=ignore',
-			'-c', `sequence.editor=cp '${todoRelPath}'`,
-			'rebase', '-i', '--autostash', upstream,
-		);
+		await callRebase({action: 'start', upstream, todo_path: todoRelPath});
 	}
 
 	async function rebaseContinue(): Promise<void> {
-		// core.editor=true → accept the in-progress commit message as-is (no prompt).
-		await callGit('-c', 'core.editor=true', 'rebase', '--continue');
+		await callRebase({action: 'continue'});
 	}
 
 	async function rebaseSkip(): Promise<void> {
