@@ -36,11 +36,18 @@ describe('resolveScope', () => {
 		expect(resolveScope({x: '@nope'}).x).toBe('@nope');
 	});
 
-	it('does not hang on a reference cycle', () => {
-		const out = resolveScope({a: '@b', b: '@a'});
+	it('treats a leading @ as a reference even when the rest looks like a function', () => {
+		// This exact value shipped in a theme: the author meant rgba(0,0,0,.2) and the stray
+		// @ made it a reference to a token that does not exist, so it reached the CSS as
+		// literal text.
+		expect(resolveScope({x: '@rgba(0,0,0,.2)'}).x).toBe('@rgba(0,0,0,.2)');
+	});
 
-		expect(out).toHaveProperty('a');
-		expect(out).toHaveProperty('b');
+	it('does not hang on a reference cycle, and resolves it deterministically', () => {
+		// A cycle cannot produce a colour, so the reference is left in place rather than
+		// looping. Pinned exactly: a regression that turned this into garbage would
+		// otherwise pass a test that only checked the keys existed.
+		expect(resolveScope({a: '@b', b: '@a'})).toEqual({a: '@a', b: '@a'});
 	});
 
 	it('inherits values from the inherited scope', () => {
@@ -66,11 +73,21 @@ describe('resolveScope', () => {
 		expect(lighter.toLowerCase()).not.toBe(darker.toLowerCase());
 	});
 
-	it('evaluates mixLess() to something between its two colours', () => {
+	it('evaluates mixLess() to a colour between its two endpoints', () => {
 		const mixed = resolveScope({x: 'mixLess(#000000, #FFFFFF, 50%)'}).x;
 
-		expect(mixed).not.toBe('#000000');
-		expect(mixed).not.toBe('#ffffff');
+		// A 50% mix of black and white must be a mid grey: all three channels equal, and
+		// none of them at either extreme.
+		const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(mixed);
+
+		expect(match).not.toBeNull();
+
+		const [r, g, b] = match!.slice(1).map(h => parseInt(h, 16));
+
+		expect(r).toBe(g);
+		expect(g).toBe(b);
+		expect(r).toBeGreaterThan(0x10);
+		expect(r).toBeLessThan(0xF0);
 	});
 
 	it('evaluates a function whose argument is a reference', () => {
