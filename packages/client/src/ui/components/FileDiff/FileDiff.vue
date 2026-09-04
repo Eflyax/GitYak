@@ -114,11 +114,18 @@
 				@mount="handleEditorMount"
 			/>
 		</div>
+
+		<ConfirmDialog
+			v-model:show="showDiscardHunkConfirm"
+			title="Discard hunk"
+			message="This will permanently discard this change from the working tree. Are you sure?"
+			@confirm="confirmDiscardHunk"
+		/>
 	</div>
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onBeforeUnmount} from 'vue';
+import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue';
 import type {editor} from 'monaco-editor';
 import type * as Monaco from 'monaco-editor';
 import {NButton} from 'naive-ui';
@@ -129,6 +136,9 @@ import {useFileDiff} from '@/composables/useFileDiff';
 import {getMonacoLanguage} from '@/composables/useMonacoLanguage';
 import {useCommands} from '@/composables/useCommands';
 import ConflictResolver from './ConflictResolver.vue';
+import ConfirmDialog from '../ConfirmDialog.vue';
+import {useNotify} from '@/composables/useNotify';
+import type {IHunk} from '@/domain/services/patch';
 
 const emit = defineEmits<{
 	close: []
@@ -150,7 +160,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true));
 
 const {activePath, stageFile} = useGit();
 const {loadStatus} = useWorkingTree();
-const {original, modified} = useFileDiff();
+const {original, modified, patch, hunkActions, applyHunk} = useFileDiff();
+const notify = useNotify();
 
 type TabKey = 'unstaged' | 'fileDiff' | 'gitDiff';
 
@@ -174,9 +185,140 @@ async function handleStageFile(): Promise<void> {
 }
 
 let diffEditor: editor.IStandaloneDiffEditor | null = null;
+let monaco: typeof Monaco | null = null;
+
+// ── Per-hunk actions ─────────────────────────────────────────────────────────
+// One Monaco content widget per git hunk, anchored to the hunk's first line in the modified
+// editor. Monaco keeps them positioned while the user scrolls; we only rebuild them when the
+// underlying patch changes.
+
+const
+	hunkWidgets: Array<editor.IContentWidget> = [],
+	showDiscardHunkConfirm = ref(false),
+	pendingDiscardHunk = ref<IHunk | null>(null),
+	ACTION_LABELS: Record<'stage' | 'unstage' | 'discard', string> = {
+		stage: 'Stage hunk',
+		unstage: 'Unstage hunk',
+		discard: 'Discard hunk',
+	};
+
+function clearHunkWidgets(): void {
+	const modifiedEditor = diffEditor?.getModifiedEditor();
+
+	for (const widget of hunkWidgets) {
+		modifiedEditor?.removeContentWidget(widget);
+	}
+
+	hunkWidgets.length = 0;
+}
+
+/**
+ * Hunk actions rewrite the file on disk, so an unsaved edit in the editor would be silently
+ * lost — or make the patch no longer apply. Refuse while the buffer differs from what we
+ * loaded.
+ */
+function hasUnsavedEdits(): boolean {
+	const value = diffEditor?.getModifiedEditor().getValue();
+
+	return value !== undefined && value !== modified.value;
+}
+
+async function runHunkAction(hunk: IHunk, mode: 'stage' | 'unstage' | 'discard'): Promise<void> {
+	if (hasUnsavedEdits()) {
+		notify.warning('Save or revert your edits first');
+		return;
+	}
+
+	try {
+		const hasChangesLeft = await applyHunk(hunk, mode);
+
+		await loadStatus();
+
+		if (!hasChangesLeft) {
+			emit('close');
+		}
+	}
+	catch (err: unknown) {
+		notify.error(err instanceof Error ? err.message : 'Could not apply the hunk');
+		await loadStatus();
+	}
+}
+
+function requestHunkAction(hunk: IHunk, mode: 'stage' | 'unstage' | 'discard'): void {
+	if (mode === 'discard') {
+		pendingDiscardHunk.value = hunk;
+		showDiscardHunkConfirm.value = true;
+		return;
+	}
+
+	void runHunkAction(hunk, mode);
+}
+
+function confirmDiscardHunk(): void {
+	const hunk = pendingDiscardHunk.value;
+
+	pendingDiscardHunk.value = null;
+
+	if (hunk) {
+		void runHunkAction(hunk, 'discard');
+	}
+}
+
+function buildHunkWidget(hunk: IHunk, index: number): editor.IContentWidget {
+	const node = document.createElement('div');
+
+	node.className = 'file-diff__hunk-actions';
+
+	for (const mode of hunkActions.value) {
+		const button = document.createElement('button');
+
+		button.className = `file-diff__hunk-btn file-diff__hunk-btn--${mode}`;
+		button.textContent = ACTION_LABELS[mode];
+		button.setAttribute('test-id', `hunk-${mode}-btn-${index}`);
+		button.addEventListener('click', () => requestHunkAction(hunk, mode));
+		node.appendChild(button);
+	}
+
+	// A pure deletion has no line of its own in the modified file; newStart then points just
+	// before the removed block, and 0 when it was removed from the top.
+	const lineNumber = Math.max(1, hunk.newStart);
+
+	return {
+		getId: () => `gityak.hunk.${index}`,
+		getDomNode: () => node,
+		getPosition: () => ({
+			position: {lineNumber, column: 1},
+			preference: [
+				monaco!.editor.ContentWidgetPositionPreference.ABOVE,
+				monaco!.editor.ContentWidgetPositionPreference.BELOW,
+			],
+		}),
+	};
+}
+
+function renderHunkWidgets(): void {
+	clearHunkWidgets();
+
+	const modifiedEditor = diffEditor?.getModifiedEditor();
+
+	if (!modifiedEditor || !monaco || !patch.value || !hunkActions.value.length) {
+		return;
+	}
+
+	patch.value.hunks.forEach((hunk, index) => {
+		const widget = buildHunkWidget(hunk, index);
+
+		hunkWidgets.push(widget);
+		modifiedEditor.addContentWidget(widget);
+	});
+}
+
+watch([patch, hunkActions], renderHunkWidgets);
 
 function handleEditorMount(editorInstance: editor.IStandaloneDiffEditor, monacoInstance: typeof Monaco): void {
 	diffEditor = editorInstance;
+	monaco = monacoInstance;
+	renderHunkWidgets();
 
 	const scrollDisposable = editorInstance.onDidUpdateDiff(() => {
 		scrollDisposable.dispose();
@@ -216,8 +358,10 @@ function handleEditorMount(editorInstance: editor.IStandaloneDiffEditor, monacoI
 }
 
 onBeforeUnmount(() => {
+	clearHunkWidgets();
 	diffEditor?.dispose();
 	diffEditor = null;
+	monaco = null;
 });
 
 const editorOptions = {
@@ -365,6 +509,35 @@ const editorOptions = {
 		width: 100%;
 		height: 100%;
 		min-height: 200px;
+	}
+
+	// Hunk widgets are created imperatively for Monaco, so they never carry the scope
+	// attribute — reach them through the editor subtree instead.
+	&__editor :deep(.file-diff__hunk-actions) {
+		display: flex;
+		gap: 4px;
+		z-index: 10;
+	}
+
+	&__editor :deep(.file-diff__hunk-btn) {
+		padding: 1px 8px;
+		border: 1px solid $border;
+		border-radius: 3px;
+		background-color: $bg-panel;
+		color: $text-secondary;
+		font-size: 10px;
+		line-height: 16px;
+		cursor: pointer;
+	}
+
+	&__editor :deep(.file-diff__hunk-btn:hover) {
+		color: $text-primary;
+		border-color: $text-secondary;
+	}
+
+	&__editor :deep(.file-diff__hunk-btn--discard:hover) {
+		color: $color-danger;
+		border-color: $color-danger;
 	}
 }
 </style>

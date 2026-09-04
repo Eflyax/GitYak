@@ -3,8 +3,9 @@ import {useWebSocket} from './useWebSocket';
 import {useProject} from './useProject';
 import {useLayout} from './useLayout';
 import {useActivityLog} from './useActivityLog';
-import {ENetworkCommand} from '@/domain';
+import {ENetworkCommand, EFileArea} from '@/domain';
 import {parseGitError} from '@/domain';
+import type {IFileStatus} from '@/domain';
 
 export interface IRemoteConfig {
 	name: string;
@@ -184,6 +185,55 @@ export function useGit() {
 	async function discardAllChanges(): Promise<void> {
 		await callGit('reset', '--hard', 'HEAD');
 		await callGit('clean', '-fd');
+	}
+
+	// ── Partial (per-hunk) staging ────────────────────────────────────────────
+
+	/**
+	 * The diff of one file against the index (or the index against HEAD for a staged file),
+	 * as raw patch text. Returns '' when there is nothing to diff — an untracked file has no
+	 * index entry, so git prints nothing rather than failing.
+	 */
+	async function getFilePatch(file: IFileStatus): Promise<string> {
+		const args = ['diff', '--no-color', '--no-ext-diff'];
+
+		if (file.area === EFileArea.Staged) {
+			args.push('--cached');
+		}
+
+		args.push('--');
+
+		// A rename has to name both sides or the diff header would not describe the move.
+		if (file.oldPath && file.oldPath !== file.path) {
+			args.push(file.oldPath);
+		}
+
+		args.push(file.path);
+
+		return callGit(...args);
+	}
+
+	/**
+	 * Applies a patch built from a subset of a file's hunks. `gitCall` is argv-only on every
+	 * backend, so the patch reaches git through a scratch file inside .git — the same route
+	 * the interactive rebase uses for its todo list.
+	 */
+	async function applyPatch(patchText: string, mode: 'stage' | 'unstage' | 'discard'): Promise<void> {
+		const patchFile = '.git/gityak-hunk.patch';
+
+		await writeFile(patchFile, patchText);
+
+		const args = ['apply', '--whitespace=nowarn'];
+
+		if (mode !== 'discard') {
+			args.push('--cached');
+		}
+
+		if (mode !== 'stage') {
+			args.push('-R');
+		}
+
+		await callGit(...args, patchFile);
 	}
 
 	// ── Commit ────────────────────────────────────────────────────────────────
@@ -429,6 +479,8 @@ export function useGit() {
 		unstageAll,
 		discardFile,
 		discardAllChanges,
+		getFilePatch,
+		applyPatch,
 		commit,
 		createTag,
 		deleteTag,
