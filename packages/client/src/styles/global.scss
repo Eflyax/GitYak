@@ -222,27 +222,35 @@ textarea {
 }
 
 // ── Notifications coloured by type ──────────────────────────────────────────
+// The tint has to be mixed into an opaque colour, not laid over the page as a translucent
+// wash: a toast covers whatever is underneath and has to stay readable. `rgba($token, …)`
+// cannot do that here — the theme tokens are CSS custom properties, and `rgba(var(--x), .1)`
+// is invalid CSS that the browser drops, which left the card fully transparent.
+@mixin notification-tint($color) {
+	// Plain opaque fallback first, for engines without color-mix().
+	background-color: $bg-panel;
+	background-color: color-mix(in srgb, #{$color} 14%, #{$bg-panel});
+	border-left-color: $color;
+}
+
 .n-notification:has(.gy-notify) {
 	border-left: 3px solid transparent;
 	border-radius: 4px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
 .n-notification:has(.gy-notify--success) {
-	background-color: rgba($color-success, 0.1);
-	border-left-color: $color-success;
+	@include notification-tint($color-success);
 }
 
 .n-notification:has(.gy-notify--error) {
-	background-color: rgba($color-danger, 0.1);
-	border-left-color: $color-danger;
+	@include notification-tint($color-danger);
 }
 
 .n-notification:has(.gy-notify--warning) {
-	background-color: rgba($status-modified, 0.1);
-	border-left-color: $status-modified;
+	@include notification-tint($status-modified);
 }
 
 .n-notification:has(.gy-notify--info) {
-	background-color: rgba($color-accent, 0.1);
-	border-left-color: $color-accent;
+	@include notification-tint($color-accent);
 }
