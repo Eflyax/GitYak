@@ -1,6 +1,7 @@
 import {ref, computed, readonly} from 'vue';
 import type {ICommit, IReference, IStash} from '@/domain';
 import {EReferenceType} from '@/domain';
+import {buildSearchArgs} from '@/domain/services/commitSearch';
 import {useGit} from './useGit';
 import {useStash} from './useStash';
 
@@ -40,6 +41,7 @@ const currentLimit = ref<number>(COMMIT_LIMIT);
 const allLoaded = ref(false);
 const referencesByHash = ref<Record<string, IReference[]>>({});
 const commitFiles = ref<ICommitFile[] | null>(null);
+const searchQuery = ref('');
 
 const commitMap = computed(() => {
 	const map = new Map<string, ICommit>();
@@ -255,6 +257,10 @@ export function useCommits() {
 	async function loadCommits(limit = COMMIT_LIMIT): Promise<void> {
 		await loadReferences();
 
+		// A pathspec has to be the last thing on the command line, so the search arguments go
+		// after every option of ours.
+		const searchArgs = buildSearchArgs(searchQuery.value);
+
 		const log = await callGit(
 			'log',
 			'--exclude=refs/stash',
@@ -264,6 +270,7 @@ export function useCommits() {
 			'--date=format-local:%Y-%m-%d %H:%M',
 			...(limit ? [`--max-count=${limit}`] : []),
 			'--date-order',
+			...searchArgs,
 		);
 
 		const regularCommits = log
@@ -306,11 +313,15 @@ export function useCommits() {
 			references: [],
 		};
 
-		const rawCommits: ICommit[] = [
-			workingTree,
-			...mapStashes(stashes.value),
-			...regularCommits,
-		];
+		// A search returns matching commits only: the working-tree row and the stashes are not
+		// results, and keeping them would put rows in the list that the query never matched.
+		const rawCommits: ICommit[] = searchArgs.length
+			? regularCommits
+			: [
+				workingTree,
+				...mapStashes(stashes.value),
+				...regularCommits,
+			];
 
 		buildGraph(rawCommits);
 
@@ -394,8 +405,17 @@ export function useCommits() {
 		commitFiles.value = [...dedup.values()].sort((a, b) => a.path.localeCompare(b.path));
 	}
 
+	/** Re-runs the log with a new query; an empty query restores the full history. */
+	async function search(query: string): Promise<void> {
+		searchQuery.value = query;
+		await loadCommits();
+	}
+
 	return {
 		commits: readonly(commits),
+		searchQuery: readonly(searchQuery),
+		isSearching: computed(() => searchQuery.value.trim().length > 0),
+		search,
 		selectedHashes: readonly(selectedHashes),
 		commitMap,
 		commitFiles: readonly(commitFiles),

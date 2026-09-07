@@ -63,6 +63,9 @@
 						:name="branch.name"
 						:color="branchColor(branch.name)"
 						:is-active="branch.isCurrent"
+						:upstream="branch.upstream"
+						:ahead="branch.ahead"
+						:behind="branch.behind"
 						@select="switchBranch(branch.name)"
 						@contextmenu.prevent="contextMenuRef($event, localRefTarget(branch.name))"
 					/>

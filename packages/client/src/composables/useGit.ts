@@ -4,7 +4,7 @@ import {useProject} from './useProject';
 import {useLayout} from './useLayout';
 import {useActivityLog} from './useActivityLog';
 import {ENetworkCommand, EFileArea} from '@/domain';
-import {parseGitError} from '@/domain';
+import {parseGitError, isNotARepository} from '@/domain';
 import type {IFileStatus} from '@/domain';
 
 export interface IRemoteConfig {
@@ -160,6 +160,10 @@ export function useGit() {
 		await callGit('branch', '-m', oldName, newName);
 	}
 
+	async function setUpstream(branchName: string, upstream: string): Promise<void> {
+		await callGit('branch', `--set-upstream-to=${upstream}`, branchName);
+	}
+
 	// ── Staging ───────────────────────────────────────────────────────────────
 
 	async function stageFile(filePath: string): Promise<void> {
@@ -310,6 +314,14 @@ export function useGit() {
 		await callGit('cherry-pick', ...hashes);
 	}
 
+	/**
+	 * Creates a commit that undoes the given one, leaving history intact. `--no-edit` keeps
+	 * git's generated message instead of opening an editor the GUI has no way to answer.
+	 */
+	async function revertCommit(hash: string): Promise<void> {
+		await callGit('revert', '--no-edit', hash);
+	}
+
 	async function cherryPickAbort(): Promise<void> {
 		await callGit('cherry-pick', '--abort');
 	}
@@ -401,13 +413,22 @@ export function useGit() {
 		}
 	}
 
+	/**
+	 * Answers whether the project path is a git repository. A transport failure is NOT an
+	 * answer — it is rethrown, so the caller reports a connection problem instead of
+	 * latching "this folder is not a git repository" onto a repo it simply could not reach.
+	 */
 	async function isGitRepo(): Promise<boolean> {
 		try {
 			await callGit('rev-parse', '--git-dir');
 			return true;
 		}
-		catch {
-			return false;
+		catch (err: unknown) {
+			if (isNotARepository(err)) {
+				return false;
+			}
+
+			throw err;
 		}
 	}
 
@@ -473,6 +494,7 @@ export function useGit() {
 		deleteBranch,
 		deleteRemoteBranch,
 		renameBranch,
+		setUpstream,
 		stageFile,
 		stageAll,
 		unstageFile,
@@ -494,6 +516,7 @@ export function useGit() {
 		resetMixed,
 		mergeAbort,
 		cherryPick,
+		revertCommit,
 		cherryPickAbort,
 		cherryPickContinue,
 		merge,

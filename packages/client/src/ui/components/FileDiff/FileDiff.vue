@@ -48,9 +48,27 @@
 					</svg>
 				</button>
 				<button
+					test-id="toggle-blame-btn"
+					class="file-diff__action-btn"
+					:class="{'file-diff__action-btn--on': blameOn}"
+					title="Blame"
+					@click="toggleBlame"
+				>
+					<svg
+						width="13"
+						height="13"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+					>
+						<path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+					</svg>
+				</button>
+				<button
 					test-id="toggle-history-btn"
 					class="file-diff__action-btn"
+					:class="{'file-diff__action-btn--on': historyOn}"
 					title="History"
+					@click="toggleHistory"
 				>
 					<svg
 						width="13"
@@ -102,17 +120,75 @@
 		<!-- Monaco diff editor -->
 		<div
 			v-else
-			class="file-diff__editor"
+			class="file-diff__body"
 		>
-			<vue-monaco-diff-editor
-				:original="original"
-				:modified="modified"
-				:language="language"
-				theme="vs-dark"
-				:options="editorOptions"
-				class="file-diff__monaco"
-				@mount="handleEditorMount"
-			/>
+			<div
+				v-if="historyOn"
+				test-id="file-history-panel"
+				class="file-diff__history"
+			>
+				<div class="file-diff__history-head">
+					History
+				</div>
+				<div
+					v-if="!historyEntries.length"
+					test-id="file-history-empty"
+					class="file-diff__history-empty"
+				>
+					No history for this file.
+				</div>
+				<button
+					v-for="entry in historyEntries"
+					:key="entry.hash"
+					test-id="file-history-entry"
+					class="file-diff__history-item"
+					:class="{'file-diff__history-item--active': entry.hash === historyRevision}"
+					@click="showRevision(entry)"
+				>
+					<span class="file-diff__history-subject">{{ entry.subject }}</span>
+					<span class="file-diff__history-meta">{{ entry.author }} · {{ entry.date }}</span>
+				</button>
+			</div>
+
+			<!-- Blame needs its own editor: Monaco's diff view does not render injected text,
+			     so annotations added to the modified side stay invisible there. -->
+			<div
+				v-if="blameOn && !blame.length"
+				test-id="blame-loading"
+				class="file-diff__blame-loading"
+			>
+				Loading blame…
+			</div>
+
+			<div
+				v-else-if="blameOn"
+				test-id="blame-view"
+				class="file-diff__editor"
+			>
+				<vue-monaco-editor
+					:value="blameContent"
+					:language="language"
+					theme="vs-dark"
+					:options="blameEditorOptions"
+					class="file-diff__monaco"
+					@mount="handleBlameEditorMount"
+				/>
+			</div>
+
+			<div
+				v-else
+				class="file-diff__editor"
+			>
+				<vue-monaco-diff-editor
+					:original="original"
+					:modified="modified"
+					:language="language"
+					theme="vs-dark"
+					:options="editorOptions"
+					class="file-diff__monaco"
+					@mount="handleEditorMount"
+				/>
+			</div>
 		</div>
 
 		<ConfirmDialog
@@ -129,16 +205,19 @@ import {ref, computed, watch, onMounted, onBeforeUnmount} from 'vue';
 import type {editor} from 'monaco-editor';
 import type * as Monaco from 'monaco-editor';
 import {NButton} from 'naive-ui';
-import {VueMonacoDiffEditor} from '@guolao/vue-monaco-editor';
+import {VueMonacoDiffEditor, VueMonacoEditor} from '@guolao/vue-monaco-editor';
 import {useGit} from '@/composables/useGit';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useFileDiff} from '@/composables/useFileDiff';
+import {useFileHistory} from '@/composables/useFileHistory';
 import {getMonacoLanguage} from '@/composables/useMonacoLanguage';
 import {useCommands} from '@/composables/useCommands';
 import ConflictResolver from './ConflictResolver.vue';
 import ConfirmDialog from '../ConfirmDialog.vue';
 import {useNotify} from '@/composables/useNotify';
 import type {IHunk} from '@/domain/services/patch';
+import type {IFileHistoryEntry} from '@/domain/services/fileHistory';
+import {EFileArea, EFileStatus} from '@/domain';
 
 const emit = defineEmits<{
 	close: []
@@ -160,7 +239,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true));
 
 const {activePath, stageFile} = useGit();
 const {loadStatus} = useWorkingTree();
-const {original, modified, patch, hunkActions, applyHunk} = useFileDiff();
+const {original, modified, patch, hunkActions, applyHunk, loadDiff} = useFileDiff();
+const {entries: historyEntries, blame, loadHistory, loadBlame, clear: clearHistory} = useFileHistory();
 const notify = useNotify();
 
 type TabKey = 'unstaged' | 'fileDiff' | 'gitDiff';
@@ -318,6 +398,8 @@ watch([patch, hunkActions], renderHunkWidgets);
 function handleEditorMount(editorInstance: editor.IStandaloneDiffEditor, monacoInstance: typeof Monaco): void {
 	diffEditor = editorInstance;
 	monaco = monacoInstance;
+	// The editor mounts asynchronously — later than the first click, in practice. Whatever
+	// was requested while it was still loading is applied here, or it would never appear.
 	renderHunkWidgets();
 
 	const scrollDisposable = editorInstance.onDidUpdateDiff(() => {
@@ -357,12 +439,139 @@ function handleEditorMount(editorInstance: editor.IStandaloneDiffEditor, monacoI
 	}
 }
 
+// ── File history & blame ─────────────────────────────────────────────────────
+
+const
+	historyOn = ref(false),
+	blameOn = ref(false),
+	historyRevision = ref<string | null>(null);
+
+let blameEditor: editor.IStandaloneCodeEditor | null = null;
+let blameDecorationIds: Array<string> = [];
+
+async function toggleHistory(): Promise<void> {
+	historyOn.value = !historyOn.value;
+
+	if (!historyOn.value || !activePath.value) {
+		return;
+	}
+
+	await loadHistory(activePath.value);
+}
+
+/** Opens the diff this commit made to the file, against its first parent. */
+async function showRevision(entry: IFileHistoryEntry): Promise<void> {
+	historyRevision.value = entry.hash;
+
+	await loadDiff(
+		{
+			path: entry.path,
+			oldPath: entry.oldPath,
+			status: (entry.status || 'M') as EFileStatus,
+			area: EFileArea.Committed,
+		},
+		[entry.hash, `${entry.hash}^`],
+	);
+}
+
+// The blame editor shows the file as blame reported it, so the annotations line up even if
+// the diff view was showing a different revision.
+const blameContent = computed(() => blame.value.map(entry => entry.content).join('\n'));
+
+function clearBlameDecorations(): void {
+	const model = blameEditor?.getModel();
+
+	if (model && blameDecorationIds.length) {
+		model.deltaDecorations(blameDecorationIds, []);
+	}
+
+	blameDecorationIds = [];
+}
+
+// Each line is prefixed with the commit and author that last touched it, injected into the
+// view rather than into the document, so the file's own text is untouched.
+function renderBlame(): void {
+	const model = blameEditor?.getModel();
+
+	if (!model || !monaco || !blame.value.length) {
+		return;
+	}
+
+	blameDecorationIds = model.deltaDecorations(blameDecorationIds, blame.value.map(entry => ({
+		range: new monaco!.Range(entry.line, 1, entry.line, 1),
+		options: {
+			// The range is a single position, and Monaco drops injected text on an empty
+			// range unless it is told to show it anyway.
+			showIfCollapsed: true,
+			before: {
+				content: entry.isUncommitted
+					? 'uncommitted        '
+					: `${entry.hash.slice(0, 7)} ${entry.author.padEnd(12).slice(0, 12)}`,
+				inlineClassName: 'file-diff__blame-gutter',
+			},
+			hoverMessage: entry.isUncommitted
+				? {value: 'Not committed yet'}
+				: {value: `**${entry.summary}**\n\n${entry.author}`},
+		},
+	})));
+}
+
+function handleBlameEditorMount(editorInstance: editor.IStandaloneCodeEditor, monacoInstance: typeof Monaco): void {
+	blameEditor = editorInstance;
+	monaco ??= monacoInstance;
+	renderBlame();
+}
+
+async function toggleBlame(): Promise<void> {
+	blameOn.value = !blameOn.value;
+
+	if (!blameOn.value) {
+		clearBlameDecorations();
+		blameEditor = null;
+
+		return;
+	}
+
+	if (activePath.value) {
+		await loadBlame(activePath.value, historyRevision.value ?? undefined);
+	}
+}
+
+watch(blame, renderBlame);
+
+// A different file means a different history: dropping the old one keeps the panel from
+// showing another file's commits while the new ones load.
+watch(activePath, path => {
+	historyRevision.value = null;
+	clearBlameDecorations();
+	blameOn.value = false;
+	clearHistory();
+
+	if (historyOn.value && path) {
+		void loadHistory(path);
+	}
+});
+
 onBeforeUnmount(() => {
 	clearHunkWidgets();
+	clearBlameDecorations();
+	blameEditor = null;
+	clearHistory();
 	diffEditor?.dispose();
 	diffEditor = null;
 	monaco = null;
 });
+
+const blameEditorOptions = {
+	readOnly: true,
+	scrollBeyondLastLine: false,
+	minimap: {enabled: false},
+	fontSize: 12,
+	lineHeight: 20,
+	fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+	renderLineHighlight: 'none' as const,
+	'bracketPairColorization.enabled': false,
+};
 
 const editorOptions = {
 	renderSideBySide: true,
@@ -500,9 +709,94 @@ const editorOptions = {
 		}
 	}
 
+	&__body {
+		flex: 1;
+		display: flex;
+		min-height: 0;
+	}
+
 	&__editor {
 		flex: 1;
 		overflow: hidden;
+		min-width: 0;
+	}
+
+	&__blame-loading {
+		flex: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 12px;
+		color: $text-muted;
+	}
+
+	&__history {
+		width: 240px;
+		flex-shrink: 0;
+		overflow-y: auto;
+		border-right: 1px solid $border;
+		background-color: $bg-panel;
+	}
+
+	&__history-head {
+		padding: 6px 10px;
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		color: $text-muted;
+		border-bottom: 1px solid $border;
+	}
+
+	&__history-empty {
+		padding: 10px;
+		font-size: 11px;
+		color: $text-dim;
+	}
+
+	&__history-item {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		width: 100%;
+		padding: 6px 10px;
+		border: none;
+		border-bottom: 1px solid $border;
+		background: transparent;
+		text-align: left;
+		cursor: pointer;
+
+		&:hover {
+			background-color: $bg-hover;
+		}
+
+		&--active {
+			background-color: $bg-section;
+			box-shadow: inset 2px 0 0 $color-accent;
+		}
+	}
+
+	&__history-subject {
+		font-size: 11px;
+		color: $text-primary;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	&__history-meta {
+		font-size: 10px;
+		color: $text-dim;
+	}
+
+	&__action-btn--on {
+		color: $color-accent;
+	}
+
+	// Injected by Monaco, so it is outside this component's scope.
+	:deep(.file-diff__blame-gutter) {
+		color: $text-dim;
+		font-size: 11px;
 	}
 
 	&__monaco {

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {parseGitError} from './GitError';
+import {parseGitError, isNotARepository} from './GitError';
 import {EGitErrorCode} from '../enums';
 
 describe('parseGitError', () => {
@@ -103,5 +103,29 @@ describe('parseGitError', () => {
 		expect(err.exitCode).toBe(128);
 		expect(err.stderr).toBe('fatal: not a git repository');
 		expect(err.name).toBe('GitError');
+	});
+});
+
+describe('isNotARepository', () => {
+	it('recognises the error git raises outside a repository', () => {
+		expect(isNotARepository(parseGitError('fatal: not a git repository', 128))).toBe(true);
+	});
+
+	// The bug this guards: a dropped socket used to be indistinguishable from "no repo here",
+	// so a remote project that was merely still connecting was reported as not a repository.
+	it('does not claim a dropped connection means there is no repository', () => {
+		expect(isNotARepository(new Error('WebSocket connection closed'))).toBe(false);
+		expect(isNotARepository(new Error('Not connected'))).toBe(false);
+		expect(isNotARepository(new Error('Timed out waiting for the connection'))).toBe(false);
+	});
+
+	it('does not treat other git failures as a missing repository', () => {
+		expect(isNotARepository(parseGitError('fatal: Authentication failed', 128))).toBe(false);
+		expect(isNotARepository(parseGitError('something nobody predicted', 3))).toBe(false);
+	});
+
+	it('handles values that are not errors at all', () => {
+		expect(isNotARepository(undefined)).toBe(false);
+		expect(isNotARepository('not a git repository')).toBe(false);
 	});
 });

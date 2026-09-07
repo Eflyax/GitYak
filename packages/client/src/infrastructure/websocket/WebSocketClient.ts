@@ -38,6 +38,9 @@ export class WebSocketClient implements ITransportClient {
 	private reconnectTimer?: ReturnType<typeof setTimeout>;
 	private readonly url: string;
 	private readonly cs = useConnectionStatus();
+	// Callers waiting for the socket to be usable. Kept as a list because the readiness of a
+	// single connection can be awaited from more than one place.
+	private readonly readyWaiters: Array<PendingRequest> = [];
 
 	constructor(url: string, private readonly token = '') {
 		this.url = url;
@@ -64,6 +67,7 @@ export class WebSocketClient implements ITransportClient {
 				this.connected = true;
 				this.queue.forEach(msg => this.ws.send(msg));
 				this.queue.length = 0;
+				this.settleReady();
 
 				if (wasReconnect) {
 					this.cs.setReconnecting(false);
@@ -96,6 +100,7 @@ export class WebSocketClient implements ITransportClient {
 					this.connected = true;
 					this.queue.forEach(msg => this.ws.send(msg));
 					this.queue.length = 0;
+					this.settleReady();
 
 					if (wasReconnect) {
 						this.cs.setReconnecting(false);
@@ -113,6 +118,7 @@ export class WebSocketClient implements ITransportClient {
 				this.pending.forEach(({reject}) => reject(new Error(message)));
 				this.pending.clear();
 				this.queue.length = 0;
+				this.settleReady(new Error(message));
 
 				return;
 			}
@@ -159,6 +165,7 @@ export class WebSocketClient implements ITransportClient {
 				// it lit would keep "Reconnecting…" on screen between closeProject() and the
 				// next connect().
 				this.cs.setReconnecting(false);
+				this.settleReady(new Error('WebSocket connection closed'));
 
 				return;
 			}
@@ -166,6 +173,8 @@ export class WebSocketClient implements ITransportClient {
 			// A rejected token is not retried: hammering the server every few seconds with
 			// a credential it has already refused would never succeed and just adds noise.
 			if (this.authFailed) {
+				this.settleReady(new Error('Authentication failed'));
+
 				return;
 			}
 
@@ -180,6 +189,65 @@ export class WebSocketClient implements ITransportClient {
 			this.pending.clear();
 			this.queue.length = 0;
 		};
+	}
+
+	private settleReady(error?: Error): void {
+		const waiters = this.readyWaiters.splice(0);
+
+		for (const {resolve, reject} of waiters) {
+			if (error) {
+				reject(error);
+			}
+			else {
+				resolve(undefined);
+			}
+		}
+	}
+
+	/**
+	 * Resolves once the socket is open and — when there is an auth gate — authenticated, so a
+	 * caller can hold off issuing commands until they will actually be delivered. A refused
+	 * connection does NOT reject: the client retries on its own, and an SSH tunnel that is
+	 * still coming up refuses the first attempts. Only the timeout, a rejected token or a
+	 * deliberate close ends the wait early.
+	 */
+	waitUntilOpen(timeoutMs = 30_000): Promise<void> {
+		if (this.connected) {
+			return Promise.resolve();
+		}
+
+		if (this.authFailed) {
+			return Promise.reject(new Error('Authentication failed'));
+		}
+
+		if (this.closedByUser) {
+			return Promise.reject(new Error('WebSocket connection closed'));
+		}
+
+		return new Promise<void>((resolve, reject) => {
+			const timer = setTimeout(() => {
+				const index = this.readyWaiters.indexOf(waiter);
+
+				if (index !== -1) {
+					this.readyWaiters.splice(index, 1);
+				}
+
+				reject(new Error('Timed out waiting for the connection'));
+			}, timeoutMs);
+
+			const waiter: PendingRequest = {
+				resolve: () => {
+					clearTimeout(timer);
+					resolve();
+				},
+				reject: reason => {
+					clearTimeout(timer);
+					reject(reason);
+				},
+			};
+
+			this.readyWaiters.push(waiter);
+		});
 	}
 
 	call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
@@ -227,6 +295,7 @@ export class WebSocketClient implements ITransportClient {
 
 	close(): void {
 		this.closedByUser = true;
+		this.settleReady(new Error('WebSocket connection closed'));
 		clearTimeout(this.reconnectTimer);
 		this.reconnectTimer = undefined;
 		this.ws.close();

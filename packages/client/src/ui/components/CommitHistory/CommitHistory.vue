@@ -1,5 +1,39 @@
 <template>
 	<div class="commit-history">
+		<!-- Search -->
+		<div
+			v-if="currentProject && !needsInit"
+			class="commit-history__search"
+		>
+			<Icon name="mdi-magnify" />
+			<input
+				v-model="searchInput"
+				test-id="commit-search-input"
+				class="commit-history__search-input"
+				type="text"
+				placeholder="Search history — text, author:name, file:path, content:text"
+				@keydown.enter="runSearch"
+				@keydown.esc.stop.prevent="clearSearch"
+			>
+			<button
+				v-if="searchInput"
+				test-id="commit-search-clear"
+				class="commit-history__search-clear"
+				title="Clear search"
+				@click="clearSearch"
+			>
+				<Icon name="mdi-close" />
+			</button>
+		</div>
+
+		<div
+			v-if="isSearching && !loading"
+			test-id="commit-search-summary"
+			class="commit-history__search-summary"
+		>
+			{{ commits.length }} matching commit{{ commits.length === 1 ? '' : 's' }}
+		</div>
+
 		<!-- Loading overlay -->
 		<div
 			v-if="loading && !commits.length"
@@ -31,6 +65,22 @@
 				@click="showInitDialog = true"
 			>
 				Initialize repository
+			</NButton>
+		</div>
+
+		<!-- Empty state – nothing matched the search -->
+		<div
+			v-else-if="!commits.length && !loading && isSearching"
+			test-id="commit-search-empty"
+			class="commit-history__empty"
+		>
+			<Icon name="mdi-magnify" />
+			<span>No commits match this search.</span>
+			<NButton
+				size="small"
+				@click="clearSearch"
+			>
+				Clear search
 			</NButton>
 		</div>
 
@@ -141,7 +191,8 @@ const ROW_HEIGHT = 28;
 const REFS_WIDTH = 180;
 
 const message = useMessage();
-const {commits, selectedHashes, selectCommit, toggleCommitSelection, loadCommits} = useCommits();
+const {commits, selectedHashes, selectCommit, toggleCommitSelection, loadCommits, search, isSearching} = useCommits();
+
 const {loadStatus, hasChanges, conflictDetected} = useWorkingTree();
 const {loadStashes} = useStash();
 const {loadBranches} = useBranches();
@@ -165,6 +216,16 @@ const {
 
 const needsInit = ref(false);
 const showInitDialog = ref(false);
+const searchInput = ref('');
+
+async function runSearch(): Promise<void> {
+	await search(searchInput.value);
+}
+
+async function clearSearch(): Promise<void> {
+	searchInput.value = '';
+	await search('');
+}
 
 async function handleConfirmDeleteStash(): Promise<void> {
 	const id = deleteStashId.value;
@@ -227,10 +288,20 @@ async function refresh(): Promise<void> {
 		return;
 	}
 
-	const repoExists = await isGitRepo();
+	try {
+		const repoExists = await isGitRepo();
 
-	if (!repoExists) {
-		needsInit.value = true;
+		if (!repoExists) {
+			needsInit.value = true;
+
+			return;
+		}
+	}
+	catch (e: unknown) {
+		// The repository could not be reached — a tunnel still coming up, a dropped socket.
+		// Leave needsInit as it was: claiming "not a git repository" here would latch a
+		// transport problem onto the repo, and nothing later clears it.
+		message.error(e instanceof Error ? e.message : 'Failed to reach the repository');
 
 		return;
 	}
@@ -349,6 +420,52 @@ watch(commits, newCommits => {
 		flex: 1;
 		overflow-y: auto;
 		overflow-x: hidden;
+	}
+
+	&__search {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 0 10px;
+		height: 30px;
+		flex-shrink: 0;
+		border-bottom: 1px solid $border;
+		background-color: $bg-panel;
+		color: $text-muted;
+	}
+
+	&__search-input {
+		flex: 1;
+		border: none;
+		outline: none;
+		background: transparent;
+		color: $text-primary;
+		font-size: 12px;
+
+		&::placeholder {
+			color: $text-ghost;
+		}
+	}
+
+	&__search-clear {
+		display: flex;
+		border: none;
+		background: transparent;
+		color: $text-muted;
+		cursor: pointer;
+
+		&:hover {
+			color: $text-primary;
+		}
+	}
+
+	&__search-summary {
+		padding: 3px 10px;
+		flex-shrink: 0;
+		font-size: 11px;
+		color: $text-muted;
+		background-color: $bg-section;
+		border-bottom: 1px solid $border;
 	}
 
 	&__content {
