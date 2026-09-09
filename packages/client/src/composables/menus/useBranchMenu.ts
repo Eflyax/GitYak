@@ -7,7 +7,7 @@ import type {IMenuDeps, IRefContextTarget} from '@/composables/useContextMenu';
 export function useBranchMenu(deps: IMenuDeps) {
 	const
 		{deleteTag, pushBranch, pushTag, merge} = useGit(),
-		{deleteBranch, deleteRemoteBranch, deleteBranchBoth, branches, currentBranch, switchBranch} = useBranches(),
+		{deleteBranch, deleteRemoteBranch, deleteBranchBoth, branches, currentBranch, switchBranch, setUpstream} = useBranches(),
 		{open: openRebase} = useRebase();
 
 	async function mergeRefs(source: string, target: string): Promise<{success: boolean}> {
@@ -120,6 +120,29 @@ export function useBranchMenu(deps: IMenuDeps) {
 						await deps.refreshAll();
 					},
 				});
+			}
+
+			// A local branch can be pointed at any remote-tracking branch; until it is, the
+			// sidebar has no ahead/behind counts to show for it.
+			if (target.isLocal) {
+				const upstreamCandidates = branches.value
+					.filter(b => b.isRemote)
+					.map(b => ({
+						label: b.name,
+						icon: deps.menuIcon('mdi-cloud-outline'),
+						onClick: async () => {
+							await setUpstream(target.name, b.name);
+							await deps.refreshAll();
+						},
+					}));
+
+				if (upstreamCandidates.length) {
+					items.push({
+						label: 'Set upstream',
+						icon: deps.menuIcon('mdi-source-branch-sync'),
+						children: upstreamCandidates,
+					});
+				}
 			}
 
 			const deleteChildren = [];

@@ -1,42 +1,10 @@
 import {ref, readonly} from 'vue';
 import type {IBranch} from '@/domain';
+import {BRANCH_REF_FORMAT, parseBranchRefs} from '@/domain/services/branchRefs';
 import {useGit} from './useGit';
 
 const branches = ref<IBranch[]>([]);
 const currentBranch = ref<IBranch | null>(null);
-
-function parseBranches(output: string): {branches: IBranch[]; current: IBranch | null} {
-	const lines = output.trim().split('\n').filter(Boolean);
-	const parsed: IBranch[] = [];
-	let current: IBranch | null = null;
-
-	for (const line of lines) {
-		const isCurrent = line.startsWith('* ');
-		const cleaned = line.replace(/^[* ] /, '');
-		const parts = cleaned.split(/\s+/);
-		const name = parts[0] ?? '';
-		const hash = parts[1] ?? '';
-		const isRemote = name.startsWith('remotes/');
-		const normalizedName = isRemote ? name.replace(/^remotes\//, '') : name;
-
-		if (normalizedName === 'HEAD' || normalizedName.endsWith('/HEAD')) continue;
-
-		const branch: IBranch = {
-			name: normalizedName,
-			hash,
-			isRemote,
-			isCurrent: isCurrent && !isRemote,
-		};
-
-		parsed.push(branch);
-
-		if (isCurrent) {
-			current = branch;
-		}
-	}
-
-	return {branches: parsed, current};
-}
 
 export function useBranches() {
 	const {
@@ -47,20 +15,27 @@ export function useBranches() {
 		deleteRemoteBranch: gitDeleteRemoteBranch,
 		renameBranch: gitRenameBranch,
 		pushBranch: gitPushBranch,
+		setUpstream: gitSetUpstream,
 	} = useGit();
 
 	async function loadBranches(): Promise<void> {
 		const output = await callGit(
-			'branch',
-			'--all',
-			'-v',
-			'--no-abbrev',
+			'for-each-ref',
+			`--format=${BRANCH_REF_FORMAT}`,
+			'refs/heads',
+			'refs/remotes',
 		);
 
-		const result = parseBranches(output);
+		const result = parseBranchRefs(output);
 
 		branches.value = result.branches;
 		currentBranch.value = result.current;
+	}
+
+	/** Points a local branch at a remote-tracking branch, so it gains ahead/behind counts. */
+	async function setUpstream(branchName: string, upstream: string): Promise<void> {
+		await gitSetUpstream(branchName, upstream);
+		await loadBranches();
 	}
 
 	async function switchBranch(name: string): Promise<void> {
@@ -113,5 +88,6 @@ export function useBranches() {
 		deleteBranchBoth,
 		renameBranch,
 		pushCurrentBranch,
+		setUpstream,
 	};
 }

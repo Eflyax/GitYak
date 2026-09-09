@@ -205,3 +205,77 @@ describe('WebSocketClient after a deliberate close', () => {
 			.rejects.toThrow('WebSocket connection closed');
 	});
 });
+
+describe('WebSocketClient readiness gate', () => {
+	it('resolves once the socket is open and, with a token, authenticated', async () => {
+		const client = new WebSocketClient('ws://x', 'secret');
+		const ready = client.waitUntilOpen(1_000);
+
+		socket.onopen?.();
+		accept();
+
+		await expect(ready).resolves.toBeUndefined();
+	});
+
+	it('resolves on open alone when there is no auth gate', async () => {
+		const client = new WebSocketClient('ws://x');
+		const ready = client.waitUntilOpen(1_000);
+
+		socket.onopen?.();
+
+		await expect(ready).resolves.toBeUndefined();
+	});
+
+	// The SSH case: `ssh -L` is still setting the forward up, so the first socket hits a
+	// closed port. The client retries on its own and the wait has to survive that.
+	it('keeps waiting across a refused connection until a retry succeeds', async () => {
+		vi.useFakeTimers();
+
+		try {
+			const client = new WebSocketClient('ws://x');
+			const ready = client.waitUntilOpen(30_000);
+			let settled = false;
+
+			void ready.then(() => { settled = true; });
+
+			socket.onerror?.();
+			socket.onclose?.();
+
+			await vi.advanceTimersByTimeAsync(5_000);
+			expect(settled).toBe(false);
+
+			// The retry's socket comes up.
+			socket.onopen?.();
+			await expect(ready).resolves.toBeUndefined();
+		}
+		finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('rejects when the socket never opens within the timeout', async () => {
+		vi.useFakeTimers();
+
+		try {
+			const client = new WebSocketClient('ws://x');
+			const ready = client.waitUntilOpen(2_000);
+			const assertion = expect(ready).rejects.toThrow('Timed out waiting for the connection');
+
+			await vi.advanceTimersByTimeAsync(2_000);
+			await assertion;
+		}
+		finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it('rejects immediately when authentication fails', async () => {
+		const client = new WebSocketClient('ws://x', 'wrong');
+		const ready = client.waitUntilOpen(1_000);
+
+		socket.onopen?.();
+		socket.onmessage?.({data: JSON.stringify({type: 'auth', status: 'error', message: 'Invalid token'})});
+
+		await expect(ready).rejects.toThrow('Invalid token');
+	});
+});

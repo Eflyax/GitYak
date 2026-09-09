@@ -19,6 +19,15 @@ export class GitError extends Error {
 	}
 }
 
+/**
+ * True only when git itself reported that the path is outside a repository. Anything else —
+ * a dropped socket, a tunnel that is not up yet, a timeout — is a failure to ask the
+ * question, not an answer to it, and must not be mistaken for "there is no repository here".
+ */
+export function isNotARepository(error: unknown): boolean {
+	return error instanceof GitError && error.code === EGitErrorCode.NotARepository;
+}
+
 export function parseGitError(stderr: string, exitCode: number): GitError {
 	if (stderr.includes('not a git repository')) {
 		return new GitError({

@@ -11,6 +11,9 @@ import {useConnectionStatus} from '@/composables/useConnectionStatus';
 const REMOTE_BINARY_PATH = '~/.local/bin/gityak';
 const REMOTE_WORKER_VERSION = __REMOTE_WORKER_VERSION__;
 const FORCE_PROVISION = false;
+// The tunnel is usually listening within a second; this only bounds how long a silently
+// broken forward keeps the connect() call waiting before it reports a failure.
+const TUNNEL_READY_TIMEOUT_MS = 15_000;
 
 export class SshTunnelClient implements ITransportClient {
 	private serverChild: Child | null = null;
@@ -57,6 +60,12 @@ export class SshTunnelClient implements ITransportClient {
 			if (this.reconnectCallback) {
 				this.wsClient.onReconnect(this.reconnectCallback);
 			}
+
+			// createTunnel() only waits a fixed moment after `ssh -L` is spawned, which does not
+			// prove the forward is listening. Returning here before the socket is really open
+			// let the app's first commands race a connection-refused close that rejects them —
+			// and a rejected `rev-parse` was then read as "this folder is not a git repository".
+			await this.wsClient.waitUntilOpen(TUNNEL_READY_TIMEOUT_MS);
 
 			this.startHeartbeat();
 			this.cs.reset();

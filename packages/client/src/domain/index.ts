@@ -22,4 +22,4 @@ export type {IRepositoryStatus} from './models/RepositoryStatus';
 export type {IActivityLog} from './models/ActivityLog';
 
 // ── Errors ────────────────────────────────────────────────────────────────────
-export {GitError, parseGitError} from './errors/GitError';
+export {GitError, parseGitError, isNotARepository} from './errors/GitError';

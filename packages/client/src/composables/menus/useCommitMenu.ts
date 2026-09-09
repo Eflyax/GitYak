@@ -12,7 +12,7 @@ import type {IMenuDeps} from '@/composables/useContextMenu';
 
 export function useCommitMenu(deps: IMenuDeps) {
 	const
-		{callGit, cherryPick} = useGit(),
+		{callGit, cherryPick, revertCommit} = useGit(),
 		{loadStashes} = useStash(),
 		{loadStatus} = useWorkingTree(),
 		{commits, commitMap, selectedHashes, loadCommits} = useCommits(),
@@ -132,6 +132,9 @@ export function useCommitMenu(deps: IMenuDeps) {
 				: 'Cherry pick';
 
 			const squashEnabled = selectionSquashable(selected);
+			// A revert commits on top of HEAD, so it needs a clean tree — and there is nothing
+			// to revert on the working-tree row.
+			const revertEnabled = !deps.isWorkingTreeDirty() && commit.hash !== 'WORKING_TREE';
 			const squashLabel = `Squash ${selected.length} commits`;
 
 			items.push(
@@ -156,6 +159,21 @@ export function useCommitMenu(deps: IMenuDeps) {
 					disabled: !squashEnabled,
 					onClick: squashEnabled
 						? async () => squashSelected(selected)
+						: undefined,
+				},
+				{
+					label: 'Revert commit',
+					icon: deps.menuIcon('mdi-undo-variant'),
+					disabled: revertEnabled ? undefined : true,
+					onClick: revertEnabled
+						? async () => {
+							try {
+								await revertCommit(commit.hash);
+							}
+							finally {
+								await deps.refreshAll();
+							}
+						}
 						: undefined,
 				},
 				{

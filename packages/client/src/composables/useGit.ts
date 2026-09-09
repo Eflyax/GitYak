@@ -3,8 +3,9 @@ import {useWebSocket} from './useWebSocket';
 import {useProject} from './useProject';
 import {useLayout} from './useLayout';
 import {useActivityLog} from './useActivityLog';
-import {ENetworkCommand} from '@/domain';
-import {parseGitError} from '@/domain';
+import {ENetworkCommand, EFileArea} from '@/domain';
+import {parseGitError, isNotARepository} from '@/domain';
+import type {IFileStatus} from '@/domain';
 
 export interface IRemoteConfig {
 	name: string;
@@ -159,6 +160,10 @@ export function useGit() {
 		await callGit('branch', '-m', oldName, newName);
 	}
 
+	async function setUpstream(branchName: string, upstream: string): Promise<void> {
+		await callGit('branch', `--set-upstream-to=${upstream}`, branchName);
+	}
+
 	// ── Staging ───────────────────────────────────────────────────────────────
 
 	async function stageFile(filePath: string): Promise<void> {
@@ -184,6 +189,55 @@ export function useGit() {
 	async function discardAllChanges(): Promise<void> {
 		await callGit('reset', '--hard', 'HEAD');
 		await callGit('clean', '-fd');
+	}
+
+	// ── Partial (per-hunk) staging ────────────────────────────────────────────
+
+	/**
+	 * The diff of one file against the index (or the index against HEAD for a staged file),
+	 * as raw patch text. Returns '' when there is nothing to diff — an untracked file has no
+	 * index entry, so git prints nothing rather than failing.
+	 */
+	async function getFilePatch(file: IFileStatus): Promise<string> {
+		const args = ['diff', '--no-color', '--no-ext-diff'];
+
+		if (file.area === EFileArea.Staged) {
+			args.push('--cached');
+		}
+
+		args.push('--');
+
+		// A rename has to name both sides or the diff header would not describe the move.
+		if (file.oldPath && file.oldPath !== file.path) {
+			args.push(file.oldPath);
+		}
+
+		args.push(file.path);
+
+		return callGit(...args);
+	}
+
+	/**
+	 * Applies a patch built from a subset of a file's hunks. `gitCall` is argv-only on every
+	 * backend, so the patch reaches git through a scratch file inside .git — the same route
+	 * the interactive rebase uses for its todo list.
+	 */
+	async function applyPatch(patchText: string, mode: 'stage' | 'unstage' | 'discard'): Promise<void> {
+		const patchFile = '.git/gityak-hunk.patch';
+
+		await writeFile(patchFile, patchText);
+
+		const args = ['apply', '--whitespace=nowarn'];
+
+		if (mode !== 'discard') {
+			args.push('--cached');
+		}
+
+		if (mode !== 'stage') {
+			args.push('-R');
+		}
+
+		await callGit(...args, patchFile);
 	}
 
 	// ── Commit ────────────────────────────────────────────────────────────────
@@ -258,6 +312,14 @@ export function useGit() {
 
 	async function cherryPick(hashes: Array<string>): Promise<void> {
 		await callGit('cherry-pick', ...hashes);
+	}
+
+	/**
+	 * Creates a commit that undoes the given one, leaving history intact. `--no-edit` keeps
+	 * git's generated message instead of opening an editor the GUI has no way to answer.
+	 */
+	async function revertCommit(hash: string): Promise<void> {
+		await callGit('revert', '--no-edit', hash);
 	}
 
 	async function cherryPickAbort(): Promise<void> {
@@ -351,13 +413,22 @@ export function useGit() {
 		}
 	}
 
+	/**
+	 * Answers whether the project path is a git repository. A transport failure is NOT an
+	 * answer — it is rethrown, so the caller reports a connection problem instead of
+	 * latching "this folder is not a git repository" onto a repo it simply could not reach.
+	 */
 	async function isGitRepo(): Promise<boolean> {
 		try {
 			await callGit('rev-parse', '--git-dir');
 			return true;
 		}
-		catch {
-			return false;
+		catch (err: unknown) {
+			if (isNotARepository(err)) {
+				return false;
+			}
+
+			throw err;
 		}
 	}
 
@@ -423,12 +494,15 @@ export function useGit() {
 		deleteBranch,
 		deleteRemoteBranch,
 		renameBranch,
+		setUpstream,
 		stageFile,
 		stageAll,
 		unstageFile,
 		unstageAll,
 		discardFile,
 		discardAllChanges,
+		getFilePatch,
+		applyPatch,
 		commit,
 		createTag,
 		deleteTag,
@@ -442,6 +516,7 @@ export function useGit() {
 		resetMixed,
 		mergeAbort,
 		cherryPick,
+		revertCommit,
 		cherryPickAbort,
 		cherryPickContinue,
 		merge,
