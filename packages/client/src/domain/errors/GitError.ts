@@ -1,5 +1,7 @@
 import {EGitErrorCode} from '../enums';
 
+const DUBIOUS_OWNERSHIP = 'detected dubious ownership';
+
 export class GitError extends Error {
 	readonly code: EGitErrorCode;
 	readonly exitCode: number;
@@ -28,7 +30,40 @@ export function isNotARepository(error: unknown): boolean {
 	return error instanceof GitError && error.code === EGitErrorCode.NotARepository;
 }
 
+/**
+ * The directory git refused to work in, as named in a dubious-ownership refusal. git quotes
+ * it after "repository at "; when a build words that line differently, the remedy command it
+ * prints below names the same directory.
+ */
+export function parseDubiousOwnershipPath(stderr: string): string | null {
+	if (!stderr.includes(DUBIOUS_OWNERSHIP)) {
+		return null;
+	}
+
+	const quoted = /repository at '([^']+)'/.exec(stderr);
+
+	if (quoted) {
+		return quoted[1]!;
+	}
+
+	// The path is the rest of the line, so it may contain spaces — git prints it unquoted.
+	const remedy = /--add\s+safe\.directory\s+(.+)/.exec(stderr);
+
+	return remedy ? remedy[1]!.trim() : null;
+}
+
 export function parseGitError(stderr: string, exitCode: number): GitError {
+	// Checked before everything else: this refusal blocks every command in the repository,
+	// and its remedy is unrelated to whatever the caller was trying to do.
+	if (stderr.includes(DUBIOUS_OWNERSHIP)) {
+		return new GitError({
+			message: 'Repository has dubious ownership',
+			code: EGitErrorCode.DubiousOwnership,
+			exitCode,
+			stderr,
+		});
+	}
+
 	if (stderr.includes('not a git repository')) {
 		return new GitError({
 			message: 'Not a git repository',

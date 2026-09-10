@@ -91,6 +91,8 @@
 
 	<RebaseModal />
 
+	<SafeDirectoryDialog @added="reloadRepository" />
+
 	<RepositoryGraph
 		v-if="showGraph"
 		@close="showGraph = false"
@@ -110,6 +112,7 @@ import {EServerType} from '@/domain';
 import {filterProjects} from '@/domain/services/projectSearch';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useBranches} from '@/composables/useBranches';
 import {useKeyboard} from '@/composables/useKeyboard';
 import {useCommands} from '@/composables/useCommands';
 import {useCommitForm} from '@/composables/useCommitForm';
@@ -128,6 +131,7 @@ import ProjectManager from './ProjectManager/ProjectManager.vue';
 import Settings from './Settings/Settings.vue';
 import CommandPalette from './CommandPalette/CommandPalette.vue';
 import RebaseModal from './RebaseModal.vue';
+import SafeDirectoryDialog from './SafeDirectoryDialog.vue';
 import RepositoryGraph from './RepositoryGraph/RepositoryGraph.vue';
 import HookOutputDialog from './HookOutputDialog.vue';
 import {useCommitAction} from '@/composables/useCommitAction';
@@ -152,13 +156,20 @@ function handleClose(): void {
 }
 
 const {currentProject, openLastOpenProject, openProject, projects, addProject} = useProject();
-const {selectedHashes} = useCommits();
+const {selectedHashes, loadCommits} = useCommits();
 const {commitSummary} = useCommitForm();
 
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value.length);
 
 const windowFocus = useWindowFocus();
 const {loadStatus, status, conflictDetected} = useWorkingTree();
+const {loadBranches} = useBranches();
+
+// After a repository becomes readable again — the git safe.directory prompt is the case —
+// the commands that were refused are not replayed; the view is simply loaded afresh.
+async function reloadRepository(): Promise<void> {
+	await Promise.all([loadCommits(), loadBranches(), loadStatus()]);
+}
 const {start: startRepoWatch, stop: stopRepoWatch} = useRepoWatch();
 
 interface IProjectLocation {

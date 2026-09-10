@@ -3,8 +3,9 @@ import {useWebSocket} from './useWebSocket';
 import {useProject} from './useProject';
 import {useLayout} from './useLayout';
 import {useActivityLog} from './useActivityLog';
-import {ENetworkCommand, EFileArea} from '@/domain';
-import {parseGitError, isNotARepository} from '@/domain';
+import {useSafeDirectory} from './useSafeDirectory';
+import {ENetworkCommand, EFileArea, EGitErrorCode} from '@/domain';
+import {parseGitError, isNotARepository, parseDubiousOwnershipPath} from '@/domain';
 import type {IFileStatus} from '@/domain';
 
 export interface IRemoteConfig {
@@ -20,7 +21,8 @@ export function useGit() {
 		{call} = useWebSocket(),
 		{currentProject} = useProject(),
 		{setLoading} = useLayout(),
-		{addLog} = useActivityLog();
+		{addLog} = useActivityLog(),
+		{request: requestSafeDirectory} = useSafeDirectory();
 
 	function repoPath(): string {
 		if (!currentProject.value) {
@@ -28,6 +30,25 @@ export function useGit() {
 		}
 
 		return currentProject.value.path;
+	}
+
+	/**
+	 * Classifies a backend failure. A dubious-ownership refusal blocks every command in the
+	 * repository, so it raises the prompt from here rather than from one call site; the error
+	 * itself is returned unchanged for the caller to handle as it always did.
+	 */
+	function toGitError(message: string): ReturnType<typeof parseGitError> {
+		const gitError = parseGitError(message, -1);
+
+		if (gitError.code === EGitErrorCode.DubiousOwnership) {
+			const refused = parseDubiousOwnershipPath(message);
+
+			if (refused) {
+				requestSafeDirectory(refused);
+			}
+		}
+
+		return gitError;
 	}
 
 	async function callGit(...args: string[]): Promise<string> {
@@ -47,7 +68,8 @@ export function useGit() {
 		catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			addLog({type: 'git', status: 'error', direction: 'response', message});
-			throw parseGitError(message, -1);
+
+			throw toGitError(message);
 		}
 		finally {
 			setLoading(false);
@@ -375,7 +397,8 @@ export function useGit() {
 		catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			addLog({type: 'git', status: 'error', direction: 'response', message});
-			throw parseGitError(message, -1);
+
+			throw toGitError(message);
 		}
 		finally {
 			setLoading(false);
@@ -430,6 +453,14 @@ export function useGit() {
 
 			throw err;
 		}
+	}
+
+	/**
+	 * Records a directory as trusted in the user's global git config — the remedy git itself
+	 * prints when it refuses a repository for dubious ownership.
+	 */
+	async function addSafeDirectory(directory: string): Promise<void> {
+		await callGit('config', '--global', '--add', 'safe.directory', directory);
 	}
 
 	// ── Remotes ───────────────────────────────────────────────────────────────
@@ -528,6 +559,7 @@ export function useGit() {
 		rebaseAbort,
 		initRepo,
 		isGitRepo,
+		addSafeDirectory,
 		getRemotes,
 		saveRemote,
 		getCommitMessage,

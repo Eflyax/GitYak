@@ -1,4 +1,5 @@
 import {defineConfig, devices} from '@playwright/test';
+import {DUBIOUS_OWNERSHIP_GIT_CONFIG, DUBIOUS_OWNERSHIP_PORT} from './fixtures/dubiousOwnership';
 
 export default defineConfig({
 	testDir: './tests',
@@ -27,6 +28,22 @@ export default defineConfig({
 			reuseExistingServer: !process.env.CI,
 			timeout: 30_000,
 			cwd: '../..',
+		},
+		// A second backend that treats every repository as owned by someone else, so the
+		// dubious-ownership refusal can be exercised for real without changing file ownership.
+		// Its global git config is redirected to a throwaway file: confirming the prompt writes
+		// safe.directory, and that must never land in the developer's own ~/.gitconfig.
+		{
+			command: 'yarn workspace @git-yak/server dev',
+			port: DUBIOUS_OWNERSHIP_PORT,
+			reuseExistingServer: !process.env.CI,
+			timeout: 30_000,
+			cwd: '../..',
+			env: {
+				PORT: String(DUBIOUS_OWNERSHIP_PORT),
+				GIT_TEST_ASSUME_DIFFERENT_OWNER: '1',
+				GIT_CONFIG_GLOBAL: DUBIOUS_OWNERSHIP_GIT_CONFIG,
+			},
 		},
 		{
 			command: 'yarn workspace @git-yak/client dev',
