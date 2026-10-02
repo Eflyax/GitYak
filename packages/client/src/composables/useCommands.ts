@@ -17,6 +17,10 @@ export interface ISubItem {
 	hint?: string;
 	hintIcon?: string;
 	color?: string;
+	/** Fills a small bar next to the item, 0 (empty) to 1 (full). */
+	meter?: number;
+	/** Tooltip for that bar. */
+	meterTitle?: string;
 	action: () => void | Promise<void>;
 }
 

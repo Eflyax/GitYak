@@ -9,6 +9,8 @@ export interface IProject {
 	port: number
 	dateCreated: number
 	dateLastOpen: number
+	/** How many times the user chose to open it; the automatic reopen on startup is not counted. */
+	openCount?: number
 	serverType: EServerType
 	sshUser?: string
 	sshKeyPath?: string

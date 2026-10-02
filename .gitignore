@@ -30,3 +30,4 @@ packages/e2e/test-results/
 
 # Yarn
 .yarn/install-state.gz
+graphify-out

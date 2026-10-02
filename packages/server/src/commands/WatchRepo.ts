@@ -79,13 +79,6 @@ export function run(ws: {send: (msg: string) => void}, data: IWsRequest): void {
 	const session: IWatchSession = {watchers: [], paths: new Set()};
 
 	const onChange = (_event: string, filename: string | null): void => {
-		// A *.lock file only exists while git is mid-write; the change it guards lands on the
-		// real file (index, HEAD, a ref) and raises its own event. Reporting the lock as well
-		// just turns every git command — including the client's own refresh — into a refresh.
-		if (filename?.endsWith('.lock')) {
-			return;
-		}
-
 		if (filename) {
 			session.paths.add(filename);
 		}

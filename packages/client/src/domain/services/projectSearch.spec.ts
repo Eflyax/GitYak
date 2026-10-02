@@ -1,10 +1,11 @@
 import {describe, expect, it} from 'vitest';
-import {filterProjects} from './projectSearch';
+import {filterProjects, openFrequency} from './projectSearch';
 import type {IProject} from '@/domain/models/Project';
 import {EServerType} from '@/domain';
 
-function project(alias: string, path: string, server = 'localhost'): IProject {
+function project(alias: string, path: string, server = 'localhost', openCount?: number): IProject {
 	return {
+		openCount,
 		id: alias,
 		order: 0,
 		alias,
@@ -89,5 +90,63 @@ describe('filterProjects', () => {
 
 		expect(filterProjects(items, 'tools').map(p => p.alias))
 			.toEqual(['Tools kit', 'Zebra tools', 'Alpha']);
+	});
+});
+
+describe('filterProjects by open count', () => {
+	it('lists the most opened projects first when there is no query', () => {
+		const items = [
+			project('Rare', '/a', 'localhost', 1),
+			project('Never', '/b'),
+			project('Often', '/c', 'localhost', 9),
+		];
+
+		expect(filterProjects(items, '').map(p => p.alias)).toEqual(['Often', 'Rare', 'Never']);
+	});
+
+	it('lets a more opened project outrank a better text match', () => {
+		const items = [
+			project('Tools', '/home/me/unrelated', 'localhost', 1),   // alias prefix
+			project('Zebra', '/home/me/tools-elsewhere', 'localhost', 5), // path only
+		];
+
+		expect(filterProjects(items, 'tools').map(p => p.alias)).toEqual(['Zebra', 'Tools']);
+	});
+
+	it('falls back to the text match between equally opened projects', () => {
+		const items = [
+			project('Zebra', '/home/me/tools-elsewhere', 'localhost', 3),
+			project('Tools', '/home/me/unrelated', 'localhost', 3),
+		];
+
+		expect(filterProjects(items, 'tools').map(p => p.alias)).toEqual(['Tools', 'Zebra']);
+	});
+
+	it('still leaves out projects that do not match, however often they were opened', () => {
+		const items = [project('Popular', '/a', 'localhost', 100), project('Wanted', '/b')];
+
+		expect(filterProjects(items, 'wanted').map(p => p.alias)).toEqual(['Wanted']);
+	});
+});
+
+describe('openFrequency', () => {
+	it('is empty for a project never opened and full for the most opened one', () => {
+		expect(openFrequency(0, 10)).toBe(0);
+		expect(openFrequency(undefined, 10)).toBe(0);
+		expect(openFrequency(10, 10)).toBe(1);
+	});
+
+	it('is empty for everyone while nothing has been opened yet', () => {
+		expect(openFrequency(0, 0)).toBe(0);
+	});
+
+	it('uses a logarithmic scale so rarely opened projects stay visible', () => {
+		// Linear would give 5/200 = 0.025, a bar too short to see.
+		expect(openFrequency(5, 200)).toBeCloseTo(Math.log(6) / Math.log(201));
+		expect(openFrequency(5, 200)).toBeGreaterThan(0.3);
+	});
+
+	it('never exceeds a full bar', () => {
+		expect(openFrequency(50, 10)).toBe(1);
 	});
 });

@@ -109,7 +109,7 @@
 import {computed, onMounted, onUnmounted, watch} from 'vue';
 import {onOpenUrl, getCurrent} from '@tauri-apps/plugin-deep-link';
 import {EServerType} from '@/domain';
-import {filterProjects} from '@/domain/services/projectSearch';
+import {filterProjects, openFrequency} from '@/domain/services/projectSearch';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useBranches} from '@/composables/useBranches';
@@ -291,6 +291,10 @@ onMounted(() => {
 		id: 'open-repo',
 		label: 'Open repo',
 		getItems: (query: string) => {
+			// Relative to every project, not just the matches, so a bar means the same thing
+			// whatever was typed.
+			const maxOpenCount = Math.max(0, ...projects.value.map(p => p.openCount ?? 0));
+
 			return filterProjects(projects.value, query)
 				.map(p => ({
 					id: p.id,
@@ -299,6 +303,8 @@ onMounted(() => {
 					hint: getProjectLocationLabel(p),
 					hintIcon: isLocalProject(p) ? 'mdi-laptop' : 'mdi-server',
 					color: p.color,
+					meter: openFrequency(p.openCount, maxOpenCount),
+					meterTitle: `Opened ${p.openCount ?? 0}×`,
 					action: () => { void openProject(p); },
 				}));
 		},

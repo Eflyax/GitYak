@@ -51,6 +51,21 @@
 			white-space: nowrap;
 		}
 
+		.command-palette__meter {
+			background-color: color-mix(in srgb, #{$text-muted} 18%, transparent);
+			border-radius: 2px;
+			flex-shrink: 0;
+			height: 4px;
+			overflow: hidden;
+			width: 40px;
+		}
+
+		.command-palette__meter-fill {
+			background-color: $color-accent;
+			display: block;
+			height: 100%;
+		}
+
 		.command-palette__hint {
 			align-items: center;
 			color: $text-muted;

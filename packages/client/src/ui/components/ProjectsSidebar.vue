@@ -186,7 +186,7 @@ const filteredProjects = computed(() => {
 watch(selectedGroupFilter, () => {
 	const first = filteredProjects.value[0];
 	if (first) {
-		openProject(first);
+		openProject(first, {counted: false});
 	}
 });
 
