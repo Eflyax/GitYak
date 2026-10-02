@@ -10,6 +10,7 @@
 				{{ remaining === 0 ? 'All conflicts resolved' : `${remaining} conflict${remaining === 1 ? '' : 's'} remaining` }}
 			</span>
 			<NButton
+				test-id="take-all-current-btn"
 				size="tiny"
 				secondary
 				@click="acceptAllOurs"
@@ -17,6 +18,7 @@
 				Take all current
 			</NButton>
 			<NButton
+				test-id="take-all-incoming-btn"
 				size="tiny"
 				secondary
 				@click="acceptAllTheirs"

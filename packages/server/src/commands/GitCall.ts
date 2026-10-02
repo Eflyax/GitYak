@@ -54,7 +54,11 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsRequest): 
 	const executeGit = async (): Promise<string> => {
 		const proc = Bun.spawn(['git', ...args], {
 			cwd: resolvedPath,
-			env: getAgentEnv(ws),
+			// Read-only commands like `git status` otherwise refresh the index in place, taking
+			// .git/index.lock to do it. The repo watcher sees that write, the client refreshes
+			// with another `git status`, and the loop never ends — while the stray lock makes a
+			// concurrent rebase or commit fail with "index.lock: File exists".
+			env: {...getAgentEnv(ws), GIT_OPTIONAL_LOCKS: '0'},
 			stdout: 'pipe',
 			// Bun defaults stderr to "inherit" — capture it so git errors
 			// (push rejections, conflicts, etc.) reach the client.

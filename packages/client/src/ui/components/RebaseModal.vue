@@ -17,6 +17,7 @@
 				<div
 					v-for="(step, index) in steps"
 					:key="step.hash"
+					test-id="rebase-step"
 					class="rebase__row"
 					:class="{'rebase__row--drop': step.action === 'drop', 'rebase__row--drag': dragIndex === index}"
 					draggable="true"
@@ -34,6 +35,7 @@
 						<button
 							v-for="action in actionOptions"
 							:key="action.value"
+							:test-id="`rebase-${action.value}-btn`"
 							class="rebase__action"
 							:class="[`rebase__action--${action.value}`, {'rebase__action--on': step.action === action.value}]"
 							:disabled="isActionDisabled(action.value, index)"
@@ -49,6 +51,7 @@
 					<NInput
 						v-if="step.action === 'reword'"
 						v-model:value="step.message"
+						test-id="rebase-message-input"
 						size="tiny"
 						class="rebase__message"
 						placeholder="New commit message"
@@ -60,6 +63,7 @@
 
 					<div class="rebase__move">
 						<button
+							test-id="rebase-move-up-btn"
 							class="rebase__move-btn"
 							:disabled="index === 0"
 							title="Move up"
@@ -68,6 +72,7 @@
 							<Icon name="mdi-chevron-up" />
 						</button>
 						<button
+							test-id="rebase-move-down-btn"
 							class="rebase__move-btn"
 							:disabled="index === steps.length - 1"
 							title="Move down"

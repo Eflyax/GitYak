@@ -48,14 +48,23 @@ pub fn run(req: &protocol::WsRequest, state: &AppState, tx: &UnboundedSender<Str
 		let paths: Vec<String> = match res {
 			// Deduplicated and ordered: a recursive watch of the repository root can report
 			// the same path many times inside one debounce window.
+			// A *.lock file only exists while git is mid-write; the change it guards lands on
+			// the real file (index, HEAD, a ref) and raises its own event. Reporting the lock
+			// as well turns every git command — the client's own refresh included — into a
+			// refresh.
 			Ok(events) => events
 				.into_iter()
+				.filter(|e: &DebouncedEvent| e.path.extension().map_or(true, |ext| ext != "lock"))
 				.map(|e: DebouncedEvent| e.path.display().to_string())
 				.collect::<BTreeSet<String>>()
 				.into_iter()
 				.collect(),
 			Err(_) => Vec::new(),
 		};
+
+		if paths.is_empty() {
+			return;
+		}
 
 		let frame = serde_json::json!({
 			"type": "event",
