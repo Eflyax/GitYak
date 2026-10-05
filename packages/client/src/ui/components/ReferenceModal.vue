@@ -41,6 +41,7 @@
 import {ref, computed, watch} from 'vue';
 import {NModal, NInput, NButton, useMessage} from 'naive-ui';
 import {useBranches} from '@/composables/useBranches';
+import {useTags} from '@/composables/useTags';
 import {useGit} from '@/composables/useGit';
 import {EReferenceModalType} from '@/domain';
 
@@ -60,7 +61,8 @@ const emit = defineEmits<{
 
 const message = useMessage();
 const {createBranch, renameBranch} = useBranches();
-const {createTag, callGit} = useGit();
+const {createTag} = useTags();
+const {callGit} = useGit();
 
 const name = ref('');
 const submitting = ref(false);

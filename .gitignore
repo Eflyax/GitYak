@@ -28,6 +28,9 @@ packages/e2e/test-results/
 # Subagent-driven development scratch
 .superpowers/
 
+# graphify knowledge graph (regenerated locally with `graphify update .`)
+graphify-out/
+
 # Yarn
 .yarn/install-state.gz
 graphify-out

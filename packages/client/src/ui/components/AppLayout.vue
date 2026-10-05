@@ -113,6 +113,7 @@ import {filterProjects, openFrequency} from '@/domain/services/projectSearch';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useBranches} from '@/composables/useBranches';
+import {useTags} from '@/composables/useTags';
 import {useKeyboard} from '@/composables/useKeyboard';
 import {useCommands} from '@/composables/useCommands';
 import {useCommitForm} from '@/composables/useCommitForm';
@@ -164,11 +165,16 @@ const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKIN
 const windowFocus = useWindowFocus();
 const {loadStatus, status, conflictDetected} = useWorkingTree();
 const {loadBranches} = useBranches();
+const {loadTags, loadRemoteTags} = useTags();
 
 // After a repository becomes readable again — the git safe.directory prompt is the case —
 // the commands that were refused are not replayed; the view is simply loaded afresh.
 async function reloadRepository(): Promise<void> {
 	await Promise.all([loadCommits(), loadBranches(), loadStatus()]);
+}
+
+async function loadRefs(): Promise<void> {
+	await Promise.all([loadBranches(), loadTags(), loadRemoteTags()]);
 }
 const {start: startRepoWatch, stop: stopRepoWatch} = useRepoWatch();
 
@@ -324,6 +330,10 @@ onUnmounted(() => {
 watch(currentProject, project => {
 	if (project) {
 		void startRepoWatch();
+		// The refs the sidebar renders belong to the project, so they are loaded here rather
+		// than by a pane: the commit history, which reloads its own data on a project change,
+		// is not mounted while a file diff is open.
+		void loadRefs();
 	}
 	else {
 		stopRepoWatch();

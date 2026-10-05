@@ -170,7 +170,7 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted} from 'vue';
+import {ref, computed} from 'vue';
 import {NInput} from 'naive-ui';
 import BranchItem from './BranchItem.vue';
 import Icon from '@/ui/components/Icon.vue';
@@ -182,7 +182,7 @@ import {useContextMenu} from '@/composables/useContextMenu';
 
 const {sidebarCollapsed, collapseSidebar, expandSidebar} = useLayout();
 const {branches, switchBranch, loadBranches} = useBranches();
-const {tags, remoteTags, loadTags, loadRemoteTags} = useTags();
+const {tags, remoteTags} = useTags();
 const {contextMenuRef} = useContextMenu();
 
 function toggle(): void {
@@ -260,10 +260,6 @@ const filteredTags = computed(() => {
 	const q = searchQuery.value.toLowerCase();
 
 	return q ? tags.value.filter(t => t.name.toLowerCase().includes(q)) : tags.value;
-});
-
-onMounted(async () => {
-	await Promise.all([loadBranches(), loadTags(), loadRemoteTags()]);
 });
 </script>
 
