@@ -26,30 +26,19 @@
 		</div>
 
 		<template #footer>
-			<div class="safe-directory__footer">
-				<NButton
-					test-id="safe-directory-cancel-btn"
-					:disabled="working"
-					@click="cancel"
-				>
-					Cancel
-				</NButton>
-				<NButton
-					test-id="safe-directory-add-btn"
-					type="primary"
-					:loading="working"
-					@click="addException"
-				>
-					Add exception
-				</NButton>
-			</div>
+			<DialogActions
+				:actions="actions"
+				:active="show"
+			/>
 		</template>
 	</NModal>
 </template>
 
 <script setup lang="ts">
 import {ref, computed} from 'vue';
-import {NModal, NButton} from 'naive-ui';
+import {NModal} from 'naive-ui';
+import DialogActions from '@/ui/components/DialogActions.vue';
+import type {IDialogAction} from '@/composables/useDialogKeys';
 import {useGit} from '@/composables/useGit';
 import {useSafeDirectory} from '@/composables/useSafeDirectory';
 import {useNotify} from '@/composables/useNotify';
@@ -101,6 +90,17 @@ async function addException(): Promise<void> {
 		working.value = false;
 	}
 }
+const actions = computed<Array<IDialogAction>>(() => [
+	{key: 'c', label: 'Cancel', testId: 'safe-directory-cancel-btn', disabled: working.value, onSelect: cancel},
+	{
+		key: 'a',
+		label: 'Add exception',
+		testId: 'safe-directory-add-btn',
+		type: 'primary',
+		loading: working.value,
+		onSelect: () => void addException(),
+	},
+]);
 </script>
 
 <style scoped lang="scss">
@@ -136,10 +136,5 @@ async function addException(): Promise<void> {
 		word-break: break-all;
 	}
 
-	&__footer {
-		display: flex;
-		justify-content: flex-end;
-		gap: 8px;
-	}
 }
 </style>

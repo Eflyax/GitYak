@@ -11,28 +11,19 @@
 		</p>
 
 		<template #footer>
-			<div class="confirm-dialog__footer">
-				<NButton
-					test-id="confirm-dialog-no-btn"
-					@click="cancel"
-				>
-					No
-				</NButton>
-				<NButton
-					test-id="confirm-dialog-yes-btn"
-					type="error"
-					@click="confirm"
-				>
-					Yes
-				</NButton>
-			</div>
+			<DialogActions
+				:actions="actions"
+				:active="show"
+			/>
 		</template>
 	</NModal>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue';
-import {NModal, NButton} from 'naive-ui';
+import {NModal} from 'naive-ui';
+import DialogActions from '@/ui/components/DialogActions.vue';
+import type {IDialogAction} from '@/composables/useDialogKeys';
 
 const props = defineProps<{
 	show: boolean;
@@ -58,6 +49,11 @@ function confirm(): void {
 	emit('confirm');
 	emit('update:show', false);
 }
+
+const actions = computed<Array<IDialogAction>>(() => [
+	{key: 'n', label: 'No', testId: 'confirm-dialog-no-btn', onSelect: cancel},
+	{key: 'y', label: 'Yes', testId: 'confirm-dialog-yes-btn', type: 'error', onSelect: confirm},
+]);
 </script>
 
 <style scoped lang="scss">
@@ -65,11 +61,5 @@ function confirm(): void {
 	color: $text-muted;
 	font-size: 13px;
 	margin: 0;
-}
-
-.confirm-dialog__footer {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
 }
 </style>

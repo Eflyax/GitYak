@@ -26,35 +26,19 @@
 		</div>
 
 		<template #footer>
-			<div class="push-rejected__footer">
-				<NButton
-					test-id="push-cancel-btn"
-					@click="cancel"
-				>
-					Cancel
-				</NButton>
-				<NButton
-					test-id="push-pull-btn"
-					type="info"
-					@click="choose('pull')"
-				>
-					Pull (ff-only)
-				</NButton>
-				<NButton
-					test-id="push-force-btn"
-					type="error"
-					@click="choose('force')"
-				>
-					Force push
-				</NButton>
-			</div>
+			<DialogActions
+				:actions="actions"
+				:active="show"
+			/>
 		</template>
 	</NModal>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue';
-import {NModal, NButton} from 'naive-ui';
+import {NModal} from 'naive-ui';
+import DialogActions from '@/ui/components/DialogActions.vue';
+import type {IDialogAction} from '@/composables/useDialogKeys';
 
 const props = defineProps<{
 	show: boolean;
@@ -79,6 +63,12 @@ function choose(action: 'force' | 'pull'): void {
 	emit('choose', action);
 	emit('update:show', false);
 }
+
+const actions = computed<Array<IDialogAction>>(() => [
+	{key: 'c', label: 'Cancel', testId: 'push-cancel-btn', onSelect: cancel},
+	{key: 'p', label: 'Pull (ff-only)', testId: 'push-pull-btn', type: 'info', onSelect: () => choose('pull')},
+	{key: 'f', label: 'Force push', testId: 'push-force-btn', type: 'error', onSelect: () => choose('force')},
+]);
 </script>
 
 <style scoped lang="scss">
@@ -126,12 +116,6 @@ function choose(action: 'force' | 'pull'): void {
 		white-space: pre-wrap;
 		max-height: 200px;
 		overflow-y: auto;
-	}
-
-	&__footer {
-		display: flex;
-		justify-content: flex-end;
-		gap: 8px;
 	}
 }
 </style>

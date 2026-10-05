@@ -19,21 +19,19 @@
 		</div>
 
 		<template #footer>
-			<div class="hook-output__footer">
-				<NButton
-					test-id="hook-output-close-btn"
-					@click="close"
-				>
-					Close
-				</NButton>
-			</div>
+			<DialogActions
+				:actions="actions"
+				:active="show"
+			/>
 		</template>
 	</NModal>
 </template>
 
 <script setup lang="ts">
 import {computed} from 'vue';
-import {NModal, NButton} from 'naive-ui';
+import {NModal} from 'naive-ui';
+import DialogActions from '@/ui/components/DialogActions.vue';
+import type {IDialogAction} from '@/composables/useDialogKeys';
 
 const props = defineProps<{
 	show: boolean;
@@ -55,6 +53,10 @@ const title = computed<string>(() => (props.success ? 'Commit complete' : 'Commi
 function close(): void {
 	emit('update:show', false);
 }
+
+const actions = computed<Array<IDialogAction>>(() => [
+	{key: 'c', label: 'Close', testId: 'hook-output-close-btn', onSelect: close},
+]);
 </script>
 
 <style scoped lang="scss">
@@ -85,10 +87,5 @@ function close(): void {
 		overflow-y: auto;
 	}
 
-	&__footer {
-		display: flex;
-		justify-content: flex-end;
-		gap: 8px;
-	}
 }
 </style>

@@ -57,35 +57,28 @@
 		</div>
 	</div>
 
-	<NDrawer
+	<NModal
 		v-model:show="showActivityLog"
-		:width="500"
-		:min-width="500"
-		test-id="activity-log-drawer"
-		resizable
-		placement="right"
+		preset="card"
+		title="Activity Log"
+		test-id="activity-log-modal"
+		class="activity-log-modal"
+		style="width: 900px; max-width: calc(100vw - 48px);"
+		closable
 	>
-		<NDrawerContent
-			title="Activity Log"
-			closable
-		>
-			<ActivityLog />
-		</NDrawerContent>
-	</NDrawer>
+		<ActivityLog />
+	</NModal>
 
-	<NDrawer
+	<NModal
 		v-model:show="showSettings"
-		:width="380"
-		test-id="settings-drawer"
-		placement="right"
+		preset="card"
+		title="Settings"
+		test-id="settings-modal"
+		style="width: 420px; max-width: calc(100vw - 48px);"
+		closable
 	>
-		<NDrawerContent
-			title="Settings"
-			closable
-		>
-			<Settings />
-		</NDrawerContent>
-	</NDrawer>
+		<Settings />
+	</NModal>
 
 	<CommandPalette />
 
@@ -117,7 +110,7 @@ import {useTags} from '@/composables/useTags';
 import {useKeyboard} from '@/composables/useKeyboard';
 import {useCommands} from '@/composables/useCommands';
 import {useCommitForm} from '@/composables/useCommitForm';
-import {NDrawer, NDrawerContent} from 'naive-ui';
+import {NModal} from 'naive-ui';
 import {Splitpanes, Pane} from 'splitpanes';
 import Sidebar from './Sidebar/Sidebar.vue';
 import CommitHistory from './CommitHistory/CommitHistory.vue';

@@ -1,7 +1,7 @@
 <template>
 	<div class="activity-log">
 		<div class="activity-log__header">
-			<span class="activity-log__title">Activity Log <span class="activity-log__count">({{ logs.length }})</span></span>
+			<span class="activity-log__count">{{ logs.length }} entries</span>
 			<NButton
 				size="tiny"
 				secondary
@@ -16,7 +16,7 @@
 			size="small"
 			:row-key="(row) => row.id"
 			virtual-scroll
-			:max-height="'calc(100vh - 100px)'"
+			:max-height="'100%'"
 			class="activity-log__table"
 		/>
 	</div>
@@ -38,14 +38,14 @@ function statusColor(status: IActivityLog['status']): string {
 }
 
 const columns: DataTableColumns<IActivityLog> = [
-	{key: 'time', title: 'Time', width: 75},
+	{key: 'time', title: 'Time', width: 92},
 	{
 		key: 'direction',
 		title: '',
 		width: 24,
 		render: (row) => row.direction === 'request' ? '→' : '←',
 	},
-	{key: 'type', title: 'Type', width: 42},
+	{key: 'type', title: 'Type', width: 60},
 	{
 		key: 'status',
 		title: 'Status',
@@ -60,7 +60,8 @@ const columns: DataTableColumns<IActivityLog> = [
 .activity-log {
 	display: flex;
 	flex-direction: column;
-	height: 100%;
+	// The log lives in a modal now, so it sizes itself rather than filling a drawer.
+	height: 65vh;
 
 	&__header {
 		display: flex;
@@ -71,15 +72,9 @@ const columns: DataTableColumns<IActivityLog> = [
 		flex-shrink: 0;
 	}
 
-	&__title {
-		font-size: 13px;
-		font-weight: 600;
-		color: $text-primary;
-	}
-
 	&__count {
+		font-size: 12px;
 		color: $text-muted;
-		font-weight: 400;
 	}
 
 	&__table {
