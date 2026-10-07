@@ -467,49 +467,7 @@ function confirmDeleteGroup(group: IProjectGroup): void {
 	&--dim { color: #555; }
 }
 
-.project-item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 8px 10px;
-	border-radius: 6px;
-	background: $bg-section;
-	border: 1px solid transparent;
-	transition: border-color 0.15s;
-
-	&:hover { border-color: $border-strong; }
-}
-
-.project-info {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	min-width: 0;
-}
-
-.project-color-dot {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	flex-shrink: 0;
-}
-
-.project-alias {
-	font-weight: 500;
-	font-size: 0.9em;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.project-path {
-	font-size: 0.78em;
-	color: #666;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	max-width: 340px;
-}
+// The project row owns its own appearance; see ProjectRow.vue.
 
 /* ── Groups ────────────────────────────────────── */
 

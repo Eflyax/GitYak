@@ -9,6 +9,32 @@
 			>
 				{{ remaining === 0 ? 'All conflicts resolved' : `${remaining} conflict${remaining === 1 ? '' : 's'} remaining` }}
 			</span>
+			<div class="conflict-resolver__nav">
+				<NButton
+					test-id="prev-conflict-btn"
+					size="tiny"
+					secondary
+					title="Previous unresolved conflict"
+					:disabled="remaining === 0"
+					@click="gotoConflict(-1)"
+				>
+					‹
+				</NButton>
+				<span
+					test-id="conflict-position"
+					class="conflict-resolver__nav-position"
+				>{{ positionLabel }}</span>
+				<NButton
+					test-id="next-conflict-btn"
+					size="tiny"
+					secondary
+					title="Next unresolved conflict"
+					:disabled="remaining === 0"
+					@click="gotoConflict(1)"
+				>
+					›
+				</NButton>
+			</div>
 			<NButton
 				test-id="take-all-current-btn"
 				size="tiny"
@@ -182,6 +208,24 @@ const resultOptions: editor.IStandaloneEditorConstructionOptions = {
 
 let monaco: typeof Monaco | null = null;
 
+// Monaco paints the overview ruler on a canvas, where a `var(--…)` is never resolved, so the
+// theme's own value is read out of the document and passed as a literal colour.
+function themeColor(name: string, fallback: string): string {
+	const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+	return value || fallback;
+}
+
+function rulerColor(side: TSide | 'result'): string {
+	if (side === 'ours') return themeColor('--color-cyan', '#7ec8e3');
+
+	return themeColor('--color-warning', '#f8e56f');
+}
+
+function rulerOptions(side: TSide | 'result'): editor.IModelDecorationOverviewRulerOptions {
+	return {color: rulerColor(side), position: monaco!.editor.OverviewRulerLane.Full};
+}
+
 // ── Current / Incoming panes ──────────────────────────────────────────────────────────────
 
 interface ISidePane {
@@ -262,6 +306,8 @@ function renderSide(side: TSide): void {
 			options: {
 				isWholeLine: true,
 				className: `conflict-resolver__region conflict-resolver__region--${side}${picked ? ' conflict-resolver__region--picked' : ''}`,
+				linesDecorationsClassName: `conflict-resolver__bar conflict-resolver__bar--${side}`,
+				overviewRuler: rulerOptions(side),
 			},
 		})));
 }
@@ -379,7 +425,12 @@ function highlight(startLine: number, lineCount: number): editor.IModelDeltaDeco
 
 	return {
 		range: new monaco!.Range(startLine, 1, startLine + lineCount - 1, 1),
-		options: {isWholeLine: true, className: 'conflict-resolver__region conflict-resolver__region--result'},
+		options: {
+			isWholeLine: true,
+			className: 'conflict-resolver__region conflict-resolver__region--result',
+			linesDecorationsClassName: 'conflict-resolver__bar conflict-resolver__bar--result',
+			overviewRuler: rulerOptions('result'),
+		},
 	};
 }
 
@@ -502,6 +553,89 @@ function handleResultMount(instance: editor.IStandaloneCodeEditor, monacoInstanc
 	});
 }
 
+// ── Moving between conflicts ──────────────────────────────────────────────────────────────
+
+const activeConflict = ref(-1);
+
+const positionLabel = computed(() => {
+	const total = conflicts.value.length;
+
+	if (!total) return '';
+
+	return `${activeConflict.value >= 0 ? activeConflict.value + 1 : '–'} / ${total}`;
+});
+
+// Read from the result text rather than from what was picked, so a conflict edited by hand
+// counts as resolved and markers typed back in count as unresolved — the same measure the
+// counter in the bar shows.
+function isUnresolved(index: number): boolean {
+	const model = resultEditor?.getModel();
+	const id = regionIds[index];
+	const range = id ? model?.getDecorationRange(id) : null;
+
+	if (!model || !range) return false;
+
+	return countConflictMarkers(model.getValueInRange(range)) > 0;
+}
+
+let flashTimer: ReturnType<typeof setTimeout> | null = null;
+let flashDecorations: editor.IEditorDecorationsCollection | null = null;
+
+// The jump lands the conflict in the middle of a pane that looks much like the rest of the
+// file; a short flash says which block was moved to.
+function flash(range: IRange): void {
+	if (!resultEditor) return;
+
+	flashDecorations ??= resultEditor.createDecorationsCollection();
+	flashDecorations.set([{range, options: {isWholeLine: true, className: 'conflict-resolver__region--flash'}}]);
+
+	if (flashTimer) clearTimeout(flashTimer);
+
+	flashTimer = setTimeout(() => flashDecorations?.clear(), 900);
+}
+
+function focusConflict(index: number): void {
+	const model = resultEditor?.getModel();
+	const id = regionIds[index];
+	const range = id ? model?.getDecorationRange(id) : null;
+
+	activeConflict.value = index;
+
+	if (resultEditor && range) {
+		resultEditor.revealRangeInCenter(range);
+		flash(range);
+	}
+
+	// The two side panes are kept at one scroll position, so revealing in one carries the
+	// other with it — and their regions are aligned to each other, not to the result.
+	const pane = panes.ours;
+	const region = oursSide.value.regions[index];
+	const lineCount = pane?.editor.getModel()?.getLineCount() ?? 0;
+
+	if (pane && region && lineCount) {
+		pane.editor.revealLineInCenter(Math.min(region.startLine, lineCount));
+	}
+}
+
+function gotoConflict(step: 1 | -1): void {
+	const total = conflicts.value.length;
+
+	if (!total) return;
+
+	// Starting one before the first conflict means "next" opens at the first one.
+	const from = activeConflict.value >= 0 ? activeConflict.value : (step > 0 ? -1 : 0);
+
+	for (let moved = 1; moved <= total; moved++) {
+		const index = (((from + step * moved) % total) + total) % total;
+
+		if (isUnresolved(index)) {
+			focusConflict(index);
+
+			return;
+		}
+	}
+}
+
 // ── Picking sides ─────────────────────────────────────────────────────────────────────────
 
 function apply(index: number): void {
@@ -535,6 +669,7 @@ watch(
 	blocks,
 	() => {
 		selections.value = conflicts.value.map(() => ({ours: false, theirs: false}));
+		activeConflict.value = -1;
 		resultText.value = initialResult.value.text;
 		// The editors receive the new text through their :value binding; the zones, ranges
 		// and decorations computed against the old text are rebuilt once it has landed.
@@ -547,6 +682,9 @@ watch(
 );
 
 onBeforeUnmount(() => {
+	if (flashTimer) clearTimeout(flashTimer);
+
+	flashDecorations = null;
 	panes.ours = undefined;
 	panes.theirs = undefined;
 	resultEditor = null;
@@ -592,6 +730,20 @@ async function handleSave(): Promise<void> {
 		color: $text-muted;
 		font-family: monospace;
 		flex: 1;
+	}
+
+	&__nav {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	&__nav-position {
+		min-width: 38px;
+		text-align: center;
+		font-size: 11px;
+		color: $text-muted;
+		font-family: monospace;
 	}
 
 	&__panes {
@@ -651,23 +803,48 @@ async function handleSave(): Promise<void> {
 
 	// Rendered by Monaco inside the editors, hence :deep.
 	&__editor :deep(.conflict-resolver__region--ours) {
-		background-color: color-mix(in srgb, #{$color-cyan} 8%, transparent);
+		background-color: color-mix(in srgb, #{$color-cyan} 20%, transparent);
 	}
 
 	&__editor :deep(.conflict-resolver__region--theirs) {
-		background-color: color-mix(in srgb, #{$color-warning} 8%, transparent);
+		background-color: color-mix(in srgb, #{$color-warning} 20%, transparent);
 	}
 
 	&__editor :deep(.conflict-resolver__region--ours.conflict-resolver__region--picked) {
-		background-color: color-mix(in srgb, #{$color-cyan} 22%, transparent);
+		background-color: color-mix(in srgb, #{$color-cyan} 38%, transparent);
 	}
 
 	&__editor :deep(.conflict-resolver__region--theirs.conflict-resolver__region--picked) {
-		background-color: color-mix(in srgb, #{$color-warning} 22%, transparent);
+		background-color: color-mix(in srgb, #{$color-warning} 38%, transparent);
 	}
 
 	&__editor :deep(.conflict-resolver__region--result) {
-		background-color: color-mix(in srgb, #{$color-warning} 6%, transparent);
+		background-color: color-mix(in srgb, #{$color-warning} 16%, transparent);
+	}
+
+	// Lands the eye after a jump, then fades away: holding a strong fill would only make the
+	// code under it harder to read.
+	&__editor :deep(.conflict-resolver__region--flash) {
+		animation: conflict-flash 0.9s ease-out forwards;
+	}
+
+	// A bar in the gutter marks the conflict's lines where the fill competes with syntax
+	// colouring; `width` has to beat Monaco's own inline sizing of the decorations margin.
+	&__editor :deep(.conflict-resolver__bar) {
+		width: 3px !important;
+		margin-left: 3px;
+	}
+
+	&__editor :deep(.conflict-resolver__bar--ours) {
+		background-color: $color-cyan;
+	}
+
+	&__editor :deep(.conflict-resolver__bar--theirs) {
+		background-color: $color-warning;
+	}
+
+	&__editor :deep(.conflict-resolver__bar--result) {
+		background-color: $color-warning;
 	}
 
 	&__editor :deep(.conflict-resolver__filler) {
@@ -689,25 +866,44 @@ async function handleSave(): Promise<void> {
 	}
 
 	&__editor :deep(.conflict-resolver__pick-btn) {
-		padding: 0 8px;
-		border: 1px solid $border;
+		padding: 0 10px;
+		border: 1px solid transparent;
 		border-radius: 3px;
-		background-color: $bg-panel;
-		color: $text-secondary;
 		font-family: -apple-system, "Segoe UI", sans-serif;
-		font-size: 10.5px;
-		line-height: 16px;
+		font-size: 11px;
+		font-weight: 600;
+		line-height: 17px;
 		cursor: pointer;
+		transition: background-color 0.15s, color 0.15s;
+	}
+
+	// Unpicked carries the side's colour as an outline, picked fills with it: prominent in
+	// both states, and which one is taken stays unmistakable.
+	&__editor :deep(.conflict-resolver__pick--ours .conflict-resolver__pick-btn) {
+		border-color: $color-cyan;
+		color: $color-cyan;
+		background-color: color-mix(in srgb, #{$color-cyan} 16%, #{$bg-panel});
+	}
+
+	&__editor :deep(.conflict-resolver__pick--theirs .conflict-resolver__pick-btn) {
+		border-color: $color-warning;
+		color: $color-warning;
+		background-color: color-mix(in srgb, #{$color-warning} 16%, #{$bg-panel});
 	}
 
 	&__editor :deep(.conflict-resolver__pick--ours .conflict-resolver__pick-btn--picked) {
-		color: $color-cyan;
-		border-color: $color-cyan;
+		background-color: $color-cyan;
+		color: $bg-app;
 	}
 
 	&__editor :deep(.conflict-resolver__pick--theirs .conflict-resolver__pick-btn--picked) {
-		color: $color-warning;
-		border-color: $color-warning;
+		background-color: $color-warning;
+		color: $bg-app;
 	}
+}
+
+@keyframes conflict-flash {
+	from { background-color: color-mix(in srgb, #{$color-warning} 55%, transparent); }
+	to { background-color: transparent; }
 }
 </style>

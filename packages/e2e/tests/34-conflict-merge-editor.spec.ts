@@ -167,3 +167,57 @@ test('undo in the result reverts a pick', async ({page, repo, openRepo}) => {
 	await expect(byTestId(page, 'conflict-counter')).toHaveText(/2 conflicts remaining/);
 	await expect.poll(() => resultValue(page)).toMatch(/^<<<<<<< HEAD\ntop-ours\n/);
 });
+
+test('the conflict navigation walks the unresolved conflicts and skips the resolved ones', async ({page, repo, openRepo}) => {
+	await openConflictedFile(page, repo, openRepo);
+
+	// Nothing is focused until the first jump.
+	await expect(byTestId(page, 'conflict-position')).toHaveText('– / 2');
+
+	await byTestId(page, 'next-conflict-btn').click();
+	await expect(byTestId(page, 'conflict-position')).toHaveText('1 / 2');
+
+	await byTestId(page, 'next-conflict-btn').click();
+	await expect(byTestId(page, 'conflict-position')).toHaveText('2 / 2');
+
+	// Resolving the first one takes it out of the walk: from the second, "next" wraps
+	// around to the second again rather than stopping at the one already dealt with.
+	await byTestId(page, 'accept-ours-btn').first().click();
+	await expect(byTestId(page, 'conflict-counter')).toHaveText(/1 conflict remaining/);
+
+	await byTestId(page, 'next-conflict-btn').click();
+	await expect(byTestId(page, 'conflict-position')).toHaveText('2 / 2');
+
+	await byTestId(page, 'prev-conflict-btn').click();
+	await expect(byTestId(page, 'conflict-position')).toHaveText('2 / 2');
+});
+
+test('the conflict navigation is disabled once nothing is left to resolve', async ({page, repo, openRepo}) => {
+	await openConflictedFile(page, repo, openRepo);
+
+	await expect(byTestId(page, 'next-conflict-btn')).toBeEnabled();
+
+	await byTestId(page, 'take-all-current-btn').click();
+
+	await expect(byTestId(page, 'conflict-counter')).toHaveText(/resolved/i);
+	await expect(byTestId(page, 'next-conflict-btn')).toBeDisabled();
+	await expect(byTestId(page, 'prev-conflict-btn')).toBeDisabled();
+});
+
+test('a conflict carries a marker in the overview ruler', async ({page, repo, openRepo}) => {
+	await openConflictedFile(page, repo, openRepo);
+
+	// Monaco paints the ruler from the decorations, so the presence of the marks is read
+	// back from the decorations themselves rather than from the canvas.
+	const marked = await page.evaluate(() => {
+		const monacoGlobal = (window as unknown as {monaco?: {editor: {getEditors(): Array<{getModel(): {getAllDecorations(): Array<{options: {overviewRuler?: {color?: unknown} | null}}>} | null; getDomNode(): HTMLElement | null}>}}}).monaco;
+		const host = document.querySelector('[test-id="conflict-result-editor"]');
+		const editor = monacoGlobal?.editor.getEditors().find(e => host?.contains(e.getDomNode()));
+
+		return (editor?.getModel()?.getAllDecorations() ?? [])
+			.filter(d => !!d.options.overviewRuler?.color)
+			.length;
+	});
+
+	expect(marked).toBe(2);
+});

@@ -124,15 +124,24 @@ export function useProject() {
 		}
 	}
 
+	// The updated project replaces its entry rather than being mutated in place: the views
+	// reload on a change of `currentProject`, which an in-place edit leaves untouched — an
+	// edited path would then be saved but never opened.
 	function updateProject(id: string, updates: Partial<Omit<IProject, 'id'>>): IProject | null {
-		const project = projects.value.find(p => p.id === id);
+		const index = projects.value.findIndex(p => p.id === id);
 
-		if (!project) return null;
+		if (index === -1) return null;
 
-		Object.assign(project, updates);
+		const updated: IProject = {...projects.value[index]!, ...updates};
+
+		projects.value[index] = updated;
 		saveProjects();
 
-		return project;
+		if (currentProject.value?.id === id) {
+			currentProject.value = updated;
+		}
+
+		return updated;
 	}
 
 	function addGroup(data: Omit<IProjectGroup, 'id'>): IProjectGroup {
