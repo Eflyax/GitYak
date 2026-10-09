@@ -405,6 +405,13 @@ export function useGit() {
 		}
 	}
 
+	// Plain, non-interactive rebase onto `upstream`. Used when there is no todo list to
+	// compose — a branch whose tip is the merge base just fast-forwards. `--autostash`
+	// keeps it working on a dirty tree, same as the interactive route.
+	async function rebaseOnto(upstream: string): Promise<void> {
+		await callGit('rebase', '--autostash', upstream);
+	}
+
 	// Runs `git rebase -i <upstream>` headlessly. The server composes every `-c` flag from
 	// a todo path it has validated against the repository, so no client string reaches
 	// `git -c`.
@@ -553,6 +560,7 @@ export function useGit() {
 		merge,
 		mergeBase,
 		logRange,
+		rebaseOnto,
 		rebaseInteractive,
 		rebaseContinue,
 		rebaseSkip,
