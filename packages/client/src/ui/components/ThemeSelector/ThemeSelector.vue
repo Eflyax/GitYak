@@ -18,7 +18,7 @@
 			v-if="!options.length"
 			class="theme-selector__empty"
 		>
-			No themes found in themes directory
+			No themes available
 		</p>
 	</div>
 </template>

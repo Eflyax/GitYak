@@ -4,6 +4,7 @@ import {invoke} from '@tauri-apps/api/core';
 import type {IResolvedTheme, IThemeEntry, IThemeFile} from '@/domain/models/Theme';
 import {parseJsonc, resolveScope} from '@/infrastructure/themeExpressionEvaluator';
 import {tokenToCssVar} from '@/infrastructure/themeTokenMap';
+import {builtinThemes, isBuiltinThemeId} from '@/infrastructure/builtinThemes';
 
 const THEME_PATH_KEY = 'git-yak:theme';
 const THEMES_DIR_KEY = 'git-yak:themes-dir';
@@ -97,6 +98,16 @@ function applyCssVars(resolved: IResolvedTheme): void {
 }
 
 async function readAndParseTheme(filePath: string): Promise<IThemeFile> {
+	const builtinRaw = builtinThemes.get(filePath);
+
+	if (builtinRaw !== undefined) {
+		return parseJsonc(builtinRaw) as IThemeFile;
+	}
+
+	if (isBuiltinThemeId(filePath)) {
+		throw new Error(`Unknown built-in theme: ${filePath}`);
+	}
+
 	const raw = await invoke<string>('read_file_at', {
 		path: filePath,
 		nullIfNotExists: false,
@@ -104,37 +115,58 @@ async function readAndParseTheme(filePath: string): Promise<IThemeFile> {
 	return parseJsonc(raw) as IThemeFile;
 }
 
-async function loadThemes(dir?: string): Promise<void> {
-	const directory = dir ?? themesDir.value;
+function sortByName(entries: Array<IThemeEntry>): Array<IThemeEntry> {
+	return [...entries].sort((a, b) => a.name.localeCompare(b.name));
+}
 
-	if (dir) {
-		themesDir.value = dir;
-		localStorage.setItem(THEMES_DIR_KEY, dir);
+async function parseThemeEntries(paths: Array<string>, isBuiltin: boolean): Promise<Array<IThemeEntry>> {
+	const entries: Array<IThemeEntry> = [];
+
+	for (const filePath of paths) {
+		try {
+			const parsed = await readAndParseTheme(filePath);
+			entries.push({
+				name: parsed.meta?.name ?? filePath,
+				filePath,
+				isBuiltin,
+			});
+		}
+		catch {
+			console.warn(`[useTheme] Failed to parse theme: ${filePath}`);
+		}
+	}
+
+	return sortByName(entries);
+}
+
+async function loadCustomThemes(directory: string): Promise<Array<IThemeEntry>> {
+	if (!directory.trim()) {
+		return [];
 	}
 
 	try {
 		const paths = await invoke<Array<string>>('list_theme_files', {dir: directory});
-		const entries: Array<IThemeEntry> = [];
-
-		for (const filePath of paths) {
-			try {
-				const parsed = await readAndParseTheme(filePath);
-				entries.push({
-					name: parsed.meta?.name ?? filePath,
-					filePath,
-				});
-			}
-			catch {
-				console.warn(`[useTheme] Failed to parse theme: ${filePath}`);
-			}
-		}
-
-		availableThemes.value = entries;
+		return await parseThemeEntries(paths, false);
 	}
 	catch {
 		console.warn(`[useTheme] Could not list themes from: ${directory}`);
-		availableThemes.value = [];
+		return [];
 	}
+}
+
+async function loadThemes(dir?: string): Promise<void> {
+	const directory = dir ?? themesDir.value;
+
+	if (dir !== undefined) {
+		themesDir.value = dir;
+		localStorage.setItem(THEMES_DIR_KEY, dir);
+	}
+
+	const
+		builtin = await parseThemeEntries([...builtinThemes.keys()], true),
+		custom = await loadCustomThemes(directory);
+
+	availableThemes.value = [...builtin, ...custom];
 }
 
 async function applyTheme(filePath: string): Promise<void> {

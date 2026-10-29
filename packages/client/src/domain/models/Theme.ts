@@ -26,5 +26,7 @@ export interface IResolvedTheme {
 
 export interface IThemeEntry {
 	name: string;
+	/** Absolute path for custom themes, `builtin:<file>` id for bundled ones. */
 	filePath: string;
+	isBuiltin: boolean;
 }

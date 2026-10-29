@@ -4,6 +4,7 @@ import {useStash} from '@/composables/useStash';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useCommits} from '@/composables/useCommits';
 import {useBranches} from '@/composables/useBranches';
+import {useNotify} from '@/composables/useNotify';
 import {useCommitForm} from '@/composables/useCommitForm';
 import {useStashMenu} from '@/composables/menus/useStashMenu';
 import {EReferenceModalType} from '@/domain';
@@ -12,11 +13,12 @@ import type {IMenuDeps} from '@/composables/useContextMenu';
 
 export function useCommitMenu(deps: IMenuDeps) {
 	const
-		{callGit, cherryPick, revertCommit} = useGit(),
+		{callGit, cherryPick, revertCommit, pushCommit} = useGit(),
+		notify = useNotify(),
 		{loadStashes} = useStash(),
 		{loadStatus} = useWorkingTree(),
 		{commits, commitMap, selectedHashes, loadCommits} = useCommits(),
-		{loadBranches} = useBranches(),
+		{loadBranches, currentBranch} = useBranches(),
 		{prefill, amendMode} = useCommitForm(),
 		{buildStashMenuItems} = useStashMenu();
 
@@ -109,6 +111,25 @@ export function useCommitMenu(deps: IMenuDeps) {
 		await Promise.all([loadStatus(), loadCommits(), loadStashes(), loadBranches()]);
 	}
 
+	async function pushSingleCommit(hash: string): Promise<void> {
+		const branch = currentBranch.value?.name;
+
+		if (!branch) return;
+
+		try {
+			// Only commits reachable from HEAD make sense to push to the current branch.
+			await callGit('merge-base', '--is-ancestor', hash, 'HEAD').catch(() => {
+				throw new Error('Commit is not part of the current branch');
+			});
+			await pushCommit(hash, branch);
+			await Promise.all([loadCommits(), loadBranches()]);
+			notify.success('Commit pushed');
+		}
+		catch (err: unknown) {
+			notify.error(err instanceof Error ? err.message : String(err));
+		}
+	}
+
 	function contextMenuCommit(argument: {e: MouseEvent; commit: ICommit}) {
 		const
 			{e, commit} = argument,
@@ -135,6 +156,7 @@ export function useCommitMenu(deps: IMenuDeps) {
 			// A revert commits on top of HEAD, so it needs a clean tree — and there is nothing
 			// to revert on the working-tree row.
 			const revertEnabled = !deps.isWorkingTreeDirty() && commit.hash !== 'WORKING_TREE';
+			const pushEnabled = commit.hash !== 'WORKING_TREE' && !!currentBranch.value;
 			const squashLabel = `Squash ${selected.length} commits`;
 
 			items.push(
@@ -174,6 +196,14 @@ export function useCommitMenu(deps: IMenuDeps) {
 								await deps.refreshAll();
 							}
 						}
+						: undefined,
+				},
+				{
+					label: 'Push commit',
+					icon: deps.menuIcon('mdi-upload'),
+					disabled: pushEnabled ? undefined : true,
+					onClick: pushEnabled
+						? async () => pushSingleCommit(commit.hash)
 						: undefined,
 				},
 				{

@@ -152,6 +152,13 @@ export function useGit() {
 		);
 	}
 
+	// Pushes history up to (and including) `hash` to `branch` on the remote,
+	// leaving any newer local commits unpushed.
+	async function pushCommit(hash: string, branch: string, remote?: string): Promise<void> {
+		const r = await resolveRemote(remote);
+		await callGit('push', r, `${hash}:refs/heads/${branch}`);
+	}
+
 	async function pushBranch(branchName: string, remote?: string): Promise<void> {
 		const r = await resolveRemote(remote);
 		await callGit('push', '--set-upstream', r, branchName);
@@ -526,6 +533,7 @@ export function useGit() {
 		fetch,
 		pull,
 		push,
+		pushCommit,
 		pushBranch,
 		checkout,
 		checkoutNewBranch,
