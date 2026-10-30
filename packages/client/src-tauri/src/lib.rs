@@ -1,3 +1,5 @@
+mod webview_fit;
+
 #[tauri::command]
 fn detect_ssh_keys() -> Vec<String> {
     let home = std::env::var("HOME").unwrap_or_default();
@@ -153,6 +155,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
+        .on_window_event(webview_fit::on_window_event)
         .invoke_handler(tauri::generate_handler![detect_ssh_keys, find_free_port, get_server_binary_path, get_file_size, write_log, get_login_shell_path, browse_directory, read_file_at, write_file_at, list_theme_files])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

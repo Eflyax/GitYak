@@ -5,6 +5,7 @@ import type {IResolvedTheme, IThemeEntry, IThemeFile} from '@/domain/models/Them
 import {parseJsonc, resolveScope} from '@/infrastructure/themeExpressionEvaluator';
 import {tokenToCssVar} from '@/infrastructure/themeTokenMap';
 import {builtinThemes, isBuiltinThemeId} from '@/infrastructure/builtinThemes';
+import {refreshGraphColors} from '@/ui/components/CommitHistory/graphColors';
 
 const THEME_PATH_KEY = 'git-yak:theme';
 const THEMES_DIR_KEY = 'git-yak:themes-dir';
@@ -187,6 +188,7 @@ async function applyTheme(filePath: string): Promise<void> {
 		activeTheme.value = resolved;
 		applyCssVars(resolved);
 		themeVersion.value++;
+		refreshGraphColors();
 		localStorage.setItem(THEME_PATH_KEY, filePath);
 	}
 	catch (err) {

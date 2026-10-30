@@ -100,10 +100,7 @@
 import {computed} from 'vue';
 import type {ICommit} from '@/domain';
 import {getGraphColor} from './graphColors';
-import {useTheme} from '@/composables/useTheme';
 import ArchiveIcon from '@/assets/svg/archive-outline.svg?component';
-
-const {themeVersion} = useTheme();
 
 const X_STEP = 20;
 const Y_STEP = 28;
@@ -145,8 +142,6 @@ function getInitials(authorName: string): string {
 }
 
 function getColor(level: number): string {
-	// Read to establish a reactive dependency on theme changes.
-	void themeVersion.value;
 	return getGraphColor(level);
 }
 

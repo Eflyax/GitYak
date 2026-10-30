@@ -1,3 +1,5 @@
+import {ref} from 'vue';
+
 const GRAPH_COLOR_COUNT = 10;
 
 const FALLBACK_COLORS = [
@@ -13,7 +15,18 @@ const FALLBACK_COLORS = [
 	'#818cf8',
 ] as const;
 
+// The colours live in CSS custom properties, which Vue cannot observe. Every caller (a
+// template, a computed) reads this revision through getGraphColor, so bumping it when a
+// theme is applied re-renders all of them with the new palette.
+const themeRevision = ref(0);
+
+export function refreshGraphColors(): void {
+	themeRevision.value++;
+}
+
 export function getGraphColor(level: number): string {
+	void themeRevision.value;
+
 	const index = level % GRAPH_COLOR_COUNT;
 	const value = getComputedStyle(document.documentElement)
 		.getPropertyValue(`--graph-${index}`)
