@@ -53,8 +53,17 @@
 		<template v-else-if="selectedCommit">
 			<!-- Hash -->
 			<div class="commit-details__hash-row">
-				<span class="commit-details__hash">
+				<span
+					:title="`${selectedCommit.hash}\nClick to copy`"
+					test-id="commit-details-hash"
+					class="commit-details__hash commit-details__copyable"
+					@click="copyHash(selectedCommit.hash)"
+				>
 					{{ selectedCommit.hashAbbr }}
+					<Icon
+						name="mdi-content-copy"
+						class="commit-details__copy-icon"
+					/>
 				</span>
 				<span class="commit-details__hash-full">
 					parents: {{ selectedCommit.parents.length }}
@@ -120,9 +129,16 @@
 				<span
 					v-for="p in selectedCommit.parents"
 					:key="String(p)"
-					class="commit-details__parent-hash"
+					:title="`${String(p)}\nClick to copy`"
+					test-id="commit-details-parent-hash"
+					class="commit-details__parent-hash commit-details__copyable"
+					@click="copyHash(String(p))"
 				>
 					{{ String(p).slice(0, 7) }}
+					<Icon
+						name="mdi-content-copy"
+						class="commit-details__copy-icon"
+					/>
 				</span>
 			</div>
 
@@ -157,8 +173,10 @@ import {useCommits} from '@/composables/useCommits';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useListNav} from '@/composables/useListNav';
+import {useNotify} from '@/composables/useNotify';
 import ChangedFileItem from './ChangedFileItem.vue';
 import CommitFileStats from '@/ui/components/CommitFileStats.vue';
+import Icon from '@/ui/components/Icon.vue';
 import type {ICommitFile} from '@/composables/useCommits';
 import type {IFileStatus} from '@/domain';
 
@@ -173,8 +191,19 @@ const {loadDiff} = useFileDiff();
 const {prefill, amendMode} = useCommitForm();
 const {status} = useWorkingTree();
 const {register, unregister, setActive} = useListNav();
+const notify = useNotify();
 
 const selectedFilePath = ref<string | null>(null);
+
+async function copyHash(hash: string): Promise<void> {
+	try {
+		await navigator.clipboard.writeText(hash);
+		notify.success(`Copied ${hash.slice(0, 7)} to clipboard`, 1500);
+	}
+	catch (err: unknown) {
+		notify.error(`Copy failed: ${err instanceof Error ? err.message : String(err)}`);
+	}
+}
 
 const selectedCommit = computed(() => {
 	const hash = selectedHashes.value[0];
@@ -336,10 +365,37 @@ watch(
 		padding: 8px 12px 4px;
 	}
 
+	// The accent is the one text colour every theme tunes to read on its own panel; the old
+	// hardcoded grey vanished on most dark themes.
 	&__hash {
-		color: $text-ghost;
+		border-radius: 3px;
+		color: $color-accent;
 		font-family: monospace;
 		font-size: 11px;
+		font-weight: 600;
+		padding: 1px 6px;
+
+		&:hover {
+			background: color-mix(in srgb, #{$color-accent} 15%, transparent);
+		}
+	}
+
+	&__copyable {
+		align-items: center;
+		cursor: pointer;
+		display: inline-flex;
+		gap: 4px;
+
+		&:hover .commit-details__copy-icon {
+			opacity: 1;
+		}
+	}
+
+	&__copy-icon {
+		height: 11px;
+		opacity: 0;
+		transition: opacity 0.1s;
+		width: 11px;
 	}
 
 	&__hash-full {
@@ -466,7 +522,7 @@ watch(
 		padding: 1px 6px;
 
 		&:hover {
-			background: rgba($color-accent, 0.15);
+			background: color-mix(in srgb, #{$color-accent} 15%, transparent);
 			color: $color-accent;
 		}
 	}

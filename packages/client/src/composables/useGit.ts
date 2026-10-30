@@ -3,9 +3,11 @@ import {useWebSocket} from './useWebSocket';
 import {useProject} from './useProject';
 import {useLayout} from './useLayout';
 import {useActivityLog} from './useActivityLog';
+import {useBackgroundTasks} from './useBackgroundTasks';
 import {useSafeDirectory} from './useSafeDirectory';
 import {ENetworkCommand, EFileArea, EGitErrorCode} from '@/domain';
 import {parseGitError, isNotARepository, parseDubiousOwnershipPath} from '@/domain';
+import {getGitTaskLabel} from '@/domain/services/gitTaskLabel';
 import type {IFileStatus} from '@/domain';
 
 export interface IRemoteConfig {
@@ -21,6 +23,7 @@ export function useGit() {
 		{call} = useWebSocket(),
 		{currentProject} = useProject(),
 		{setLoading} = useLayout(),
+		{track} = useBackgroundTasks(),
 		{addLog} = useActivityLog(),
 		{request: requestSafeDirectory} = useSafeDirectory();
 
@@ -52,6 +55,12 @@ export function useGit() {
 	}
 
 	async function callGit(...args: string[]): Promise<string> {
+		const taskLabel = getGitTaskLabel(args);
+
+		return taskLabel ? track(taskLabel, () => runGit(args)) : runGit(args);
+	}
+
+	async function runGit(args: string[]): Promise<string> {
 		setLoading(true);
 		const cmdLabel = 'git ' + args.join(' ');
 		addLog({type: 'git', status: 'info', direction: 'request', message: cmdLabel});
@@ -387,6 +396,10 @@ export function useGit() {
 	}
 
 	async function callRebase(payload: Record<string, unknown>): Promise<string> {
+		return track('Rebasing', () => runRebase(payload));
+	}
+
+	async function runRebase(payload: Record<string, unknown>): Promise<string> {
 		setLoading(true);
 		const cmdLabel = `git rebase (${String(payload['action'])})`;
 		addLog({type: 'git', status: 'info', direction: 'request', message: cmdLabel});

@@ -43,6 +43,8 @@ const referencesByHash = ref<Record<string, IReference[]>>({});
 const commitFiles = ref<ICommitFile[] | null>(null);
 const searchQuery = ref('');
 
+let detailsRequestId = 0;
+
 const commitMap = computed(() => {
 	const map = new Map<string, ICommit>();
 
@@ -329,9 +331,14 @@ export function useCommits() {
 		currentLimit.value = limit;
 		allLoaded.value = regularCommits.length < limit;
 
-		selectedHashes.value = selectedHashes.value.filter(
-			h => commitMap.value.has(h),
-		);
+		// Reassign only when a selected commit actually vanished: a new array reference re-runs
+		// every `watch(selectedHashes)`, and CommitDetails answers that by clearing and refetching
+		// its file list — on a slow transport (SSH) every background refresh made it blink.
+		const surviving = selectedHashes.value.filter(h => commitMap.value.has(h));
+
+		if (surviving.length !== selectedHashes.value.length) {
+			selectedHashes.value = surviving;
+		}
 	}
 
 	async function loadMore(): Promise<void> {
@@ -361,6 +368,11 @@ export function useCommits() {
 	}
 
 	async function loadCommitDetails(hashes: readonly string[]): Promise<void> {
+		// Each call supersedes the previous one; a slower, older response must not overwrite
+		// the file list of the commit that is selected now.
+		const requestId = ++detailsRequestId;
+		const isStale = (): boolean => requestId !== detailsRequestId;
+
 		commitFiles.value = null;
 
 		if (hashes.length === 0) return;
@@ -385,6 +397,8 @@ export function useCommits() {
 
 			const output = await callGit('diff', ...diffArgs, '--name-status', '-z');
 
+			if (isStale()) return;
+
 			commitFiles.value = parseDiffNameStatus(output);
 
 			return;
@@ -396,6 +410,8 @@ export function useCommits() {
 			const commit = commitMap.value.get(hash);
 			const parentHash = (commit?.parents as string[] | undefined)?.[0] ?? EMPTY_TREE_HASH;
 			const output = await callGit('diff', parentHash, hash, '--name-status', '-z');
+
+			if (isStale()) return;
 
 			for (const f of parseDiffNameStatus(output)) {
 				dedup.set(f.path, f);
