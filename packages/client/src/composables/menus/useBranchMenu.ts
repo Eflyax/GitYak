@@ -2,13 +2,31 @@ import ContextMenu from '@imengyu/vue3-context-menu';
 import {useGit} from '@/composables/useGit';
 import {useBranches} from '@/composables/useBranches';
 import {useRebase} from '@/composables/useRebase';
+import {useNotify} from '@/composables/useNotify';
 import type {IMenuDeps, IRefContextTarget} from '@/composables/useContextMenu';
 
 export function useBranchMenu(deps: IMenuDeps) {
 	const
 		{deleteTag, pushBranch, pushTag, merge} = useGit(),
 		{deleteBranch, deleteRemoteBranch, deleteBranchBoth, branches, currentBranch, switchBranch, setUpstream} = useBranches(),
-		{open: openRebase} = useRebase();
+		{open: openRebase} = useRebase(),
+		notify = useNotify();
+
+	// A context-menu action has no button to show a spinner on, and the menu swallows a
+	// rejected handler silently — so every action reports its outcome itself, success or failure.
+	async function runAction(successMessage: string, action: () => Promise<void>): Promise<void> {
+		try {
+			await action();
+			notify.success(successMessage);
+		}
+		catch (err: unknown) {
+			notify.error(err instanceof Error ? err.message : String(err));
+		}
+
+		// Refreshed after a failure too: an action can fail halfway (Delete → Both removes the
+		// local branch before the remote one), and the sidebar must show what actually changed.
+		await deps.refreshAll();
+	}
 
 	async function mergeRefs(source: string, target: string): Promise<{success: boolean}> {
 		if (source === target) return {success: false};
@@ -94,20 +112,14 @@ export function useBranchMenu(deps: IMenuDeps) {
 				items.push({
 					label: 'Push',
 					icon: deps.menuIcon('mdi-cloud-upload'),
-					onClick: async () => {
-						await pushTag(target.name);
-						await deps.refreshAll();
-					},
+					onClick: () => runAction(`Tag ${target.name} pushed`, () => pushTag(target.name)),
 				});
 			}
 
 			items.push({
 				label: 'Delete',
 				icon: deps.menuIcon('mdi-trash-can'),
-				onClick: async () => {
-					await deleteTag(target.name);
-					await deps.refreshAll();
-				},
+				onClick: () => runAction(`Tag ${target.name} deleted`, () => deleteTag(target.name)),
 			});
 		}
 		else {
@@ -115,10 +127,7 @@ export function useBranchMenu(deps: IMenuDeps) {
 				items.push({
 					label: 'Push',
 					icon: deps.menuIcon('mdi-cloud-upload'),
-					onClick: async () => {
-						await pushBranch(target.name);
-						await deps.refreshAll();
-					},
+					onClick: () => runAction(`Branch ${target.name} pushed`, () => pushBranch(target.name)),
 				});
 			}
 
@@ -130,10 +139,10 @@ export function useBranchMenu(deps: IMenuDeps) {
 					.map(b => ({
 						label: b.name,
 						icon: deps.menuIcon('mdi-cloud-outline'),
-						onClick: async () => {
-							await setUpstream(target.name, b.name);
-							await deps.refreshAll();
-						},
+						onClick: () => runAction(
+							`Upstream of ${target.name} set to ${b.name}`,
+							() => setUpstream(target.name, b.name),
+						),
 					}));
 
 				if (upstreamCandidates.length) {
@@ -151,10 +160,10 @@ export function useBranchMenu(deps: IMenuDeps) {
 				deleteChildren.push({
 					label: 'Local',
 					icon: deps.menuIcon('mdi-laptop'),
-					onClick: async () => {
-						await deleteBranch(target.name, true);
-						await deps.refreshAll();
-					},
+					onClick: () => runAction(
+						`Branch ${target.name} deleted`,
+						() => deleteBranch(target.name, true),
+					),
 				});
 			}
 
@@ -162,10 +171,10 @@ export function useBranchMenu(deps: IMenuDeps) {
 				deleteChildren.push({
 					label: 'Remote',
 					icon: deps.menuIcon('mdi-cloud-outline'),
-					onClick: async () => {
-						await deleteRemoteBranch(target.name, target.remotes[0]);
-						await deps.refreshAll();
-					},
+					onClick: () => runAction(
+						`Remote branch ${target.name} deleted`,
+						() => deleteRemoteBranch(target.name, target.remotes[0]),
+					),
 				});
 			}
 
@@ -173,10 +182,10 @@ export function useBranchMenu(deps: IMenuDeps) {
 				deleteChildren.push({
 					label: 'Both',
 					icon: deps.menuIcon('mdi-trash-can'),
-					onClick: async () => {
-						await deleteBranchBoth(target.name, target.remotes[0]);
-						await deps.refreshAll();
-					},
+					onClick: () => runAction(
+						`Branch ${target.name} deleted locally and on the remote`,
+						() => deleteBranchBoth(target.name, target.remotes[0]),
+					),
 				});
 			}
 
