@@ -1,10 +1,16 @@
 import {ref, readonly} from 'vue';
 import type {IBranch} from '@/domain';
 import {BRANCH_REF_FORMAT, parseBranchRefs} from '@/domain/services/branchRefs';
+import {singleFlight} from '@/domain/services/singleFlight';
 import {useGit} from './useGit';
 
 const branches = ref<IBranch[]>([]);
 const currentBranch = ref<IBranch | null>(null);
+
+// The ref list the branches were last parsed from; an identical reload is skipped.
+let lastOutput: string | null = null;
+// Shared by every caller, so loads requested from several components never run side by side.
+let loadBranchesOnce: (() => Promise<void>) | null = null;
 
 export function useBranches() {
 	const {
@@ -18,7 +24,7 @@ export function useBranches() {
 		setUpstream: gitSetUpstream,
 	} = useGit();
 
-	async function loadBranches(): Promise<void> {
+	async function doLoadBranches(): Promise<void> {
 		const output = await callGit(
 			'for-each-ref',
 			`--format=${BRANCH_REF_FORMAT}`,
@@ -26,11 +32,21 @@ export function useBranches() {
 			'refs/remotes',
 		);
 
+		if (output === lastOutput) {
+			return;
+		}
+
+		lastOutput = output;
+
 		const result = parseBranchRefs(output);
 
 		branches.value = result.branches;
 		currentBranch.value = result.current;
 	}
+
+	loadBranchesOnce ??= singleFlight(doLoadBranches);
+
+	const loadBranches = loadBranchesOnce;
 
 	/** Points a local branch at a remote-tracking branch, so it gains ahead/behind counts. */
 	async function setUpstream(branchName: string, upstream: string): Promise<void> {

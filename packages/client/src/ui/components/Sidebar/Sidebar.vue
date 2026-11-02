@@ -140,7 +140,7 @@
 						:key="tag.name"
 						test-id="tag-item"
 						class="sidebar__tag-item"
-						@contextmenu.prevent="contextMenuRef($event, {name: tag.name, isLocal: true, remotes: remoteTags.includes(tag.name) ? ['origin'] : [], isTag: true})"
+						@contextmenu.prevent="contextMenuRef($event, {name: tag.name, isLocal: true, remotes: remoteTagSet.has(tag.name) ? ['origin'] : [], isTag: true})"
 					>
 						<Icon
 							name="mdi-tag-outline"
@@ -152,7 +152,7 @@
 							title="Local"
 						/>
 						<Icon
-							v-if="remoteTags.includes(tag.name)"
+							v-if="remoteTagSet.has(tag.name)"
 							name="mdi-cloud-outline"
 							class="sidebar__tag-icon"
 							title="Remote"
@@ -182,7 +182,7 @@ import {useContextMenu} from '@/composables/useContextMenu';
 
 const {sidebarCollapsed, collapseSidebar, expandSidebar} = useLayout();
 const {branches, switchBranch, loadBranches} = useBranches();
-const {tags, remoteTags} = useTags();
+const {tags, remoteTagSet} = useTags();
 const {contextMenuRef} = useContextMenu();
 
 function toggle(): void {

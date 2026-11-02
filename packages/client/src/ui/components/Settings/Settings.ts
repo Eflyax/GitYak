@@ -6,11 +6,13 @@ import ThemeSelector from '@/ui/components/ThemeSelector/ThemeSelector.vue';
 import {useTheme} from '@/composables/useTheme';
 import {useSshProxyJump} from '@/composables/useSshProxyJump';
 import {useNotify} from '@/composables/useNotify';
+import {useHistorySettings, clampPageSize, clampMaxCommits, PAGE_SIZE_MIN, PAGE_SIZE_MAX} from '@/composables/useHistorySettings';
 import type {ISshProxyJumpConfig, TSshProxyJumpTextField} from '@/domain/models/SshProxyJump';
 
 const
 	{themesDir, availableThemes, loadThemes} = useTheme(),
 	sshProxyJump = useSshProxyJump(),
+	historySettings = useHistorySettings(),
 	isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 export default defineComponent({
@@ -29,6 +31,8 @@ export default defineComponent({
 	data() {
 		return {
 			isTauri,
+			pageSizeMin: PAGE_SIZE_MIN,
+			pageSizeMax: PAGE_SIZE_MAX,
 			proxyJumpBusy: false,
 			detectedKeys: [] as Array<string>,
 		};
@@ -37,6 +41,14 @@ export default defineComponent({
 	computed: {
 		themesDir(): string {
 			return themesDir.value;
+		},
+
+		historyPageSize(): number {
+			return historySettings.pageSize.value;
+		},
+
+		historyMaxCommits(): number {
+			return historySettings.maxCommits.value;
 		},
 
 		customThemesCount(): number {
@@ -74,6 +86,14 @@ export default defineComponent({
 
 		async onThemesDirBlur(): Promise<void> {
 			await loadThemes(themesDir.value);
+		},
+
+		onPageSizeInput(value: number | null): void {
+			historySettings.pageSize.value = clampPageSize(value ?? undefined);
+		},
+
+		onMaxCommitsInput(value: number | null): void {
+			historySettings.maxCommits.value = clampMaxCommits(value ?? 0);
 		},
 
 		async refreshProxyJump(): Promise<void> {

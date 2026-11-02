@@ -1,9 +1,11 @@
-import {ref, readonly} from 'vue';
+import {ref, computed, readonly} from 'vue';
 import type {ITag} from '@/domain';
 import {useGit} from './useGit';
 
 const tags = ref<ITag[]>([]);
 const remoteTags = ref<string[]>([]);
+// Looked up once per rendered tag: a Set keeps that O(1) for repos with hundreds of tags.
+const remoteTagSet = computed(() => new Set(remoteTags.value));
 
 export function useTags() {
 	const {
@@ -66,6 +68,7 @@ export function useTags() {
 	return {
 		tags: readonly(tags),
 		remoteTags: readonly(remoteTags),
+		remoteTagSet,
 		loadTags,
 		loadRemoteTags,
 		createTag,

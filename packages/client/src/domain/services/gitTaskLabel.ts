@@ -12,6 +12,7 @@ const LABELS: Record<string, string> = {
 	'commit': 'Committing',
 	'clone': 'Cloning',
 	'clean': 'Cleaning',
+	'commit-graph': 'Optimizing repository',
 };
 
 const STASH_LABELS: Record<string, string | null> = {

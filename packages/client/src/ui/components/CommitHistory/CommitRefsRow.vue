@@ -129,7 +129,7 @@ const {checkout, callGit} = useGit();
 const {loadCommits, selectCommit} = useCommits();
 const {hasChanges, loadStatus} = useWorkingTree();
 const {stashSave} = useStash();
-const {remoteTags} = useTags();
+const {remoteTagSet} = useTags();
 const {contextMenuRef, contextMenuRefDrop} = useContextMenu();
 const {dragSource, startDrag, endDrag} = useDragRef();
 const dialog = useDialog();
@@ -235,7 +235,7 @@ const mergedRefs = computed((): IMergedRef[] => {
 		refName: r.name,
 		isBranch: false,
 		isLocal: true,
-		remotes: remoteTags.value.includes(r.name) ? ['origin'] : [],
+		remotes: remoteTagSet.value.has(r.name) ? ['origin'] : [],
 	}));
 
 	return [...mergedBranches, ...otherMerged];

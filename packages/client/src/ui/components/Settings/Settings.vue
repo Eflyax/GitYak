@@ -24,6 +24,44 @@
 		</section>
 
 		<section
+			test-id="settings-history-section"
+			class="settings__section"
+		>
+			<h3 class="settings__section-title">
+				History
+			</h3>
+			<div class="settings__row">
+				<label class="settings__label">Commits per page</label>
+				<n-input-number
+					test-id="settings-history-page-size-input"
+					:value="historyPageSize"
+					:min="pageSizeMin"
+					:max="pageSizeMax"
+					:step="100"
+					size="small"
+					@update:value="onPageSizeInput"
+				/>
+				<p class="settings__hint">
+					Loaded when a repository opens, and again each time the history is scrolled to its end.
+				</p>
+			</div>
+			<div class="settings__row">
+				<label class="settings__label">Maximum commits</label>
+				<n-input-number
+					test-id="settings-history-max-commits-input"
+					:value="historyMaxCommits"
+					:min="0"
+					:step="1000"
+					size="small"
+					@update:value="onMaxCommitsInput"
+				/>
+				<p class="settings__hint">
+					The history stops loading older commits past this count. 0 means no limit.
+				</p>
+			</div>
+		</section>
+
+		<section
 			v-if="isTauri"
 			test-id="settings-proxy-jump-section"
 			class="settings__section"

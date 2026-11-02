@@ -46,7 +46,6 @@
 </template>
 
 <script setup lang="ts">
-import {computed} from 'vue';
 import type {ICommit} from '@/domain';
 import {getGraphColor} from './graphColors';
 import CommitFileStats from '@/ui/components/CommitFileStats.vue';
@@ -56,21 +55,7 @@ import {useBranches} from '@/composables/useBranches';
 
 const ROW_HEIGHT = 28;
 
-const AUTHOR_COLORS = [
-	'#6f9ef8', '#f89b6f', '#6ff8a0', '#f86f6f',
-	'#c46ff8', '#f8e56f', '#6feef8', '#f86fc4',
-];
-
-function hashAuthorColor(seed: string): string {
-	let hash = 0;
-	for (let i = 0; i < seed.length; i++) {
-		hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-		hash |= 0;
-	}
-	return AUTHOR_COLORS[Math.abs(hash) % AUTHOR_COLORS.length]!;
-}
-
-const props = defineProps<{
+defineProps<{
 	commit: ICommit
 	isSelected?: boolean
 }>();
@@ -79,19 +64,6 @@ const emit = defineEmits<{
 	select: [event: MouseEvent]
 	contextmenu: [event: MouseEvent]
 }>();
-
-// Reserved for future avatar rendering
-const _authorColor = computed(() =>
-	hashAuthorColor(props.commit.authorEmail || props.commit.authorName),
-);
-
-const _authorInitial = computed(() =>
-	props.commit.authorName?.charAt(0)?.toUpperCase() ?? '?',
-);
-
-void _authorColor.value;
-void _authorInitial.value;
-
 
 const {workingTreeStats, hasUnresolvedConflicts} = useWorkingTree();
 const {currentBranch} = useBranches();

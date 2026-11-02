@@ -101,12 +101,17 @@
 		>
 			<div
 				class="commit-history__content"
-				:style="{height: visibleCommits.length * ROW_HEIGHT + 'px'}"
+				:style="{height: visibleCommits.length * ROW_HEIGHT + (footerText ? FOOTER_HEIGHT : 0) + 'px'}"
 			>
+				<!-- Only the rows around the viewport are rendered; the content keeps the full
+					height so the scrollbar reflects the whole loaded history. -->
 				<!-- References column (LEFT of graph) -->
-				<div class="commit-history__refs-col">
+				<div
+					class="commit-history__refs-col"
+					:style="{transform: `translateY(${windowStart * ROW_HEIGHT}px)`}"
+				>
 					<CommitRefsRow
-						v-for="commit in visibleCommits"
+						v-for="commit in windowCommits"
 						:key="commit.hash"
 						:commit="commit"
 					/>
@@ -120,22 +125,39 @@
 					<CommitGraph
 						:commits="visibleCommits"
 						:selected-hash="selectedHash"
+						:row-offset="hiddenRows"
+						:start-index="windowStart"
+						:end-index="windowEnd"
+						:max-level="maxLevel"
 					/>
 				</div>
 
 				<!-- Commit rows -->
 				<div
 					class="commit-history__rows"
-					:style="{marginLeft: totalLeftMargin + 'px'}"
+					:style="{marginLeft: totalLeftMargin + 'px', transform: `translateY(${windowStart * ROW_HEIGHT}px)`}"
 				>
 					<CommitRow
-						v-for="commit in visibleCommits"
+						v-for="commit in windowCommits"
 						:key="commit.hash"
 						:commit="commit"
 						:is-selected="selectedHashes.includes(commit.hash)"
 						@select="handleSelectCommit(commit, $event)"
 						@contextmenu="onContextMenu(commit, $event)"
 					/>
+				</div>
+
+				<div
+					v-if="footerText"
+					test-id="commit-history-footer"
+					class="commit-history__footer"
+					:style="{top: visibleCommits.length * ROW_HEIGHT + 'px', left: totalLeftMargin + 'px'}"
+				>
+					<n-spin
+						v-if="isLoadingMore"
+						:size="12"
+					/>
+					{{ footerText }}
 				</div>
 			</div>
 		</div>
@@ -184,14 +206,22 @@ import {useLayout} from '@/composables/useLayout';
 import {useContextMenu} from '@/composables/useContextMenu';
 import {useGit} from '@/composables/useGit';
 import {useListNav} from '@/composables/useListNav';
+import {useRepoMaintenance} from '@/composables/useRepoMaintenance';
 import type {ICommit} from '@/domain';
+import {computeRowWindow, scrollTopToReveal} from '@/domain/services/rowWindow';
 
 
 const ROW_HEIGHT = 28;
 const REFS_WIDTH = 180;
+const FOOTER_HEIGHT = 28;
+// Rows rendered beyond each edge of the viewport, so a fast scroll does not flash empty space.
+const OVERSCAN = 10;
 
 const message = useMessage();
-const {commits, selectedHashes, selectCommit, toggleCommitSelection, loadCommits, search, isSearching} = useCommits();
+const {
+	commits, selectedHashes, selectCommit, toggleCommitSelection, loadCommits, search, isSearching,
+	loadMore, allLoaded, isLoadingMore, limitReached, maxLevel,
+} = useCommits();
 
 const {loadStatus, hasChanges, conflictDetected} = useWorkingTree();
 const {loadStashes} = useStash();
@@ -200,6 +230,7 @@ const {currentProject} = useProject();
 const {loading} = useLayout();
 const {stashDrop, isGitRepo, initRepo, writeFile, callGit, commit} = useGit();
 const {register, unregister, setActive} = useListNav();
+const {ensureCommitGraph} = useRepoMaintenance();
 
 const {
 	contextMenuCommit,
@@ -262,13 +293,87 @@ async function bootstrapInitialCommit(): Promise<void> {
 
 const scrollEl = ref<HTMLElement | null>(null);
 
-const visibleCommits = computed((): ICommit[] => {
+// The working-tree row is always the first commit when present. Hidden (a clean tree), it is
+// sliced off rather than the commits re-indexed, so every other row moves up by one.
+const hiddenRows = computed((): number => {
 	const showWorkingTree = hasChanges.value || conflictDetected.value;
-	const filtered = showWorkingTree
-		? commits.value
-		: commits.value.filter(c => c.hash !== 'WORKING_TREE');
 
-	return filtered.map((c, i) => ({...c, index: i}));
+	return !showWorkingTree && commits.value[0]?.hash === 'WORKING_TREE' ? 1 : 0;
+});
+
+const visibleCommits = computed((): ICommit[] =>
+	hiddenRows.value ? commits.value.slice(hiddenRows.value) : commits.value,
+);
+
+// Rendered rows. Kept as two plain numbers so a scroll that stays within the same rows
+// changes nothing and re-renders nothing.
+const windowStart = ref(0);
+const windowEnd = ref(0);
+
+const windowCommits = computed(() => visibleCommits.value.slice(windowStart.value, windowEnd.value));
+
+const footerText = computed((): string => {
+	if (isLoadingMore.value) return 'Loading more commits…';
+
+	if (limitReached.value) {
+		return `Showing ${visibleCommits.value.length} commits — the limit can be raised in Settings`;
+	}
+
+	return '';
+});
+
+let frame = 0;
+
+function updateWindow(): void {
+	const el = scrollEl.value;
+
+	if (!el) return;
+
+	const range = computeRowWindow(el.scrollTop, el.clientHeight, ROW_HEIGHT, visibleCommits.value.length, OVERSCAN);
+
+	windowStart.value = range.start;
+	windowEnd.value = range.end;
+
+	// Fetch the next page while a screenful of rows is still left to scroll through.
+	const rowsPerScreen = Math.ceil(el.clientHeight / ROW_HEIGHT);
+
+	if (!allLoaded.value && !isLoadingMore.value && range.end + rowsPerScreen >= visibleCommits.value.length) {
+		void loadMore();
+	}
+}
+
+function onScroll(): void {
+	if (frame) return;
+
+	frame = requestAnimationFrame(() => {
+		frame = 0;
+		updateWindow();
+	});
+}
+
+const resizeObserver = new ResizeObserver(() => updateWindow());
+
+// The scroll container exists only while there are commits to show (v-else above), so the
+// listeners follow the element rather than the component.
+watch(scrollEl, (el, previous) => {
+	if (previous) {
+		previous.removeEventListener('scroll', onScroll);
+		resizeObserver.unobserve(previous);
+	}
+
+	if (el) {
+		el.addEventListener('scroll', onScroll, {passive: true});
+		resizeObserver.observe(el);
+		updateWindow();
+	}
+});
+
+// A reload or a new page changes the row count; a short list may still not fill the viewport.
+watch(() => visibleCommits.value.length, () => void nextTick(updateWindow));
+
+// A new repo or search starts at the top of the list.
+watch([() => currentProject.value, isSearching], () => {
+	if (scrollEl.value) scrollEl.value.scrollTop = 0;
 });
 
 // First selected hash → drives graph highlight and row selection
@@ -276,9 +381,8 @@ const selectedHash = computed(() => selectedHashes.value[0]);
 
 const graphWidth = computed(() => {
 	if (!visibleCommits.value.length) return 0;
-	const maxLevel = Math.max(...visibleCommits.value.map(c => c.level ?? 0));
 
-	return (maxLevel + 1) * 20 + 12 + 16 + 4;
+	return (maxLevel.value + 1) * 20 + 12 + 16 + 4;
 });
 
 const totalLeftMargin = computed(() => REFS_WIDTH + graphWidth.value);
@@ -323,6 +427,10 @@ async function refresh(): Promise<void> {
 			loadBranches(),
 			loadCommits(),
 		]);
+
+		// After the history is on screen, so a remote worker that runs one command at a time
+		// never makes the first load wait behind it.
+		void ensureCommitGraph();
 	}
 	catch (e: unknown) {
 		message.error(e instanceof Error ? e.message : 'Failed to load repository data');
@@ -345,14 +453,10 @@ function scrollCommitIntoView(index: number): void {
 
 	if (!el) return;
 
-	const top = index * ROW_HEIGHT;
-	const bottom = top + ROW_HEIGHT;
+	const target = scrollTopToReveal(el.scrollTop, el.clientHeight, index, ROW_HEIGHT);
 
-	if (top < el.scrollTop) {
-		el.scrollTop = top;
-	}
-	else if (bottom > el.scrollTop + el.clientHeight) {
-		el.scrollTop = bottom - el.clientHeight;
+	if (target !== null) {
+		el.scrollTop = target;
 	}
 }
 
@@ -386,7 +490,12 @@ onMounted(() => {
 	setActive('commits');
 });
 
-onUnmounted(() => unregister('commits'));
+onUnmounted(() => {
+	unregister('commits');
+	resizeObserver.disconnect();
+	cancelAnimationFrame(frame);
+	scrollEl.value?.removeEventListener('scroll', onScroll);
+});
 
 watch(() => currentProject.value, refresh);
 
@@ -489,6 +598,18 @@ watch(commits, newCommits => {
 
 	&__rows {
 		width: 100%;
+	}
+
+	&__footer {
+		position: absolute;
+		right: 0;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		height: 28px;
+		padding: 0 10px;
+		font-size: 11px;
+		color: $text-muted;
 	}
 
 	&__loading {

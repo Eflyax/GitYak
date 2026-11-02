@@ -37,16 +37,25 @@
 				</span>
 			</div>
 
-			<div class="commit-details__files">
-				<ChangedFileItem
-					v-for="file in commitFiles ?? []"
-					:key="file.path"
-					:path="file.path"
-					:status="(file.status as EFileStatus)"
-					:is-selected="selectedFilePath === file.path"
-					@open="handleFileOpen(file)"
-				/>
-			</div>
+			<n-virtual-list
+				ref="filesListRef"
+				class="commit-details__files"
+				:items="files"
+				:item-size="FILE_ROW_HEIGHT"
+				:padding-top="4"
+				:padding-bottom="4"
+				key-field="path"
+			>
+				<template #default="{item: file}">
+					<ChangedFileItem
+						:key="file.path"
+						:path="file.path"
+						:status="(file.status as EFileStatus)"
+						:is-selected="selectedFilePath === file.path"
+						@open="handleFileOpen(file)"
+					/>
+				</template>
+			</n-virtual-list>
 		</template>
 
 		<!-- Single commit -->
@@ -143,16 +152,25 @@
 			</div>
 
 			<!-- File list -->
-			<div class="commit-details__files">
-				<ChangedFileItem
-					v-for="file in commitFiles ?? []"
-					:key="file.path"
-					:path="file.path"
-					:status="(file.status as EFileStatus)"
-					:is-selected="selectedFilePath === file.path"
-					@open="handleFileOpen(file)"
-				/>
-			</div>
+			<n-virtual-list
+				ref="filesListRef"
+				class="commit-details__files"
+				:items="files"
+				:item-size="FILE_ROW_HEIGHT"
+				:padding-top="4"
+				:padding-bottom="4"
+				key-field="path"
+			>
+				<template #default="{item: file}">
+					<ChangedFileItem
+						:key="file.path"
+						:path="file.path"
+						:status="(file.status as EFileStatus)"
+						:is-selected="selectedFilePath === file.path"
+						@open="handleFileOpen(file)"
+					/>
+				</template>
+			</n-virtual-list>
 		</template>
 
 		<div
@@ -165,7 +183,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch, onMounted, onUnmounted} from 'vue';
+import {computed, ref, watch, onMounted, onUnmounted, nextTick, useTemplateRef} from 'vue';
+import {NVirtualList} from 'naive-ui';
 import {EFileArea, EFileStatus} from '@/domain/enums';
 import {getGraphColor} from '@/ui/components/CommitHistory/graphColors';
 import {useCommitForm} from '@/composables/useCommitForm';
@@ -179,6 +198,7 @@ import CommitFileStats from '@/ui/components/CommitFileStats.vue';
 import Icon from '@/ui/components/Icon.vue';
 import type {ICommitFile} from '@/composables/useCommits';
 import type {IFileStatus} from '@/domain';
+import {scrollTopToReveal} from '@/domain/services/rowWindow';
 
 const emit = defineEmits<{
 	openDiff: [filePath: string]
@@ -194,6 +214,12 @@ const {register, unregister, setActive} = useListNav();
 const notify = useNotify();
 
 const selectedFilePath = ref<string | null>(null);
+
+// Matches the fixed height of `ChangedFileItem`; the virtual list positions rows by it.
+const FILE_ROW_HEIGHT = 26;
+
+const filesListRef = useTemplateRef<InstanceType<typeof NVirtualList>>('filesListRef');
+const files = computed((): ICommitFile[] => commitFiles.value ?? []);
 
 async function copyHash(hash: string): Promise<void> {
 	try {
@@ -276,12 +302,18 @@ function handleEditClick(): void {
 }
 
 const filesStatuses = computed(() => {
-	return {
-		[EFileStatus.Modified]: commitFiles.value?.filter(file => file.status === EFileStatus.Modified).length ?? 0,
-		[EFileStatus.Added]: commitFiles.value?.filter(file => file.status === EFileStatus.Added).length ?? 0,
-		[EFileStatus.Deleted]: commitFiles.value?.filter(file => file.status === EFileStatus.Deleted).length ?? 0,
-		[EFileStatus.Renamed]: commitFiles.value?.filter(file => file.status === EFileStatus.Renamed).length ?? 0,
+	const counts = {
+		[EFileStatus.Modified]: 0,
+		[EFileStatus.Added]: 0,
+		[EFileStatus.Deleted]: 0,
+		[EFileStatus.Renamed]: 0,
 	};
+
+	for (const file of files.value) {
+		if (file.status in counts) counts[file.status as keyof typeof counts]++;
+	}
+
+	return counts;
 });
 
 const authorColor = computed(() => getGraphColor(selectedCommit.value?.level ?? 0));
@@ -325,7 +357,24 @@ function moveFile(delta: number): void {
 		: Math.max(0, Math.min(list.length - 1, current + delta));
 	const target = list[next];
 
-	if (target) void handleFileOpen(target);
+	if (!target) return;
+
+	void handleFileOpen(target);
+	void nextTick(() => revealFile(next));
+}
+
+// Only the rows near the viewport exist in the DOM, so keyboard navigation scrolls the list
+// itself instead of relying on the browser to reveal the selected row.
+function revealFile(index: number): void {
+	const el = filesListRef.value?.getScrollContainer();
+
+	if (!el) return;
+
+	const target = scrollTopToReveal(el.scrollTop, el.clientHeight, index, FILE_ROW_HEIGHT);
+
+	if (target !== null) {
+		filesListRef.value?.scrollTo({top: target});
+	}
 }
 
 onMounted(() => register('commitFiles', {moveUp: () => moveFile(-1), moveDown: () => moveFile(1)}));
@@ -568,9 +617,7 @@ watch(
 
 	&__files {
 		flex: 1;
-		overflow-x: hidden;
-		overflow-y: auto;
-		padding: 4px 0;
+		min-height: 0;
 	}
 }
 </style>

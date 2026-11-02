@@ -1,9 +1,13 @@
-import {ref, computed, readonly} from 'vue';
+import {ref, shallowRef, computed, readonly, shallowReadonly, watch} from 'vue';
 import type {ICommit, IReference, IStash} from '@/domain';
 import {EReferenceType} from '@/domain';
 import {buildSearchArgs} from '@/domain/services/commitSearch';
+import {buildGraph} from '@/domain/services/commitGraph';
+import {singleFlight} from '@/domain/services/singleFlight';
 import {useGit} from './useGit';
 import {useStash} from './useStash';
+import {useProject} from './useProject';
+import {useHistorySettings} from './useHistorySettings';
 
 export interface ICommitFile {
 	path: string;
@@ -12,8 +16,6 @@ export interface ICommitFile {
 }
 
 const FIELD_SEP = '\x06';
-const COMMIT_LIMIT = 200;
-const LIMIT_MULTIPLIER = 4;
 const EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 const LOG_FORMAT = [
@@ -35,15 +37,42 @@ const LOG_KEYS: (keyof ICommit)[] = [
 	'committerEmail', 'committerName', 'committerDate',
 ] as (keyof ICommit)[];
 
-const commits = ref<ICommit[]>([]);
+const COLLATOR = new Intl.Collator();
+
+// Shallow: thousands of commits are replaced wholesale on every load and never edited in
+// place, so deep reactivity would only add proxies and dependency tracking per field.
+const commits = shallowRef<ICommit[]>([]);
 const selectedHashes = ref<string[]>([]);
-const currentLimit = ref<number>(COMMIT_LIMIT);
 const allLoaded = ref(false);
-const referencesByHash = ref<Record<string, IReference[]>>({});
-const commitFiles = ref<ICommitFile[] | null>(null);
+const limitReached = ref(false);
+const isLoadingMore = ref(false);
+const maxLevel = ref(0);
+const referencesByHash = shallowRef<Record<string, IReference[]>>({});
+const commitFiles = shallowRef<ICommitFile[] | null>(null);
 const searchQuery = ref('');
+const isSearching = computed(() => searchQuery.value.trim().length > 0);
 
 let detailsRequestId = 0;
+
+// Regular commits (not the working-tree row or stashes) held by the history, and the repo +
+// query they belong to. A refresh reloads as many as were loaded so a scrolled-down history
+// keeps its place; a different repo or query starts over at one page.
+let loadedCount = 0;
+let pagingKey = '';
+// The raw output the history was last built from; an identical reload is skipped entirely.
+let lastSignature = '';
+// Bumped on every reload, so a page that was being fetched across one is dropped.
+let generation = 0;
+// Shared by every caller, so loads requested from several components never run side by side.
+let loadCommitsOnce: (() => Promise<void>) | null = null;
+
+// Raising the limit in Settings after the history hit it lets scrolling load further again.
+watch(useHistorySettings().maxCommits, max => {
+	if (limitReached.value && (max === 0 || max > loadedCount)) {
+		limitReached.value = false;
+		allLoaded.value = false;
+	}
+});
 
 const commitMap = computed(() => {
 	const map = new Map<string, ICommit>();
@@ -100,84 +129,6 @@ function mapStashes(stashes: readonly IStash[]): ICommit[] {
 				}],
 			} as ICommit;
 		});
-}
-
-function buildGraph(rawCommits: ICommit[]): void {
-	const occupiedLevels: Record<number, ICommit> = {};
-	const remainingParents: Record<string, Set<string>> = {};
-	const children: Record<string, ICommit[]> = {};
-
-	for (const [i, commit] of rawCommits.entries()) {
-		commit.index = i;
-		commit.hashAbbr = commit.hash.slice(0, 7);
-
-		const
-			rawParents = commit.parents;
-
-		let parents: string[];
-
-		if (Array.isArray(rawParents)) {
-			parents = rawParents as string[];
-		}
-		else {
-			const raw = rawParents as unknown as string;
-
-			parents = raw ? raw.split(' ').filter(Boolean) : [];
-		}
-
-		commit.parents = parents;
-
-		if (!commit.isStash && commit.hash !== 'WORKING_TREE') {
-			commit.references = referencesByHash.value[commit.hash] ?? [];
-		}
-
-		for (const parentHash of parents) {
-			children[parentHash] ??= [];
-			children[parentHash].push(commit);
-		}
-
-		remainingParents[commit.hash] = new Set(parents);
-
-		const sortedChildren = (children[commit.hash] ?? []).sort(
-			(a, b) => (a.level ?? 0) - (b.level ?? 0),
-		);
-
-		for (const child of sortedChildren) {
-			if (
-				occupiedLevels[child.level ?? -1] === child &&
-				commit.hash === child.parents[0] &&
-				(child.index ?? 0) < i
-			) {
-				commit.level = child.level;
-				break;
-			}
-		}
-
-		if (commit.level === undefined) {
-			for (let level = 0; ; ++level) {
-				if (occupiedLevels[level] === undefined) {
-					commit.level = level;
-					break;
-				}
-			}
-		}
-
-		if (parents.length > 0) {
-			occupiedLevels[commit.level] = commit;
-		}
-
-		for (const child of children[commit.hash] ?? []) {
-			remainingParents[child.hash].delete(commit.hash);
-
-			if (
-				remainingParents[child.hash].size === 0 &&
-				child.level !== commit.level &&
-				occupiedLevels[child.level ?? -1] === child
-			) {
-				delete occupiedLevels[child.level ?? -1];
-			}
-		}
-	}
 }
 
 function parseDiffNameStatus(output: string): ICommitFile[] {
@@ -240,96 +191,134 @@ function parseReferences(refOutput: string): Record<string, IReference[]> {
 	return result;
 }
 
+function parseLog(log: string): ICommit[] {
+	return log
+		.split('\0')
+		.filter(Boolean)
+		.map(row => parseRawCommit(row) as ICommit);
+}
+
+function makeWorkingTree(headHash: string, mergeHeadHash: string): ICommit {
+	const parents = headHash ? [headHash, ...(mergeHeadHash ? [mergeHeadHash] : [])] : [];
+
+	return {
+		hash: 'WORKING_TREE',
+		hashAbbr: 'WORKING',
+		parents: parents as unknown as ReadonlyArray<string>,
+		subject: 'Working Tree',
+		body: '',
+		authorName: '',
+		authorEmail: '',
+		authorDate: '',
+		committerName: '',
+		committerEmail: '',
+		committerDate: '',
+		references: [],
+	};
+}
+
 export function useCommits() {
 	const {callGit} = useGit();
 	const {stashes} = useStash();
+	const {currentProject} = useProject();
+	const {pageSize, maxCommits} = useHistorySettings();
 
-	async function loadReferences(): Promise<void> {
-		const output = await callGit(
-			'for-each-ref',
-			'--format=%(objectname) %(refname)',
-			'refs/heads',
-			'refs/remotes',
-			'refs/tags',
-		);
-
-		referencesByHash.value = parseReferences(output);
+	/** How many more regular commits the history may hold under the `maxCommits` setting. */
+	function capacityLeft(): number {
+		return maxCommits.value > 0 ? Math.max(0, maxCommits.value - loadedCount) : Infinity;
 	}
 
-	async function loadCommits(limit = COMMIT_LIMIT): Promise<void> {
-		await loadReferences();
-
+	function logArgs(count: number, skip: number): string[] {
 		// A pathspec has to be the last thing on the command line, so the search arguments go
 		// after every option of ours.
-		const searchArgs = buildSearchArgs(searchQuery.value);
-
-		const log = await callGit(
+		return [
 			'log',
 			'--exclude=refs/stash',
 			'--all',
 			'-z',
 			`--pretty=format:${LOG_FORMAT}`,
 			'--date=format-local:%Y-%m-%d %H:%M',
-			...(limit ? [`--max-count=${limit}`] : []),
+			`--max-count=${count}`,
+			...(skip ? [`--skip=${skip}`] : []),
 			'--date-order',
-			...searchArgs,
-		);
+			...buildSearchArgs(searchQuery.value),
+		];
+	}
 
-		const regularCommits = log
-			.split('\0')
-			.filter(Boolean)
-			.map(row => parseRawCommit(row) as ICommit);
-
-		let headHash = '';
-
+	async function revParse(rev: string): Promise<string> {
 		try {
-			headHash = (await callGit('rev-parse', 'HEAD')).trim();
+			return (await callGit('rev-parse', rev)).trim();
 		}
 		catch {
-			// ignore: no HEAD yet (e.g. freshly initialised repo)
+			// No HEAD yet (freshly initialised repo) or no MERGE_HEAD (not mid-merge).
+			return '';
+		}
+	}
+
+	async function doLoadCommits(): Promise<void> {
+		const key = `${currentProject.value?.id ?? ''}\0${searchQuery.value}`;
+
+		if (key !== pagingKey) {
+			pagingKey = key;
+			loadedCount = 0;
 		}
 
-		let mergeHeadHash = '';
+		let count = Math.max(pageSize.value, loadedCount);
 
-		try {
-			mergeHeadHash = (await callGit('rev-parse', 'MERGE_HEAD')).trim();
-		}
-		catch {
-			// ignore: not mid-merge
+		if (maxCommits.value > 0) {
+			count = Math.min(count, maxCommits.value);
 		}
 
-		const workingTreeParents = headHash ? [headHash, ...(mergeHeadHash ? [mergeHeadHash] : [])] : [];
+		// Independent reads: issued together so a remote transport pays one round trip, not four.
+		const [refOutput, log, headHash, mergeHeadHash] = await Promise.all([
+			callGit(
+				'for-each-ref',
+				'--format=%(objectname) %(refname)',
+				'refs/heads',
+				'refs/remotes',
+				'refs/tags',
+			),
+			callGit(...logArgs(count, 0)),
+			revParse('HEAD'),
+			revParse('MERGE_HEAD'),
+		]);
 
-		const workingTree: ICommit = {
-			hash: 'WORKING_TREE',
-			hashAbbr: 'WORKING',
-			parents: workingTreeParents as unknown as ReadonlyArray<string>,
-			subject: 'Working Tree',
-			body: '',
-			authorName: '',
-			authorEmail: '',
-			authorDate: '',
-			committerName: '',
-			committerEmail: '',
-			committerDate: '',
-			references: [],
-		};
+		const signature = [
+			key, count, refOutput, log, headHash, mergeHeadHash,
+			stashes.value.map(s => `${s.id}:${s.hash}`).join(','),
+		].join('\0');
+
+		// A refresh triggered by a file event or window focus usually finds nothing new; rebuilding
+		// would re-render the whole history for the same picture.
+		if (signature === lastSignature) {
+			return;
+		}
+
+		lastSignature = signature;
+		generation++;
+
+		const
+			references = parseReferences(refOutput),
+			regularCommits = parseLog(log),
+			isSearch = buildSearchArgs(searchQuery.value).length > 0;
 
 		// A search returns matching commits only: the working-tree row and the stashes are not
 		// results, and keeping them would put rows in the list that the query never matched.
-		const rawCommits: ICommit[] = searchArgs.length
+		const rawCommits: ICommit[] = isSearch
 			? regularCommits
 			: [
-				workingTree,
+				makeWorkingTree(headHash, mergeHeadHash),
 				...mapStashes(stashes.value),
 				...regularCommits,
 			];
 
-		buildGraph(rawCommits);
+		maxLevel.value = buildGraph(rawCommits, references);
 
+		referencesByHash.value = references;
 		commits.value = rawCommits;
-		currentLimit.value = limit;
-		allLoaded.value = regularCommits.length < limit;
+		loadedCount = regularCommits.length;
+		limitReached.value = maxCommits.value > 0 && loadedCount >= maxCommits.value;
+		allLoaded.value = regularCommits.length < count || limitReached.value;
 
 		// Reassign only when a selected commit actually vanished: a new array reference re-runs
 		// every `watch(selectedHashes)`, and CommitDetails answers that by clearing and refetching
@@ -341,11 +330,56 @@ export function useCommits() {
 		}
 	}
 
+	/** Appends the next page of history below the commits already loaded. */
 	async function loadMore(): Promise<void> {
-		const nextLimit = currentLimit.value * LIMIT_MULTIPLIER;
+		if (allLoaded.value || isLoadingMore.value) {
+			return;
+		}
 
-		await loadCommits(nextLimit);
+		const count = Math.min(pageSize.value, capacityLeft());
+
+		if (count <= 0) {
+			limitReached.value = true;
+			allLoaded.value = true;
+
+			return;
+		}
+
+		const startedAt = generation;
+
+		isLoadingMore.value = true;
+
+		try {
+			const page = parseLog(await callGit(...logArgs(count, loadedCount)));
+
+			// A reload replaced the history meanwhile; the skip offset no longer matches it.
+			if (startedAt !== generation) {
+				return;
+			}
+
+			// A commit made between the two reads shifts the --skip window by one; never show a
+			// commit twice.
+			const fresh = page.filter(c => !commitMap.value.has(c.hash));
+			const merged = [...commits.value, ...fresh];
+
+			maxLevel.value = buildGraph(merged, referencesByHash.value);
+
+			commits.value = merged;
+			loadedCount += fresh.length;
+			// The next refresh reloads `loadedCount` commits; its output can never match the
+			// signature of the shorter load before this page.
+			lastSignature = '';
+			limitReached.value = maxCommits.value > 0 && loadedCount >= maxCommits.value;
+			allLoaded.value = page.length < count || limitReached.value;
+		}
+		finally {
+			isLoadingMore.value = false;
+		}
 	}
+
+	loadCommitsOnce ??= singleFlight(doLoadCommits);
+
+	const loadCommits = loadCommitsOnce;
 
 	function selectCommit(hash: string): void {
 		selectedHashes.value = [hash];
@@ -418,7 +452,7 @@ export function useCommits() {
 			}
 		}
 
-		commitFiles.value = [...dedup.values()].sort((a, b) => a.path.localeCompare(b.path));
+		commitFiles.value = [...dedup.values()].sort((a, b) => COLLATOR.compare(a.path, b.path));
 	}
 
 	/** Re-runs the log with a new query; an empty query restores the full history. */
@@ -428,14 +462,17 @@ export function useCommits() {
 	}
 
 	return {
-		commits: readonly(commits),
+		commits: shallowReadonly(commits),
 		searchQuery: readonly(searchQuery),
-		isSearching: computed(() => searchQuery.value.trim().length > 0),
+		isSearching,
 		search,
 		selectedHashes: readonly(selectedHashes),
 		commitMap,
-		commitFiles: readonly(commitFiles),
+		commitFiles: shallowReadonly(commitFiles),
 		allLoaded: readonly(allLoaded),
+		limitReached: readonly(limitReached),
+		isLoadingMore: readonly(isLoadingMore),
+		maxLevel: readonly(maxLevel),
 		loadCommits,
 		loadMore,
 		selectCommit,
