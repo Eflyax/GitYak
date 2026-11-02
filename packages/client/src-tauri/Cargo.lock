@@ -1392,6 +1392,8 @@ dependencies = [
 name = "git-yak"
 version = "2.0.0"
 dependencies = [
+ "objc2-app-kit",
+ "objc2-core-foundation",
  "serde",
  "serde_json",
  "tauri",

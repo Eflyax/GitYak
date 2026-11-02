@@ -91,6 +91,7 @@ import {NButton, useMessage} from 'naive-ui';
 import {invoke} from '@tauri-apps/api/core';
 import {WebSocketClient} from '@/infrastructure/websocket/WebSocketClient';
 import {ENetworkCommand} from '@/domain';
+import {ancestorPaths, parentPath as parentOf} from '@/domain/services/directoryPaths';
 import Icon from '@/ui/components/Icon.vue';
 
 interface IDirEntry {
@@ -133,11 +134,7 @@ const pathSegments = computed(() => {
 	return ['/', ...currentPath.value.split('/').filter(Boolean)];
 });
 
-const parentPath = computed(() => {
-	const parts = currentPath.value.split('/').filter(Boolean);
-	if (parts.length <= 1) return '/';
-	return '/' + parts.slice(0, -1).join('/');
-});
+const parentPath = computed(() => parentOf(currentPath.value));
 
 function pathUpTo(index: number): string {
 	if (index === 0) return '/';
@@ -180,10 +177,34 @@ function navigateUp(): void {
 	navigateTo(parentPath.value);
 }
 
+// A project whose directory was deleted still carries that path. Opening the nearest
+// ancestor that does exist keeps the browser usable, where failing outright would leave the
+// project with no way to be pointed somewhere else.
+async function loadInitialDirectory(): Promise<void> {
+	const requested = currentPath.value;
+	const candidates = ancestorPaths(requested);
+
+	for (const [index, path] of candidates.entries()) {
+		try {
+			await loadDirectory(path);
+
+			if (index > 0) {
+				message.warning(`${requested} is not available — opened ${path} instead`);
+			}
+
+			return;
+		}
+		catch (e: unknown) {
+			// Even the root is unreadable: the server is unreachable, not the path wrong.
+			if (index === candidates.length - 1) throw e;
+		}
+	}
+}
+
 onMounted(async () => {
 	if (isTauri) {
 		try {
-			await loadDirectory(currentPath.value);
+			await loadInitialDirectory();
 		}
 		catch (e: unknown) {
 			errorMsg.value = e instanceof Error ? e.message : 'Failed to load directory';
@@ -193,7 +214,7 @@ onMounted(async () => {
 
 	try {
 		client = new WebSocketClient(`ws://${props.server}:${props.port}`);
-		await loadDirectory(currentPath.value);
+		await loadInitialDirectory();
 	}
 	catch (e: unknown) {
 		errorMsg.value = e instanceof Error ? e.message : 'Connection failed';

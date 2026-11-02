@@ -55,37 +55,43 @@
 					</NButton>
 				</div>
 
-				<div
+				<n-virtual-list
 					v-if="unstagedExpanded"
+					ref="unstagedListRef"
 					class="staging-panel__file-list"
+					:style="fileListStyle(unstagedFiles.length)"
+					:items="unstagedFiles"
+					:item-size="FILE_ROW_HEIGHT"
+					key-field="path"
 				>
-					<div
-						v-for="file in unstagedFiles"
-						:key="file.path"
-						test-id="unstaged-file"
-						class="staging-panel__file"
-						:class="{'staging-panel__file--active': activePath === file.path}"
-						@click="handleFileClick(file)"
-						@contextmenu.prevent="contextMenuFile($event, file.path)"
-					>
-						<div>
-							<FileStatus :status="conflictDetected ? EFileStatus.Conflicted : file.status" />
-
-							<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
-						</div>
-
-						<NButton
-							test-id="stage-file-btn"
-							size="tiny"
-							class="staging-panel__stage-action"
-							:type="conflictDetected ? 'warning' : 'success'"
-							secondary
-							@click.stop="handleStageFile(file)"
+					<template #default="{item: file}">
+						<div
+							:key="file.path"
+							test-id="unstaged-file"
+							class="staging-panel__file"
+							:class="{'staging-panel__file--active': activePath === file.path}"
+							@click="handleFileClick(file)"
+							@contextmenu.prevent="contextMenuFile($event, file.path)"
 						>
-							{{ conflictDetected ? 'Mark resolved' : 'Stage file' }}
-						</NButton>
-					</div>
-				</div>
+							<div>
+								<FileStatus :status="conflictDetected ? EFileStatus.Conflicted : file.status" />
+
+								<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
+							</div>
+
+							<NButton
+								test-id="stage-file-btn"
+								size="tiny"
+								class="staging-panel__stage-action"
+								:type="conflictDetected ? 'warning' : 'success'"
+								secondary
+								@click.stop="handleStageFile(file)"
+							>
+								{{ conflictDetected ? 'Mark resolved' : 'Stage file' }}
+							</NButton>
+						</div>
+					</template>
+				</n-virtual-list>
 			</div>
 
 			<!-- Staged files -->
@@ -122,36 +128,42 @@
 					</NButton>
 				</div>
 
-				<div
+				<n-virtual-list
 					v-if="stagedExpanded"
+					ref="stagedListRef"
 					class="staging-panel__file-list"
+					:style="fileListStyle(stagedFiles.length)"
+					:items="stagedFiles"
+					:item-size="FILE_ROW_HEIGHT"
+					key-field="path"
 				>
-					<div
-						v-for="file in stagedFiles"
-						:key="file.path"
-						test-id="staged-file"
-						class="staging-panel__file"
-						:class="{'staging-panel__file--active': activePath === file.path}"
-						@click="handleFileClick(file)"
-					>
-						<div>
-							<FileStatus :status="file.status" />
-
-							<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
-						</div>
-
-						<NButton
-							test-id="unstage-file-btn"
-							size="tiny"
-							class="staging-panel__stage-action"
-							type="error"
-							secondary
-							@click.stop="unstageFile(file.path)"
+					<template #default="{item: file}">
+						<div
+							:key="file.path"
+							test-id="staged-file"
+							class="staging-panel__file"
+							:class="{'staging-panel__file--active': activePath === file.path}"
+							@click="handleFileClick(file)"
 						>
-							Unstage file
-						</NButton>
-					</div>
-				</div>
+							<div>
+								<FileStatus :status="file.status" />
+
+								<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
+							</div>
+
+							<NButton
+								test-id="unstage-file-btn"
+								size="tiny"
+								class="staging-panel__stage-action"
+								type="error"
+								secondary
+								@click.stop="unstageFile(file.path)"
+							>
+								Unstage file
+							</NButton>
+						</div>
+					</template>
+				</n-virtual-list>
 			</div>
 		</div>
 
@@ -272,8 +284,8 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, useTemplateRef, onMounted, onUnmounted} from 'vue';
-import {NButton, NInput} from 'naive-ui';
+import {ref, computed, useTemplateRef, onMounted, onUnmounted, nextTick} from 'vue';
+import {NButton, NInput, NVirtualList} from 'naive-ui';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useBranches} from '@/composables/useBranches';
 import {useCommits} from '@/composables/useCommits';
@@ -288,6 +300,7 @@ import FileStatus from '../FileStatus.vue';
 import Icon from '../Icon.vue';
 import {EFileStatus} from '@/domain/enums';
 import ConfirmDialog from '../ConfirmDialog.vue';
+import {scrollTopToReveal} from '@/domain/services/rowWindow';
 
 const emit = defineEmits<{
 	openDiff: [filePath: string]
@@ -303,6 +316,14 @@ const {commitSummary, commitDescription, amendMode, noVerify, prefill} = useComm
 const {runCommit, isCommitting} = useCommitAction();
 const {register, unregister, setActive} = useListNav();
 const commitSummaryInput = useTemplateRef<InstanceType<typeof NInput>>('commitSummaryInput');
+const unstagedListRef = useTemplateRef<InstanceType<typeof NVirtualList>>('unstagedListRef');
+const stagedListRef = useTemplateRef<InstanceType<typeof NVirtualList>>('stagedListRef');
+
+// Matches `.staging-panel__file`; the virtual lists position rows by it.
+const FILE_ROW_HEIGHT = 30;
+// The bottom border of a list, so a list at its natural height shows no scrollbar.
+const FILE_LIST_BORDER = 1;
+const FILE_LIST_MIN_HEIGHT = 90;
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
 const stagedExpanded = ref(true);
@@ -358,6 +379,34 @@ const totalCount = computed(() => {
 	return paths.size;
 });
 
+// Both lists share the panel height. Each grows to fit its files and no further, so a short
+// list leaves the rest of the space to a long one; two long lists split it evenly.
+function fileListStyle(count: number): Record<string, string> {
+	const natural = count * FILE_ROW_HEIGHT + FILE_LIST_BORDER;
+
+	return {
+		maxHeight: `${natural}px`,
+		minHeight: `${Math.min(natural, FILE_LIST_MIN_HEIGHT)}px`,
+	};
+}
+
+// Only the rows near the viewport exist in the DOM, so keyboard navigation scrolls the list
+// itself instead of relying on the browser to reveal a focused row.
+function revealFile(path: string): void {
+	const unstagedIndex = unstagedFiles.value.findIndex(f => f.path === path);
+	const list = unstagedIndex !== -1 ? unstagedListRef.value : stagedListRef.value;
+	const index = unstagedIndex !== -1 ? unstagedIndex : stagedFiles.value.findIndex(f => f.path === path);
+	const el = list?.getScrollContainer();
+
+	if (!el || index === -1) return;
+
+	const target = scrollTopToReveal(el.scrollTop, el.clientHeight, index, FILE_ROW_HEIGHT);
+
+	if (target !== null) {
+		list?.scrollTo({top: target});
+	}
+}
+
 function fileName(path: string): string {
 	const parts = path.split('/');
 
@@ -397,7 +446,10 @@ function moveFile(delta: number): void {
 		: Math.max(0, Math.min(list.length - 1, current + delta));
 	const target = list[next];
 
-	if (target) void handleFileClick(target);
+	if (!target) return;
+
+	void handleFileClick(target);
+	void nextTick(() => revealFile(target.path));
 }
 
 onMounted(() => register('staging', {moveUp: () => moveFile(-1), moveDown: () => moveFile(1)}));
@@ -502,12 +554,15 @@ loadStatus();
 
 	&__files {
 		flex: 1;
-		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
 		min-height: 0;
 	}
 
+	// The headers and lists of both sections are laid out as one column, so the two
+	// scrollable lists can share the panel height between them.
 	&__section {
-		border-bottom: 1px solid $border;
+		display: contents;
 	}
 
 	&__section-header {
@@ -563,8 +618,8 @@ loadStatus();
 	}
 
 	&__file-list {
-		padding: 2px 0;
-		min-height: 250px;
+		flex: 1 1 0;
+		border-bottom: 1px solid $border;
 	}
 
 	&__file {

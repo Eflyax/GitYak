@@ -37,24 +37,42 @@
 				</span>
 			</div>
 
-			<div class="commit-details__files">
-				<ChangedFileItem
-					v-for="file in commitFiles ?? []"
-					:key="file.path"
-					:path="file.path"
-					:status="(file.status as EFileStatus)"
-					:is-selected="selectedFilePath === file.path"
-					@open="handleFileOpen(file)"
-				/>
-			</div>
+			<n-virtual-list
+				ref="filesListRef"
+				class="commit-details__files"
+				:items="files"
+				:item-size="FILE_ROW_HEIGHT"
+				:padding-top="4"
+				:padding-bottom="4"
+				key-field="path"
+			>
+				<template #default="{item: file}">
+					<ChangedFileItem
+						:key="file.path"
+						:path="file.path"
+						:status="(file.status as EFileStatus)"
+						:is-selected="selectedFilePath === file.path"
+						@open="handleFileOpen(file)"
+					/>
+				</template>
+			</n-virtual-list>
 		</template>
 
 		<!-- Single commit -->
 		<template v-else-if="selectedCommit">
 			<!-- Hash -->
 			<div class="commit-details__hash-row">
-				<span class="commit-details__hash">
+				<span
+					:title="`${selectedCommit.hash}\nClick to copy`"
+					test-id="commit-details-hash"
+					class="commit-details__hash commit-details__copyable"
+					@click="copyHash(selectedCommit.hash)"
+				>
 					{{ selectedCommit.hashAbbr }}
+					<Icon
+						name="mdi-content-copy"
+						class="commit-details__copy-icon"
+					/>
 				</span>
 				<span class="commit-details__hash-full">
 					parents: {{ selectedCommit.parents.length }}
@@ -120,23 +138,39 @@
 				<span
 					v-for="p in selectedCommit.parents"
 					:key="String(p)"
-					class="commit-details__parent-hash"
+					:title="`${String(p)}\nClick to copy`"
+					test-id="commit-details-parent-hash"
+					class="commit-details__parent-hash commit-details__copyable"
+					@click="copyHash(String(p))"
 				>
 					{{ String(p).slice(0, 7) }}
+					<Icon
+						name="mdi-content-copy"
+						class="commit-details__copy-icon"
+					/>
 				</span>
 			</div>
 
 			<!-- File list -->
-			<div class="commit-details__files">
-				<ChangedFileItem
-					v-for="file in commitFiles ?? []"
-					:key="file.path"
-					:path="file.path"
-					:status="(file.status as EFileStatus)"
-					:is-selected="selectedFilePath === file.path"
-					@open="handleFileOpen(file)"
-				/>
-			</div>
+			<n-virtual-list
+				ref="filesListRef"
+				class="commit-details__files"
+				:items="files"
+				:item-size="FILE_ROW_HEIGHT"
+				:padding-top="4"
+				:padding-bottom="4"
+				key-field="path"
+			>
+				<template #default="{item: file}">
+					<ChangedFileItem
+						:key="file.path"
+						:path="file.path"
+						:status="(file.status as EFileStatus)"
+						:is-selected="selectedFilePath === file.path"
+						@open="handleFileOpen(file)"
+					/>
+				</template>
+			</n-virtual-list>
 		</template>
 
 		<div
@@ -149,7 +183,8 @@
 </template>
 
 <script setup lang="ts">
-import {computed, ref, watch, onMounted, onUnmounted} from 'vue';
+import {computed, ref, watch, onMounted, onUnmounted, nextTick, useTemplateRef} from 'vue';
+import {NVirtualList} from 'naive-ui';
 import {EFileArea, EFileStatus} from '@/domain/enums';
 import {getGraphColor} from '@/ui/components/CommitHistory/graphColors';
 import {useCommitForm} from '@/composables/useCommitForm';
@@ -157,10 +192,13 @@ import {useCommits} from '@/composables/useCommits';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useListNav} from '@/composables/useListNav';
+import {useNotify} from '@/composables/useNotify';
 import ChangedFileItem from './ChangedFileItem.vue';
 import CommitFileStats from '@/ui/components/CommitFileStats.vue';
+import Icon from '@/ui/components/Icon.vue';
 import type {ICommitFile} from '@/composables/useCommits';
 import type {IFileStatus} from '@/domain';
+import {scrollTopToReveal} from '@/domain/services/rowWindow';
 
 const emit = defineEmits<{
 	openDiff: [filePath: string]
@@ -173,8 +211,25 @@ const {loadDiff} = useFileDiff();
 const {prefill, amendMode} = useCommitForm();
 const {status} = useWorkingTree();
 const {register, unregister, setActive} = useListNav();
+const notify = useNotify();
 
 const selectedFilePath = ref<string | null>(null);
+
+// Matches the fixed height of `ChangedFileItem`; the virtual list positions rows by it.
+const FILE_ROW_HEIGHT = 26;
+
+const filesListRef = useTemplateRef<InstanceType<typeof NVirtualList>>('filesListRef');
+const files = computed((): ICommitFile[] => commitFiles.value ?? []);
+
+async function copyHash(hash: string): Promise<void> {
+	try {
+		await navigator.clipboard.writeText(hash);
+		notify.success(`Copied ${hash.slice(0, 7)} to clipboard`, 1500);
+	}
+	catch (err: unknown) {
+		notify.error(`Copy failed: ${err instanceof Error ? err.message : String(err)}`);
+	}
+}
 
 const selectedCommit = computed(() => {
 	const hash = selectedHashes.value[0];
@@ -247,12 +302,18 @@ function handleEditClick(): void {
 }
 
 const filesStatuses = computed(() => {
-	return {
-		[EFileStatus.Modified]: commitFiles.value?.filter(file => file.status === EFileStatus.Modified).length ?? 0,
-		[EFileStatus.Added]: commitFiles.value?.filter(file => file.status === EFileStatus.Added).length ?? 0,
-		[EFileStatus.Deleted]: commitFiles.value?.filter(file => file.status === EFileStatus.Deleted).length ?? 0,
-		[EFileStatus.Renamed]: commitFiles.value?.filter(file => file.status === EFileStatus.Renamed).length ?? 0,
+	const counts = {
+		[EFileStatus.Modified]: 0,
+		[EFileStatus.Added]: 0,
+		[EFileStatus.Deleted]: 0,
+		[EFileStatus.Renamed]: 0,
 	};
+
+	for (const file of files.value) {
+		if (file.status in counts) counts[file.status as keyof typeof counts]++;
+	}
+
+	return counts;
 });
 
 const authorColor = computed(() => getGraphColor(selectedCommit.value?.level ?? 0));
@@ -296,7 +357,24 @@ function moveFile(delta: number): void {
 		: Math.max(0, Math.min(list.length - 1, current + delta));
 	const target = list[next];
 
-	if (target) void handleFileOpen(target);
+	if (!target) return;
+
+	void handleFileOpen(target);
+	void nextTick(() => revealFile(next));
+}
+
+// Only the rows near the viewport exist in the DOM, so keyboard navigation scrolls the list
+// itself instead of relying on the browser to reveal the selected row.
+function revealFile(index: number): void {
+	const el = filesListRef.value?.getScrollContainer();
+
+	if (!el) return;
+
+	const target = scrollTopToReveal(el.scrollTop, el.clientHeight, index, FILE_ROW_HEIGHT);
+
+	if (target !== null) {
+		filesListRef.value?.scrollTo({top: target});
+	}
 }
 
 onMounted(() => register('commitFiles', {moveUp: () => moveFile(-1), moveDown: () => moveFile(1)}));
@@ -336,10 +414,37 @@ watch(
 		padding: 8px 12px 4px;
 	}
 
+	// The accent is the one text colour every theme tunes to read on its own panel; the old
+	// hardcoded grey vanished on most dark themes.
 	&__hash {
-		color: $text-ghost;
+		border-radius: 3px;
+		color: $color-accent;
 		font-family: monospace;
 		font-size: 11px;
+		font-weight: 600;
+		padding: 1px 6px;
+
+		&:hover {
+			background: color-mix(in srgb, #{$color-accent} 15%, transparent);
+		}
+	}
+
+	&__copyable {
+		align-items: center;
+		cursor: pointer;
+		display: inline-flex;
+		gap: 4px;
+
+		&:hover .commit-details__copy-icon {
+			opacity: 1;
+		}
+	}
+
+	&__copy-icon {
+		height: 11px;
+		opacity: 0;
+		transition: opacity 0.1s;
+		width: 11px;
 	}
 
 	&__hash-full {
@@ -466,7 +571,7 @@ watch(
 		padding: 1px 6px;
 
 		&:hover {
-			background: rgba($color-accent, 0.15);
+			background: color-mix(in srgb, #{$color-accent} 15%, transparent);
 			color: $color-accent;
 		}
 	}
@@ -512,9 +617,7 @@ watch(
 
 	&__files {
 		flex: 1;
-		overflow-x: hidden;
-		overflow-y: auto;
-		padding: 4px 0;
+		min-height: 0;
 	}
 }
 </style>

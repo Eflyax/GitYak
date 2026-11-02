@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="GitYak">
+	<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="5.5">
+		<path d="M27.7 36.4 L35.3 47.6"/>
+		<path d="M100.3 36.4 L92.7 47.6"/>
+		<path d="M56.8 59.0 L71.2 59.0"/>
+		<path d="M48.9 71.4 L58.1 90.6"/>
+		<path d="M79.1 71.4 L69.9 90.6"/>
+		<circle cx="20.0" cy="25.0" r="10.0"/>
+		<circle cx="108.0" cy="25.0" r="10.0"/>
+		<circle cx="43.0" cy="59.0" r="10.0"/>
+		<circle cx="85.0" cy="59.0" r="10.0"/>
+		<circle cx="64.0" cy="103.0" r="10.0"/>
+	</g>
+</svg>

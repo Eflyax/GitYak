@@ -108,6 +108,7 @@
 
 <script setup lang="ts">
 import {ref, computed} from 'vue';
+import {useDialog} from 'naive-ui';
 import type {IReference} from '@/domain';
 import {EReferenceType} from '@/domain';
 import Icon from '@/ui/components/Icon.vue';
@@ -121,15 +122,18 @@ import {useCommits} from '@/composables/useCommits';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useStash} from '@/composables/useStash';
 import {useDragRef} from '@/composables/useDragRef';
+import {useNotify} from '@/composables/useNotify';
 
 const {currentBranch, branches, switchBranch, createBranch, loadBranches} = useBranches();
 const {checkout, callGit} = useGit();
 const {loadCommits, selectCommit} = useCommits();
 const {hasChanges, loadStatus} = useWorkingTree();
 const {stashSave} = useStash();
-const {remoteTags} = useTags();
+const {remoteTagSet} = useTags();
 const {contextMenuRef, contextMenuRefDrop} = useContextMenu();
 const {dragSource, startDrag, endDrag} = useDragRef();
+const dialog = useDialog();
+const notify = useNotify();
 
 function refContextTarget(mergedRef: IMergedRef) {
 	if (!mergedRef.isBranch) {
@@ -231,7 +235,7 @@ const mergedRefs = computed((): IMergedRef[] => {
 		refName: r.name,
 		isBranch: false,
 		isLocal: true,
-		remotes: remoteTags.value.includes(r.name) ? ['origin'] : [],
+		remotes: remoteTagSet.value.has(r.name) ? ['origin'] : [],
 	}));
 
 	return [...mergedBranches, ...otherMerged];
@@ -292,43 +296,71 @@ function onRefDrop(e: DragEvent, ref: IMergedRef): void {
 }
 
 async function handleDblClick(ref: IMergedRef): Promise<void> {
-	if (ref.isBranch) {
-		if (hasChanges.value) {
-			try {
-				await stashSave();
-			}
-			catch {
-				return;
-			}
-		}
+	if (!ref.isBranch) {
+		await checkout(ref.name);
+		await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
 
+		return;
+	}
+
+	const remote = ref.remotes[0] ?? 'origin';
+	const localExists = !ref.isLocal && branches.value.some(b => !b.isRemote && b.name === ref.name);
+
+	// Double click = target: a remote chip whose local branch sits elsewhere moves that local
+	// branch onto the clicked commit right away (checking it out if needed) instead of first
+	// switching to where the local branch is. Ask only when that would orphan local commits.
+	if (localExists && !(await confirmMoveLocal(ref.name, remote))) {
+		return;
+	}
+
+	if (hasChanges.value) {
+		try {
+			await stashSave();
+		}
+		catch {
+			return;
+		}
+	}
+
+	try {
 		if (ref.isLocal) {
 			await switchBranch(ref.name);
 		}
-		else {
-			const remote = ref.remotes[0] ?? 'origin';
-			const localExists = branches.value.some(b => !b.isRemote && b.name === ref.name);
-			const isCurrent = currentBranch.value?.name === ref.name;
-
-			if (isCurrent) {
-				// Double-clicking a remote branch whose local counterpart is already
-				// checked out → reset that local branch to the remote position clicked.
-				await callGit('reset', '--hard', props.commit.hash);
-			}
-			else if (localExists) {
-				await switchBranch(ref.name);
-			}
-			else {
-				await createBranch(ref.name, `${remote}/${ref.name}`);
-			}
+		else if (localExists) {
+			await callGit('checkout', '-B', ref.name, props.commit.hash);
 		}
+		else {
+			await createBranch(ref.name, `${remote}/${ref.name}`);
+		}
+	}
+	catch (err: unknown) {
+		notify.error(err instanceof Error ? err.message : String(err));
+	}
 
-		await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
+	await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
+}
+
+async function confirmMoveLocal(name: string, remote: string): Promise<boolean> {
+	const unpushed = Number((await callGit('rev-list', '--count', `${props.commit.hash}..refs/heads/${name}`)).trim());
+
+	if (!unpushed) {
+		return true;
 	}
-	else {
-		await checkout(ref.name);
-		await Promise.all([loadBranches(), loadCommits(), loadStatus()]);
-	}
+
+	return new Promise(resolve => {
+		dialog.warning({
+			title: 'Move local branch',
+			content: `Local ${name} has ${unpushed} commit${unpushed === 1 ? '' : 's'} not on ${remote}/${name}. `
+				+ `Moving it to ${remote}/${name} drops ${unpushed === 1 ? 'it' : 'them'} from the branch.`,
+			positiveText: 'Move',
+			negativeText: 'Cancel',
+			onPositiveClick: () => resolve(true),
+			onNegativeClick: () => resolve(false),
+			onClose: () => resolve(false),
+			onEsc: () => resolve(false),
+			onMaskClick: () => resolve(false),
+		});
+	});
 }
 
 const overflowCount = computed(() => mergedRefs.value.length - 1);

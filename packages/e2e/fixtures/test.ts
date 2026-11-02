@@ -3,7 +3,7 @@ import {createTempRepo, type ITempRepo} from './repo';
 
 export interface IFixtures {
 	repo: ITempRepo;
-	openRepo: (page: Page, repoPath: string, alias?: string) => Promise<void>;
+	openRepo: (page: Page, repoPath: string, alias?: string, port?: number) => Promise<void>;
 }
 
 export const test = base.extend<IFixtures>({
@@ -21,15 +21,16 @@ export const test = base.extend<IFixtures>({
 
 	// eslint-disable-next-line no-empty-pattern -- see comment above
 	openRepo: async ({}, use) => {
-		const open = async (page: Page, repoPath: string, alias = 'Test Project') => {
-			await page.addInitScript(({path, alias}: {path: string; alias: string}) => {
+		// `port` selects which backend the project talks to; it defaults to the ordinary one.
+		const open = async (page: Page, repoPath: string, alias = 'Test Project', port = 3000) => {
+			await page.addInitScript(({path, alias, port}: {path: string; alias: string; port: number}) => {
 				const id = `test-project-${Date.now()}`;
 				const project = {
 					id,
 					alias,
 					path,
 					server: 'localhost',
-					port: 3000,
+					port,
 					serverType: 'bun',
 					order: 0,
 					dateCreated: Date.now(),
@@ -38,7 +39,7 @@ export const test = base.extend<IFixtures>({
 
 				localStorage.setItem('git-yak:projects', JSON.stringify([project]));
 				localStorage.setItem('git-yak:lastProjectId', id);
-			}, {path: repoPath, alias});
+			}, {path: repoPath, alias, port});
 
 			await page.goto('/');
 		};

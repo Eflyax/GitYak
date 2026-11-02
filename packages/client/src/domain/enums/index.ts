@@ -27,6 +27,7 @@ export enum EFileArea {
 
 export enum EGitErrorCode {
 	NotARepository = 'notARepository',
+	DubiousOwnership = 'dubiousOwnership',
 	AuthenticationFailed = 'authenticationFailed',
 	MergeConflict = 'mergeConflict',
 	StashConflict = 'stashConflict',

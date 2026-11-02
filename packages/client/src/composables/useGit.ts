@@ -3,8 +3,11 @@ import {useWebSocket} from './useWebSocket';
 import {useProject} from './useProject';
 import {useLayout} from './useLayout';
 import {useActivityLog} from './useActivityLog';
-import {ENetworkCommand, EFileArea} from '@/domain';
-import {parseGitError, isNotARepository} from '@/domain';
+import {useBackgroundTasks} from './useBackgroundTasks';
+import {useSafeDirectory} from './useSafeDirectory';
+import {ENetworkCommand, EFileArea, EGitErrorCode} from '@/domain';
+import {parseGitError, isNotARepository, parseDubiousOwnershipPath} from '@/domain';
+import {getGitTaskLabel} from '@/domain/services/gitTaskLabel';
 import type {IFileStatus} from '@/domain';
 
 export interface IRemoteConfig {
@@ -20,7 +23,9 @@ export function useGit() {
 		{call} = useWebSocket(),
 		{currentProject} = useProject(),
 		{setLoading} = useLayout(),
-		{addLog} = useActivityLog();
+		{track} = useBackgroundTasks(),
+		{addLog} = useActivityLog(),
+		{request: requestSafeDirectory} = useSafeDirectory();
 
 	function repoPath(): string {
 		if (!currentProject.value) {
@@ -30,7 +35,32 @@ export function useGit() {
 		return currentProject.value.path;
 	}
 
+	/**
+	 * Classifies a backend failure. A dubious-ownership refusal blocks every command in the
+	 * repository, so it raises the prompt from here rather than from one call site; the error
+	 * itself is returned unchanged for the caller to handle as it always did.
+	 */
+	function toGitError(message: string): ReturnType<typeof parseGitError> {
+		const gitError = parseGitError(message, -1);
+
+		if (gitError.code === EGitErrorCode.DubiousOwnership) {
+			const refused = parseDubiousOwnershipPath(message);
+
+			if (refused) {
+				requestSafeDirectory(refused);
+			}
+		}
+
+		return gitError;
+	}
+
 	async function callGit(...args: string[]): Promise<string> {
+		const taskLabel = getGitTaskLabel(args);
+
+		return taskLabel ? track(taskLabel, () => runGit(args)) : runGit(args);
+	}
+
+	async function runGit(args: string[]): Promise<string> {
 		setLoading(true);
 		const cmdLabel = 'git ' + args.join(' ');
 		addLog({type: 'git', status: 'info', direction: 'request', message: cmdLabel});
@@ -47,7 +77,8 @@ export function useGit() {
 		catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			addLog({type: 'git', status: 'error', direction: 'response', message});
-			throw parseGitError(message, -1);
+
+			throw toGitError(message);
 		}
 		finally {
 			setLoading(false);
@@ -128,6 +159,13 @@ export function useGit() {
 			...(branch ? [branch] : []),
 			...(force ? ['--force-with-lease'] : []),
 		);
+	}
+
+	// Pushes history up to (and including) `hash` to `branch` on the remote,
+	// leaving any newer local commits unpushed.
+	async function pushCommit(hash: string, branch: string, remote?: string): Promise<void> {
+		const r = await resolveRemote(remote);
+		await callGit('push', r, `${hash}:refs/heads/${branch}`);
 	}
 
 	async function pushBranch(branchName: string, remote?: string): Promise<void> {
@@ -358,6 +396,10 @@ export function useGit() {
 	}
 
 	async function callRebase(payload: Record<string, unknown>): Promise<string> {
+		return track('Rebasing', () => runRebase(payload));
+	}
+
+	async function runRebase(payload: Record<string, unknown>): Promise<string> {
 		setLoading(true);
 		const cmdLabel = `git rebase (${String(payload['action'])})`;
 		addLog({type: 'git', status: 'info', direction: 'request', message: cmdLabel});
@@ -375,11 +417,19 @@ export function useGit() {
 		catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);
 			addLog({type: 'git', status: 'error', direction: 'response', message});
-			throw parseGitError(message, -1);
+
+			throw toGitError(message);
 		}
 		finally {
 			setLoading(false);
 		}
+	}
+
+	// Plain, non-interactive rebase onto `upstream`. Used when there is no todo list to
+	// compose — a branch whose tip is the merge base just fast-forwards. `--autostash`
+	// keeps it working on a dirty tree, same as the interactive route.
+	async function rebaseOnto(upstream: string): Promise<void> {
+		await callGit('rebase', '--autostash', upstream);
 	}
 
 	// Runs `git rebase -i <upstream>` headlessly. The server composes every `-c` flag from
@@ -430,6 +480,14 @@ export function useGit() {
 
 			throw err;
 		}
+	}
+
+	/**
+	 * Records a directory as trusted in the user's global git config — the remedy git itself
+	 * prints when it refuses a repository for dubious ownership.
+	 */
+	async function addSafeDirectory(directory: string): Promise<void> {
+		await callGit('config', '--global', '--add', 'safe.directory', directory);
 	}
 
 	// ── Remotes ───────────────────────────────────────────────────────────────
@@ -488,6 +546,7 @@ export function useGit() {
 		fetch,
 		pull,
 		push,
+		pushCommit,
 		pushBranch,
 		checkout,
 		checkoutNewBranch,
@@ -522,12 +581,14 @@ export function useGit() {
 		merge,
 		mergeBase,
 		logRange,
+		rebaseOnto,
 		rebaseInteractive,
 		rebaseContinue,
 		rebaseSkip,
 		rebaseAbort,
 		initRepo,
 		isGitRepo,
+		addSafeDirectory,
 		getRemotes,
 		saveRemote,
 		getCommitMessage,

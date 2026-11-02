@@ -57,6 +57,7 @@
 		<div class="profile">
 			<NButton
 				text
+				test-id="activity-log"
 				title="Activity Log"
 				@click="toggleActivityLog"
 			>

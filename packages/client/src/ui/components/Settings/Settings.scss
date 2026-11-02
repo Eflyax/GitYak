@@ -29,4 +29,15 @@
 		font-size: 12px;
 		font-weight: 500;
 	}
+
+	.settings__toggle {
+		align-items: center;
+		display: flex;
+		gap: 8px;
+	}
+
+	.settings__hint {
+		color: $text-muted;
+		font-size: 11px;
+	}
 }

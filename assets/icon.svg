@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="GitYak">
+	<defs>
+		<linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#26232E"/>
+			<stop offset="1" stop-color="#0B0A0F"/>
+		</linearGradient>
+	</defs>
+	<rect x="104" y="104" width="816" height="816" rx="180" fill="url(#tile)"/>
+	<rect x="108.9" y="108.9" width="806.2" height="806.2" rx="175.1" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="9.9"/>
+	<g fill="none" stroke="#9B76FF" stroke-width="28.2" stroke-linecap="round">
+		<path d="M325.7 370.3 L364.7 427.9"/>
+		<path d="M698.3 370.3 L659.3 427.9"/>
+		<path d="M474.8 486.3 L549.2 486.3"/>
+		<path d="M434.6 550.0 L481.6 648.5"/>
+		<path d="M589.4 550.0 L542.4 648.5"/>
+		<circle cx="286.2" cy="311.8" r="51.3"/>
+		<circle cx="737.8" cy="311.8" r="51.3"/>
+		<circle cx="404.2" cy="486.3" r="51.3"/>
+		<circle cx="619.8" cy="486.3" r="51.3"/>
+		<circle cx="512.0" cy="712.2" r="51.3"/>
+	</g>
+</svg>

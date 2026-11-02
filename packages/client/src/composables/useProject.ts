@@ -15,6 +15,7 @@ function migrateProject(p: IProject): IProject {
 	return {
 		...p,
 		serverType: p.serverType ?? EServerType.Bun,
+		openCount: p.openCount ?? 0,
 	};
 }
 
@@ -55,9 +56,13 @@ export function useProject() {
 	const
 		{connect, disconnect} = useWebSocket();
 
-	async function openProject(project: IProject): Promise<void> {
+	// `counted: false` is for opens the app makes on its own — restoring the last project on
+	// startup, or following a group filter to its first project. Counting those would rank a
+	// project by how often the app was launched rather than by how often it was chosen.
+	async function openProject(project: IProject, {counted = true}: {counted?: boolean} = {}): Promise<void> {
 		const
-			updated = updateProject(project.id, {dateLastOpen: Date.now()});
+			openCount = (getProject(project.id)?.openCount ?? project.openCount ?? 0) + (counted ? 1 : 0),
+			updated = updateProject(project.id, {dateLastOpen: Date.now(), openCount});
 
 		localStorage.setItem(LAST_OPEN_PROJECT, project.id);
 
@@ -79,7 +84,7 @@ export function useProject() {
 			const project = getProject(lastProjectId);
 
 			if (project) {
-				openProject(project).catch(() => {
+				openProject(project, {counted: false}).catch(() => {
 					// Silent failure if server is not available on startup
 				});
 			}
@@ -119,15 +124,24 @@ export function useProject() {
 		}
 	}
 
+	// The updated project replaces its entry rather than being mutated in place: the views
+	// reload on a change of `currentProject`, which an in-place edit leaves untouched — an
+	// edited path would then be saved but never opened.
 	function updateProject(id: string, updates: Partial<Omit<IProject, 'id'>>): IProject | null {
-		const project = projects.value.find(p => p.id === id);
+		const index = projects.value.findIndex(p => p.id === id);
 
-		if (!project) return null;
+		if (index === -1) return null;
 
-		Object.assign(project, updates);
+		const updated: IProject = {...projects.value[index]!, ...updates};
+
+		projects.value[index] = updated;
 		saveProjects();
 
-		return project;
+		if (currentProject.value?.id === id) {
+			currentProject.value = updated;
+		}
+
+		return updated;
 	}
 
 	function addGroup(data: Omit<IProjectGroup, 'id'>): IProjectGroup {

@@ -41,7 +41,8 @@
 import {ref, computed, watch} from 'vue';
 import {NModal, NInput, NButton, useMessage} from 'naive-ui';
 import {useBranches} from '@/composables/useBranches';
-import {useGit} from '@/composables/useGit';
+import {useTags} from '@/composables/useTags';
+import {useStash} from '@/composables/useStash';
 import {EReferenceModalType} from '@/domain';
 
 const props = defineProps<{
@@ -60,7 +61,8 @@ const emit = defineEmits<{
 
 const message = useMessage();
 const {createBranch, renameBranch} = useBranches();
-const {createTag, callGit} = useGit();
+const {createTag} = useTags();
+const {renameStash} = useStash();
 
 const name = ref('');
 const submitting = ref(false);
@@ -109,8 +111,7 @@ async function confirm(): Promise<void> {
 			const id = props.stashId;
 			const hash = props.commitHash;
 			if (id && hash) {
-				await callGit('stash', 'drop', id);
-				await callGit('stash', 'store', '-m', trimmed, hash);
+				await renameStash(id, hash, trimmed);
 			}
 		}
 		else if (props.mode === 'create') {

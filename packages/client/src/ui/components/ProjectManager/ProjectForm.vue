@@ -177,7 +177,6 @@
 						test-id="path-input"
 						:value="form.path"
 						placeholder="/path/to/repo"
-						:disabled="form.serverType !== EServerType.SSH"
 						style="flex: 1;"
 						@update:value="form.path = $event"
 					/>

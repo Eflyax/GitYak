@@ -49,7 +49,9 @@ function handleOpen(): void {
 	display: flex;
 	align-items: center;
 	gap: 7px;
-	padding: 4px 12px;
+	// Fixed: CommitDetails virtualises the list by this height (FILE_ROW_HEIGHT).
+	height: 26px;
+	padding: 0 12px;
 	cursor: pointer;
 	border-radius: 3px;
 	font-size: 12px;

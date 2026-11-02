@@ -24,10 +24,13 @@ function parseStashes(output: string): IStash[] {
 export function useStash() {
 	const {callGit, stashSave: gitStashSave, stashPop: gitStashPop, stashDrop: gitStashDrop} = useGit();
 
+	// `%gs` is the reflog subject — what `git stash list` itself prints, and the only
+	// part a rename can change. The stash commit's own subject (`%s`) is frozen at
+	// creation time, so reading that would keep showing the pre-rename name.
 	async function loadStashes(): Promise<void> {
 		const output = await callGit(
 			'stash', 'list',
-			'--format=%gd|%H|%P|%s',
+			'--format=%gd|%H|%P|%gs',
 		);
 
 		stashes.value = parseStashes(output);
@@ -48,11 +51,22 @@ export function useStash() {
 		await loadStashes();
 	}
 
+	// git has no `stash rename`, so the entry is dropped and the very same commit is
+	// re-stored under a new reflog message. Dropping first keeps the reflog free of a
+	// duplicate entry for `hash`. Note that `stash store` pushes to the top of the
+	// reflog, so a renamed entry becomes stash@{0}.
+	async function renameStash(stashId: string, hash: string, message: string): Promise<void> {
+		await callGit('stash', 'drop', stashId);
+		await callGit('stash', 'store', '-m', message, hash);
+		await loadStashes();
+	}
+
 	return {
 		stashes: readonly(stashes),
 		loadStashes,
 		stashSave,
 		stashPop,
 		stashDrop,
+		renameStash,
 	};
 }

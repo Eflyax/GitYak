@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
-import {getGraphColor} from './graphColors';
+import {computed} from 'vue';
+import {getGraphColor, refreshGraphColors} from './graphColors';
 
 // getGraphColor reads a CSS custom property off the document. Vitest runs in the node
 // environment, so both globals are stubbed rather than pulling in jsdom.
@@ -50,5 +51,18 @@ describe('getGraphColor', () => {
 
 		expect(getGraphColor(10)).toBe(getGraphColor(0));
 		expect(getGraphColor(25)).toBe(getGraphColor(5));
+	});
+
+	it('makes dependants recompute when a theme is applied', () => {
+		stubCss({'--graph-0': '#111111'});
+
+		const color = computed(() => getGraphColor(0));
+
+		expect(color.value).toBe('#111111');
+
+		stubCss({'--graph-0': '#222222'});
+		refreshGraphColors();
+
+		expect(color.value).toBe('#222222');
 	});
 });

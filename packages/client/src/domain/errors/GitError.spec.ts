@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {parseGitError, isNotARepository} from './GitError';
+import {parseGitError, isNotARepository, parseDubiousOwnershipPath} from './GitError';
 import {EGitErrorCode} from '../enums';
 
 describe('parseGitError', () => {
@@ -127,5 +127,55 @@ describe('isNotARepository', () => {
 	it('handles values that are not errors at all', () => {
 		expect(isNotARepository(undefined)).toBe(false);
 		expect(isNotARepository('not a git repository')).toBe(false);
+	});
+});
+
+// Exactly what git 2.39 writes when a repository is owned by another user — the case that
+// shows up on a remote host where the working copy belongs to www-data.
+const DUBIOUS = `fatal: detected dubious ownership in repository at '/var/www/html/foo'
+To add an exception for this directory, call:
+
+	git config --global --add safe.directory /var/www/html/foo`;
+
+describe('dubious ownership', () => {
+	it('is recognised as its own error code', () => {
+		expect(parseGitError(DUBIOUS, 128).code).toBe(EGitErrorCode.DubiousOwnership);
+	});
+
+	it('is not mistaken for a missing repository', () => {
+		expect(isNotARepository(parseGitError(DUBIOUS, 128))).toBe(false);
+	});
+
+	it('carries a message that names the problem', () => {
+		expect(parseGitError(DUBIOUS, 128).message).toBe('Repository has dubious ownership');
+	});
+});
+
+describe('parseDubiousOwnershipPath', () => {
+	it('reads the repository path git quoted', () => {
+		expect(parseDubiousOwnershipPath(DUBIOUS)).toBe('/var/www/html/foo');
+	});
+
+	it('reads a path that contains spaces', () => {
+		const stderr = "fatal: detected dubious ownership in repository at '/srv/my sites/foo'";
+
+		expect(parseDubiousOwnershipPath(stderr)).toBe('/srv/my sites/foo');
+	});
+
+	// Older git wordings quote the path differently but still print the remedy line, which
+	// names the same directory.
+	it('falls back to the path in the suggested command', () => {
+		const stderr = `fatal: detected dubious ownership in repository
+	git config --global --add safe.directory /var/www/html/bar`;
+
+		expect(parseDubiousOwnershipPath(stderr)).toBe('/var/www/html/bar');
+	});
+
+	it('returns null when the message is about something else', () => {
+		expect(parseDubiousOwnershipPath('fatal: not a git repository')).toBeNull();
+	});
+
+	it('returns null when no path can be found', () => {
+		expect(parseDubiousOwnershipPath('fatal: detected dubious ownership in repository')).toBeNull();
 	});
 });

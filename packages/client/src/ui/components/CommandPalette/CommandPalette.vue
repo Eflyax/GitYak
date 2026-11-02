@@ -47,6 +47,21 @@
 							>{{ item.description }}</span>
 						</span>
 						<span
+							v-if="item.meter !== undefined"
+							class="command-palette__meter"
+							test-id="command-palette-meter"
+							role="meter"
+							aria-valuemin="0"
+							aria-valuemax="1"
+							:aria-valuenow="item.meter"
+							:title="item.meterTitle"
+						>
+							<span
+								class="command-palette__meter-fill"
+								:style="{width: `${Math.round(item.meter * 100)}%`}"
+							/>
+						</span>
+						<span
 							v-if="item.hint"
 							class="command-palette__hint"
 						>

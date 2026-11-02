@@ -57,39 +57,34 @@
 		</div>
 	</div>
 
-	<NDrawer
+	<NModal
 		v-model:show="showActivityLog"
-		:width="500"
-		:min-width="500"
-		test-id="activity-log-drawer"
-		resizable
-		placement="right"
+		preset="card"
+		title="Activity Log"
+		test-id="activity-log-modal"
+		class="activity-log-modal"
+		style="width: 900px; max-width: calc(100vw - 48px);"
+		closable
 	>
-		<NDrawerContent
-			title="Activity Log"
-			closable
-		>
-			<ActivityLog />
-		</NDrawerContent>
-	</NDrawer>
+		<ActivityLog />
+	</NModal>
 
-	<NDrawer
+	<NModal
 		v-model:show="showSettings"
-		:width="380"
-		test-id="settings-drawer"
-		placement="right"
+		preset="card"
+		title="Settings"
+		test-id="settings-modal"
+		style="width: 420px; max-width: calc(100vw - 48px);"
+		closable
 	>
-		<NDrawerContent
-			title="Settings"
-			closable
-		>
-			<Settings />
-		</NDrawerContent>
-	</NDrawer>
+		<Settings />
+	</NModal>
 
 	<CommandPalette />
 
 	<RebaseModal />
+
+	<SafeDirectoryDialog @added="reloadRepository" />
 
 	<RepositoryGraph
 		v-if="showGraph"
@@ -107,13 +102,15 @@
 import {computed, onMounted, onUnmounted, watch} from 'vue';
 import {onOpenUrl, getCurrent} from '@tauri-apps/plugin-deep-link';
 import {EServerType} from '@/domain';
-import {filterProjects} from '@/domain/services/projectSearch';
+import {filterProjects, openFrequency} from '@/domain/services/projectSearch';
 import {useWindowFocus} from '@/composables/useWindowFocus';
 import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useBranches} from '@/composables/useBranches';
+import {useTags} from '@/composables/useTags';
 import {useKeyboard} from '@/composables/useKeyboard';
 import {useCommands} from '@/composables/useCommands';
 import {useCommitForm} from '@/composables/useCommitForm';
-import {NDrawer, NDrawerContent} from 'naive-ui';
+import {NModal} from 'naive-ui';
 import {Splitpanes, Pane} from 'splitpanes';
 import Sidebar from './Sidebar/Sidebar.vue';
 import CommitHistory from './CommitHistory/CommitHistory.vue';
@@ -128,6 +125,7 @@ import ProjectManager from './ProjectManager/ProjectManager.vue';
 import Settings from './Settings/Settings.vue';
 import CommandPalette from './CommandPalette/CommandPalette.vue';
 import RebaseModal from './RebaseModal.vue';
+import SafeDirectoryDialog from './SafeDirectoryDialog.vue';
 import RepositoryGraph from './RepositoryGraph/RepositoryGraph.vue';
 import HookOutputDialog from './HookOutputDialog.vue';
 import {useCommitAction} from '@/composables/useCommitAction';
@@ -152,13 +150,25 @@ function handleClose(): void {
 }
 
 const {currentProject, openLastOpenProject, openProject, projects, addProject} = useProject();
-const {selectedHashes} = useCommits();
+const {selectedHashes, loadCommits} = useCommits();
 const {commitSummary} = useCommitForm();
 
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value.length);
 
 const windowFocus = useWindowFocus();
 const {loadStatus, status, conflictDetected} = useWorkingTree();
+const {loadBranches} = useBranches();
+const {loadTags, loadRemoteTags} = useTags();
+
+// After a repository becomes readable again — the git safe.directory prompt is the case —
+// the commands that were refused are not replayed; the view is simply loaded afresh.
+async function reloadRepository(): Promise<void> {
+	await Promise.all([loadCommits(), loadBranches(), loadStatus()]);
+}
+
+async function loadRefs(): Promise<void> {
+	await Promise.all([loadBranches(), loadTags(), loadRemoteTags()]);
+}
 const {start: startRepoWatch, stop: stopRepoWatch} = useRepoWatch();
 
 interface IProjectLocation {
@@ -280,6 +290,10 @@ onMounted(() => {
 		id: 'open-repo',
 		label: 'Open repo',
 		getItems: (query: string) => {
+			// Relative to every project, not just the matches, so a bar means the same thing
+			// whatever was typed.
+			const maxOpenCount = Math.max(0, ...projects.value.map(p => p.openCount ?? 0));
+
 			return filterProjects(projects.value, query)
 				.map(p => ({
 					id: p.id,
@@ -288,6 +302,8 @@ onMounted(() => {
 					hint: getProjectLocationLabel(p),
 					hintIcon: isLocalProject(p) ? 'mdi-laptop' : 'mdi-server',
 					color: p.color,
+					meter: openFrequency(p.openCount, maxOpenCount),
+					meterTitle: `Opened ${p.openCount ?? 0}×`,
 					action: () => { void openProject(p); },
 				}));
 		},
@@ -307,6 +323,10 @@ onUnmounted(() => {
 watch(currentProject, project => {
 	if (project) {
 		void startRepoWatch();
+		// The refs the sidebar renders belong to the project, so they are loaded here rather
+		// than by a pane: the commit history, which reloads its own data on a project change,
+		// is not mounted while a file diff is open.
+		void loadRefs();
 	}
 	else {
 		stopRepoWatch();

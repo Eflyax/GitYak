@@ -24,18 +24,42 @@ const steps = ref<Array<IRebaseStep>>([]);
 const running = ref(false);
 
 export function useRebase() {
-	const {logRange, mergeBase, rebaseInteractive, writeFile} = useGit();
+	const {logRange, mergeBase, rebaseOnto, rebaseInteractive, writeFile} = useGit();
 	const {currentBranch, switchBranch, loadBranches} = useBranches();
 	const {loadStatus, conflictDetected} = useWorkingTree();
 	const {loadCommits, selectCommit} = useCommits();
 	const {loadStashes} = useStash();
 
+	// A source branch whose tip is already the merge base has nothing to replay, so
+	// there is no plan to edit — but the rebase still moves the branch: it fast-forwards
+	// it onto the target. Run it straight away instead of opening an empty editor.
+	async function fastForward(src: string, tgt: string): Promise<void> {
+		running.value = true;
+
+		try {
+			if (currentBranch.value?.name !== src) {
+				await switchBranch(src);
+			}
+
+			await rebaseOnto(tgt);
+			await Promise.all([loadCommits(), loadBranches(), loadStashes(), loadStatus()]);
+		}
+		finally {
+			running.value = false;
+		}
+	}
+
 	// Open the editor for rebasing `src` onto `tgt` (replays src's unique commits).
+	// Resolves to `false` only when the editor did not open *and* nothing was done.
 	async function open(src: string, tgt: string): Promise<boolean> {
 		const base = await mergeBase(tgt, src);
 		const commits = await logRange(base, src);
 
-		if (!commits.length) return false;
+		if (!commits.length) {
+			await fastForward(src, tgt);
+
+			return true;
+		}
 
 		source.value = src;
 		target.value = tgt;
