@@ -59,7 +59,6 @@
 					v-if="unstagedExpanded"
 					ref="unstagedListRef"
 					class="staging-panel__file-list"
-					:style="fileListStyle(unstagedFiles.length)"
 					:items="unstagedFiles"
 					:item-size="FILE_ROW_HEIGHT"
 					key-field="path"
@@ -132,7 +131,6 @@
 					v-if="stagedExpanded"
 					ref="stagedListRef"
 					class="staging-panel__file-list"
-					:style="fileListStyle(stagedFiles.length)"
 					:items="stagedFiles"
 					:item-size="FILE_ROW_HEIGHT"
 					key-field="path"
@@ -321,9 +319,6 @@ const stagedListRef = useTemplateRef<InstanceType<typeof NVirtualList>>('stagedL
 
 // Matches `.staging-panel__file`; the virtual lists position rows by it.
 const FILE_ROW_HEIGHT = 30;
-// The bottom border of a list, so a list at its natural height shows no scrollbar.
-const FILE_LIST_BORDER = 1;
-const FILE_LIST_MIN_HEIGHT = 90;
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
 const stagedExpanded = ref(true);
@@ -378,17 +373,6 @@ const totalCount = computed(() => {
 
 	return paths.size;
 });
-
-// Both lists share the panel height. Each grows to fit its files and no further, so a short
-// list leaves the rest of the space to a long one; two long lists split it evenly.
-function fileListStyle(count: number): Record<string, string> {
-	const natural = count * FILE_ROW_HEIGHT + FILE_LIST_BORDER;
-
-	return {
-		maxHeight: `${natural}px`,
-		minHeight: `${Math.min(natural, FILE_LIST_MIN_HEIGHT)}px`,
-	};
-}
 
 // Only the rows near the viewport exist in the DOM, so keyboard navigation scrolls the list
 // itself instead of relying on the browser to reveal a focused row.
@@ -559,10 +543,17 @@ loadStatus();
 		min-height: 0;
 	}
 
-	// The headers and lists of both sections are laid out as one column, so the two
-	// scrollable lists can share the panel height between them.
+	// The two sections always split the panel height in half, collapsed or not, so the staged
+	// header stays at the same place and each list scrolls within its own half.
 	&__section {
-		display: contents;
+		flex: 1 1 0;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+
+		& + & {
+			border-top: 1px solid $border;
+		}
 	}
 
 	&__section-header {
@@ -619,7 +610,7 @@ loadStatus();
 
 	&__file-list {
 		flex: 1 1 0;
-		border-bottom: 1px solid $border;
+		min-height: 0;
 	}
 
 	&__file {
