@@ -146,7 +146,7 @@
 					@click="showRevision(entry)"
 				>
 					<span class="file-diff__history-subject">{{ entry.subject }}</span>
-					<span class="file-diff__history-meta">{{ entry.author }} · {{ entry.date }}</span>
+					<span class="file-diff__history-meta">{{ entry.author }} · {{ formatDate(entry.date) }}</span>
 				</button>
 			</div>
 
@@ -208,6 +208,8 @@ import {NButton} from 'naive-ui';
 import {VueMonacoDiffEditor, VueMonacoEditor} from '@guolao/vue-monaco-editor';
 import {useGit} from '@/composables/useGit';
 import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useStagingActions} from '@/composables/useStagingActions';
+import {useDateFormat} from '@/composables/useDateFormat';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {useFileHistory} from '@/composables/useFileHistory';
 import {getMonacoLanguage} from '@/composables/useMonacoLanguage';
@@ -237,8 +239,10 @@ function onKeydown(event: KeyboardEvent): void {
 onMounted(() => document.addEventListener('keydown', onKeydown, true));
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true));
 
-const {activePath, stageFile} = useGit();
+const {activePath} = useGit();
 const {loadStatus} = useWorkingTree();
+const {stageFile} = useStagingActions();
+const {formatDate} = useDateFormat();
 const {original, modified, patch, hunkActions, applyHunk, loadDiff} = useFileDiff();
 const {entries: historyEntries, blame, loadHistory, loadBlame, clear: clearHistory} = useFileHistory();
 const notify = useNotify();
@@ -261,7 +265,6 @@ const isConflictFile = computed(() => modified.value.includes('<<<<<<<'));
 async function handleStageFile(): Promise<void> {
 	if (!activePath.value) return;
 	await stageFile(activePath.value);
-	await loadStatus();
 }
 
 let diffEditor: editor.IStandaloneDiffEditor | null = null;

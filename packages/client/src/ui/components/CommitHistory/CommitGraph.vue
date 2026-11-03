@@ -57,9 +57,10 @@
 				:cy="PADDING_TOP + row(commit) * Y_STEP - ROW_MARGIN"
 				:r="commit.parents.length > 1 ? CIRCLE_R / 2 : CIRCLE_R"
 				:fill="commit.hash === 'WORKING_TREE' ? 'none' : getColor(commit.level ?? 0)"
+				:style="hasInitials(commit) ? {stroke: getBorderColor(commit.level ?? 0)} : undefined"
 				:stroke="commit.hash === 'WORKING_TREE' ? getColor(commit.level ?? 0) : '#0d0f11'"
 				:stroke-dasharray="commit.hash === 'WORKING_TREE' ? '3 2' : undefined"
-				:stroke-width="commit.hash === 'WORKING_TREE' ? 2 : 0"
+				:stroke-width="commit.hash === 'WORKING_TREE' ? 2 : hasInitials(commit) ? NODE_BORDER_WIDTH : 0"
 			/>
 			<line
 				v-if="commit.references?.length && !commit.isStash"
@@ -72,7 +73,7 @@
 			/>
 
 			<text
-				v-if="commit.hash !== 'WORKING_TREE' && !commit.isStash && commit.parents.length <= 1"
+				v-if="hasInitials(commit)"
 				:x="PADDING_LEFT + (commit.level ?? 0) * X_STEP"
 				:y="PADDING_TOP + row(commit) * Y_STEP - ROW_MARGIN"
 				text-anchor="middle"
@@ -103,6 +104,9 @@ const CIRCLE_R = 11;
 const LINE_WIDTH = 3;
 const ROW_MARGIN = 5;
 const CORNER_R = 8;
+const NODE_BORDER_WIDTH = 2;
+/** Share of the node colour in its border; the rest is black. */
+const NODE_BORDER_MIX = 60;
 
 interface IEdge extends IGraphEdge {
 	key: string
@@ -169,6 +173,16 @@ function getInitials(authorName: string): string {
 
 function getColor(level: number): string {
 	return getGraphColor(level);
+}
+
+function hasInitials(commit: Readonly<ICommit>): boolean {
+	return commit.hash !== 'WORKING_TREE' && !commit.isStash && commit.parents.length <= 1;
+}
+
+// Theme colours may be hex or rgb(); color-mix darkens any of them. Applied as a CSS
+// property (not the stroke attribute) so WebKit resolves color-mix too.
+function getBorderColor(level: number): string {
+	return `color-mix(in srgb, ${getColor(level)} ${NODE_BORDER_MIX}%, black)`;
 }
 
 function getPathColor(edge: IEdge): string {

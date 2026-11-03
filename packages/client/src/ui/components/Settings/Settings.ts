@@ -1,6 +1,6 @@
 import {defineComponent} from 'vue';
-import {NAutoComplete, NInput, NInputNumber, NSwitch} from 'naive-ui';
-import type {AutoCompleteOption} from 'naive-ui';
+import {NAutoComplete, NInput, NInputNumber, NSelect, NSwitch} from 'naive-ui';
+import type {AutoCompleteOption, SelectOption} from 'naive-ui';
 import {invoke} from '@tauri-apps/api/core';
 import ThemeSelector from '@/ui/components/ThemeSelector/ThemeSelector.vue';
 import {useTheme} from '@/composables/useTheme';
@@ -8,18 +8,25 @@ import {useSshProxyJump} from '@/composables/useSshProxyJump';
 import {useNotify} from '@/composables/useNotify';
 import {useHistorySettings, clampPageSize, clampMaxCommits, PAGE_SIZE_MIN, PAGE_SIZE_MAX} from '@/composables/useHistorySettings';
 import type {ISshProxyJumpConfig, TSshProxyJumpTextField} from '@/domain/models/SshProxyJump';
+import {useDateFormat} from '@/composables/useDateFormat';
+import {DATE_FORMATS, formatGitDate} from '@/domain/services/dateFormat';
+import type {TDateFormat} from '@/domain/services/dateFormat';
 
 const
 	{themesDir, availableThemes, loadThemes} = useTheme(),
 	sshProxyJump = useSshProxyJump(),
 	historySettings = useHistorySettings(),
+	{dateFormat} = useDateFormat(),
 	isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+const DATE_FORMAT_SAMPLE = '2026-11-03 14:05';
 
 export default defineComponent({
 	components: {
 		NAutoComplete,
 		NInput,
 		NInputNumber,
+		NSelect,
 		NSwitch,
 		ThemeSelector,
 	},
@@ -49,6 +56,18 @@ export default defineComponent({
 
 		historyMaxCommits(): number {
 			return historySettings.maxCommits.value;
+		},
+
+		dateFormat(): TDateFormat {
+			return dateFormat.value;
+		},
+
+		// Each option shows a sample, so the choice does not need a separate preview.
+		dateFormatOptions(): Array<SelectOption> {
+			return DATE_FORMATS.map(f => ({
+				label: `${f.label} — ${formatGitDate(DATE_FORMAT_SAMPLE, f.value)}`,
+				value: f.value,
+			}));
 		},
 
 		customThemesCount(): number {
@@ -86,6 +105,10 @@ export default defineComponent({
 
 		async onThemesDirBlur(): Promise<void> {
 			await loadThemes(themesDir.value);
+		},
+
+		onDateFormatInput(value: TDateFormat): void {
+			dateFormat.value = value;
 		},
 
 		onPageSizeInput(value: number | null): void {

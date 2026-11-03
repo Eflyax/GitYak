@@ -26,6 +26,7 @@
 			v-if="mergedRefs.length"
 			class="tags-wrapper"
 			:class="{'tags-wrapper--expanded': expanded}"
+			:style="{paddingTop: TAG_TOP + 'px'}"
 			@mouseenter="expanded = true"
 			@mouseleave="expanded = false"
 		>
@@ -176,6 +177,10 @@ const LINE_Y = 13;
 const PADDING_LEFT = 12;
 const LINE_WIDTH_THICK = 4;
 const LINE_WIDTH_THIN = 1.5;
+// Must match `.ref-tag` height in the styles below.
+const TAG_HEIGHT = 18;
+// Centres the chips on the horizontal line (and thus on the graph node).
+const TAG_TOP = LINE_Y - TAG_HEIGHT / 2;
 
 const props = defineProps<{
 	commit: ICommit;
@@ -391,6 +396,9 @@ function getTitle(ref: IMergedRef): string {
 <style scoped lang="scss">
 .commit-refs-row {
 	position: relative;
+	// Empty space here belongs to the commit row underneath (it selects the commit and opens
+	// its context menu); only the chips themselves take the pointer.
+	pointer-events: none;
 	display: flex;
 	align-items: center;
 	box-sizing: border-box;
@@ -414,12 +422,22 @@ function getTitle(ref: IMergedRef): string {
 	display: flex;
 	align-items: flex-start;
 	gap: 3px;
-	padding: 1px 6px 0;
+	padding: 0 6px;
 	width: 100%;
+	box-sizing: border-box;
 	overflow: hidden;
 	cursor: pointer;
 
+	// Collapsed: the first chip gives up width (its name ellipsizes) so the
+	// "+N" badge next to it always stays fully visible.
+	&:not(.tags-wrapper--expanded) .ref-tag:not(.ref-tag--overflow) {
+		flex-shrink: 1;
+		min-width: 0;
+	}
+
 	&--expanded {
+		// Keeps the hover across the gaps between stacked chips so the list does not collapse.
+		pointer-events: auto;
 		flex-direction: column;
 		gap: 2px;
 		width: auto;
@@ -433,7 +451,8 @@ function getTitle(ref: IMergedRef): string {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	height: 17px;
+	height: 18px;
+	box-sizing: border-box;
 	padding: 0 5px;
 	border-radius: 3px;
 	font-size: 12px;
@@ -442,6 +461,7 @@ function getTitle(ref: IMergedRef): string {
 	white-space: nowrap;
 	flex-shrink: 0;
 	cursor: pointer;
+	pointer-events: auto;
 	box-shadow: inset 0 0 0 999px rgba(black, 0.55);
 
 	&--active {
@@ -483,6 +503,7 @@ function getTitle(ref: IMergedRef): string {
 }
 
 .ref-name {
+	min-width: 0;
 	max-width: 110px;
 	overflow: hidden;
 	text-overflow: ellipsis;

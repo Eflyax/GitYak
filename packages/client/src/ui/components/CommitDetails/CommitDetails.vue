@@ -115,7 +115,7 @@
 						{{ selectedCommit.authorName || 'Working Tree' }}
 					</span>
 					<span class="commit-details__author-date">
-						{{ selectedCommit.authorDate }}
+						{{ formatDate(selectedCommit.authorDate) }}
 					</span>
 				</div>
 			</div>
@@ -193,6 +193,7 @@ import {useFileDiff} from '@/composables/useFileDiff';
 import {useWorkingTree} from '@/composables/useWorkingTree';
 import {useListNav} from '@/composables/useListNav';
 import {useNotify} from '@/composables/useNotify';
+import {useDateFormat} from '@/composables/useDateFormat';
 import ChangedFileItem from './ChangedFileItem.vue';
 import CommitFileStats from '@/ui/components/CommitFileStats.vue';
 import Icon from '@/ui/components/Icon.vue';
@@ -211,6 +212,7 @@ const {loadDiff} = useFileDiff();
 const {prefill, amendMode} = useCommitForm();
 const {status} = useWorkingTree();
 const {register, unregister, setActive} = useListNav();
+const {formatDate} = useDateFormat();
 const notify = useNotify();
 
 const selectedFilePath = ref<string | null>(null);
@@ -261,9 +263,10 @@ const multiDateRange = computed(() => {
 		.sort();
 
 	if (dates.length === 0) return '';
-	if (dates.length === 1) return dates[0]!;
+	// Sorted as raw `YYYY-MM-DD HH:MM` strings (chronological); formatted only for display.
+	if (dates.length === 1) return formatDate(dates[0]!);
 
-	return `${dates[0]} → ${dates[dates.length - 1]}`;
+	return `${formatDate(dates[0]!)} → ${formatDate(dates[dates.length - 1]!)}`;
 });
 
 const headHash = computed(() => {

@@ -21,6 +21,19 @@
 					({{ customThemesCount }} loaded).
 				</p>
 			</div>
+			<div class="settings__row">
+				<label class="settings__label">Date format</label>
+				<n-select
+					test-id="settings-date-format-select"
+					:value="dateFormat"
+					:options="dateFormatOptions"
+					size="small"
+					@update:value="onDateFormatInput"
+				/>
+				<p class="settings__hint">
+					How commit dates are shown in the history, commit details and file history.
+				</p>
+			</div>
 		</section>
 
 		<section
