@@ -30,6 +30,17 @@
 				:fill-opacity="selectedHash === commit.hash ? 0.30 : 0.06"
 			/>
 
+			<!-- Line to the refs column: drawn before the node so the node and its initials cover it. -->
+			<line
+				v-if="commit.references?.length && !commit.isStash"
+				:x1="PADDING_LEFT + (commit.level ?? 0) * X_STEP"
+				:y1="(PADDING_TOP + row(commit) * Y_STEP)- ROW_MARGIN"
+				:x2="PADDING_LEFT + (commit.level ?? 0) * X_STEP - (CIRCLE_R * 3 * (commit.level ?? 1))"
+				:y2="(PADDING_TOP + row(commit) * Y_STEP) - ROW_MARGIN"
+				:style="{stroke: getGraphShadeColor(commit.level ?? 0)}"
+				:stroke-width="2"
+			/>
+
 			<g v-if="commit.isStash">
 				<rect
 					:x="PADDING_LEFT + (commit.level ?? 0) * X_STEP - CIRCLE_R"
@@ -57,19 +68,10 @@
 				:cy="PADDING_TOP + row(commit) * Y_STEP - ROW_MARGIN"
 				:r="commit.parents.length > 1 ? CIRCLE_R / 2 : CIRCLE_R"
 				:fill="commit.hash === 'WORKING_TREE' ? 'none' : getColor(commit.level ?? 0)"
-				:style="hasInitials(commit) ? {stroke: getBorderColor(commit.level ?? 0)} : undefined"
+				:style="hasInitials(commit) ? {stroke: getGraphShadeColor(commit.level ?? 0)} : undefined"
 				:stroke="commit.hash === 'WORKING_TREE' ? getColor(commit.level ?? 0) : '#0d0f11'"
 				:stroke-dasharray="commit.hash === 'WORKING_TREE' ? '3 2' : undefined"
 				:stroke-width="commit.hash === 'WORKING_TREE' ? 2 : hasInitials(commit) ? NODE_BORDER_WIDTH : 0"
-			/>
-			<line
-				v-if="commit.references?.length && !commit.isStash"
-				:x1="PADDING_LEFT + (commit.level ?? 0) * X_STEP"
-				:y1="(PADDING_TOP + row(commit) * Y_STEP)- ROW_MARGIN"
-				:x2="PADDING_LEFT + (commit.level ?? 0) * X_STEP - (CIRCLE_R * 3 * (commit.level ?? 1))"
-				:y2="(PADDING_TOP + row(commit) * Y_STEP) - ROW_MARGIN"
-				:stroke="getColor(commit.level ?? 0)"
-				:stroke-width="2"
 			/>
 
 			<text
@@ -93,7 +95,7 @@ import {computed} from 'vue';
 import type {ICommit} from '@/domain';
 import {edgesInWindow} from '@/domain/services/rowWindow';
 import type {IGraphEdge} from '@/domain/services/rowWindow';
-import {getGraphColor} from './graphColors';
+import {getGraphColor, getGraphShadeColor} from './graphColors';
 import ArchiveIcon from '@/assets/svg/archive-outline.svg?component';
 
 const X_STEP = 20;
@@ -105,8 +107,6 @@ const LINE_WIDTH = 3;
 const ROW_MARGIN = 5;
 const CORNER_R = 8;
 const NODE_BORDER_WIDTH = 2;
-/** Share of the node colour in its border; the rest is black. */
-const NODE_BORDER_MIX = 60;
 
 interface IEdge extends IGraphEdge {
 	key: string
@@ -177,12 +177,6 @@ function getColor(level: number): string {
 
 function hasInitials(commit: Readonly<ICommit>): boolean {
 	return commit.hash !== 'WORKING_TREE' && !commit.isStash && commit.parents.length <= 1;
-}
-
-// Theme colours may be hex or rgb(); color-mix darkens any of them. Applied as a CSS
-// property (not the stroke attribute) so WebKit resolves color-mix too.
-function getBorderColor(level: number): string {
-	return `color-mix(in srgb, ${getColor(level)} ${NODE_BORDER_MIX}%, black)`;
 }
 
 function getPathColor(edge: IEdge): string {

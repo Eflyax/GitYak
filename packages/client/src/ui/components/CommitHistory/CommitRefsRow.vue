@@ -16,7 +16,7 @@
 				:y1="LINE_Y"
 				x2="100%"
 				:y2="LINE_Y"
-				:stroke="lineColor"
+				:style="{stroke: shadeColor}"
 				:stroke-width="shownRefs.some(ref => isActive(ref)) ? LINE_WIDTH_THICK : LINE_WIDTH_THIN"
 			/>
 		</svg>
@@ -35,7 +35,7 @@
 				:key="ref.id"
 				class="ref-tag"
 				:class="{'ref-tag--active': isActive(ref)}"
-				:style="{backgroundColor: tagColor}"
+				:style="{backgroundColor: isActive(ref) ? activeColor : shadeColor}"
 				:title="getTitle(ref)"
 				:test-id="`ref-${ref.id}`"
 				draggable="true"
@@ -98,7 +98,7 @@
 			<div
 				v-if="!expanded && overflowCount > 0"
 				class="ref-tag ref-tag--overflow"
-				:style="{backgroundColor: tagColor}"
+				:style="{backgroundColor: shadeColor}"
 				:title="`${overflowCount} more`"
 			>
 				<span class="ref-name">+{{ overflowCount }}</span>
@@ -113,7 +113,7 @@ import {useDialog} from 'naive-ui';
 import type {IReference} from '@/domain';
 import {EReferenceType} from '@/domain';
 import Icon from '@/ui/components/Icon.vue';
-import {getGraphColor} from './graphColors';
+import {getGraphColor, getGraphShadeColor} from './graphColors';
 import type {ICommit} from '@/domain';
 import {useBranches} from '@/composables/useBranches';
 import {useContextMenu} from '@/composables/useContextMenu';
@@ -246,8 +246,10 @@ const mergedRefs = computed((): IMergedRef[] => {
 	return [...mergedBranches, ...otherMerged];
 });
 
-const lineColor = computed(() => getGraphColor(props.commit.level ?? 0));
-const tagColor = computed(() => getGraphColor(props.commit.level ?? 0));
+// The line and the chips share the darker shade of the node border; only the chip of the
+// checked-out branch keeps the full lane colour as its highlight.
+const shadeColor = computed(() => getGraphShadeColor(props.commit.level ?? 0));
+const activeColor = computed(() => getGraphColor(props.commit.level ?? 0));
 
 const sortedRefs = computed((): IMergedRef[] => {
 	const all = mergedRefs.value;
@@ -462,10 +464,8 @@ function getTitle(ref: IMergedRef): string {
 	flex-shrink: 0;
 	cursor: pointer;
 	pointer-events: auto;
-	box-shadow: inset 0 0 0 999px rgba(black, 0.55);
 
 	&--active {
-		box-shadow: none;
 		color: $text-white;
 
 		svg {
@@ -474,7 +474,6 @@ function getTitle(ref: IMergedRef): string {
 	}
 
 	&--overflow {
-		box-shadow: inset 0 0 0 999px rgba(black, 0.55);
 		color: $text-white;
 	}
 

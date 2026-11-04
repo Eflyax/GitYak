@@ -33,3 +33,16 @@ export function getGraphColor(level: number): string {
 		.trim();
 	return value || FALLBACK_COLORS[index]!;
 }
+
+/** Share of the lane colour in its darker shade; the rest is black. */
+const SHADE_MIX = 60;
+
+/**
+ * Darker shade of a lane colour: the border of the commit nodes, the horizontal line to the
+ * refs and the ref chips (except the checked-out one). Theme colours may be hex or rgb();
+ * color-mix darkens either. In SVG, set it as the CSS `stroke` property rather than the
+ * attribute so WebKit resolves color-mix too.
+ */
+export function getGraphShadeColor(level: number): string {
+	return `color-mix(in srgb, ${getGraphColor(level)} ${SHADE_MIX}%, black)`;
+}
