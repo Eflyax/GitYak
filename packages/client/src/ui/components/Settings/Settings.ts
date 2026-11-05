@@ -1,6 +1,7 @@
-import {defineComponent} from 'vue';
-import {NAutoComplete, NInput, NInputNumber, NSelect, NSwitch} from 'naive-ui';
-import type {AutoCompleteOption, SelectOption} from 'naive-ui';
+import {defineComponent, h, ref} from 'vue';
+import {NAutoComplete, NInput, NInputNumber, NLayout, NLayoutContent, NLayoutSider, NMenu, NSelect, NSwitch} from 'naive-ui';
+import type {AutoCompleteOption, MenuOption, SelectOption} from 'naive-ui';
+import Icon from '@/ui/components/Icon.vue';
 import {invoke} from '@tauri-apps/api/core';
 import ThemeSelector from '@/ui/components/ThemeSelector/ThemeSelector.vue';
 import {useTheme} from '@/composables/useTheme';
@@ -21,18 +22,50 @@ const
 
 const DATE_FORMAT_SAMPLE = '2026-11-03 14:05';
 
+type TSettingsSection = 'appearance' | 'dates' | 'history' | 'proxyJump';
+
+interface ISettingsSection {
+	key: TSettingsSection
+	label: string
+	icon: string
+	/** Shown only in the desktop app. */
+	tauriOnly?: boolean
+}
+
+const SECTIONS: ReadonlyArray<ISettingsSection> = [
+	{key: 'appearance', label: 'Appearance', icon: 'mdi-palette-outline'},
+	{key: 'dates', label: 'Date & Time', icon: 'mdi-calendar-clock-outline'},
+	{key: 'history', label: 'History', icon: 'mdi-history'},
+	{key: 'proxyJump', label: 'SSH ProxyJump', icon: 'mdi-server-network', tauriOnly: true},
+];
+
+const visibleSections = SECTIONS.filter(section => !section.tauriOnly || isTauri);
+
+// Module scope: reopening Settings returns to the section (and menu width) last used.
+const
+	activeSection = ref<TSettingsSection>('appearance'),
+	menuCollapsed = ref(false);
+
+function renderIcon(name: string): () => ReturnType<typeof h> {
+	return () => h(Icon, {name, style: {width: '1em', height: '1em'}});
+}
+
 export default defineComponent({
 	components: {
 		NAutoComplete,
 		NInput,
 		NInputNumber,
+		NLayout,
+		NLayoutContent,
+		NLayoutSider,
+		NMenu,
 		NSelect,
 		NSwitch,
 		ThemeSelector,
 	},
 
 	setup() {
-		return {notify: useNotify()};
+		return {notify: useNotify(), activeSection, menuCollapsed};
 	},
 
 	data() {
@@ -46,6 +79,18 @@ export default defineComponent({
 	},
 
 	computed: {
+		menuOptions(): Array<MenuOption> {
+			return visibleSections.map(section => ({
+				key: section.key,
+				label: section.label,
+				icon: renderIcon(section.icon),
+			}));
+		},
+
+		activeSectionLabel(): string {
+			return SECTIONS.find(section => section.key === this.activeSection)?.label ?? '';
+		},
+
 		themesDir(): string {
 			return themesDir.value;
 		},
@@ -99,6 +144,10 @@ export default defineComponent({
 	},
 
 	methods: {
+		onSectionSelect(key: string): void {
+			this.activeSection = key as TSettingsSection;
+		},
+
 		onThemesDirInput(value: string): void {
 			themesDir.value = value;
 		},

@@ -74,7 +74,8 @@
 		preset="card"
 		title="Settings"
 		test-id="settings-modal"
-		style="width: 420px; max-width: calc(100vw - 48px);"
+		style="width: 760px; height: 540px; max-width: calc(100vw - 48px); max-height: calc(100vh - 48px);"
+		:content-style="{padding: 0, minHeight: 0}"
 		closable
 	>
 		<Settings />
