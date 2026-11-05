@@ -39,6 +39,12 @@
 		font-weight: 500;
 	}
 
+	.settings__buttons {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
 	.settings__toggle {
 		align-items: center;
 		display: flex;

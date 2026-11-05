@@ -29,6 +29,8 @@ export interface IUseTheme {
 	themeVersion: typeof themeVersion;
 	loadThemes: (dir?: string) => Promise<void>;
 	applyTheme: (filePath: string) => Promise<void>;
+	previewTheme: (theme: IThemeFile, filePath: string) => void;
+	readThemeSource: (filePath: string) => Promise<string>;
 	naiveUiOverrides: ComputedRef<Record<string, unknown>>;
 }
 
@@ -98,22 +100,26 @@ function applyCssVars(resolved: IResolvedTheme): void {
 	tabsbarEl.textContent = buildCssBlock('.tabsbar', resolved.tabsbar);
 }
 
-async function readAndParseTheme(filePath: string): Promise<IThemeFile> {
+/** The theme file as written, comments included. */
+async function readThemeSource(filePath: string): Promise<string> {
 	const builtinRaw = builtinThemes.get(filePath);
 
 	if (builtinRaw !== undefined) {
-		return parseJsonc(builtinRaw) as IThemeFile;
+		return builtinRaw;
 	}
 
 	if (isBuiltinThemeId(filePath)) {
 		throw new Error(`Unknown built-in theme: ${filePath}`);
 	}
 
-	const raw = await invoke<string>('read_file_at', {
+	return await invoke<string>('read_file_at', {
 		path: filePath,
 		nullIfNotExists: false,
 	});
-	return parseJsonc(raw) as IThemeFile;
+}
+
+async function readAndParseTheme(filePath: string): Promise<IThemeFile> {
+	return parseJsonc(await readThemeSource(filePath)) as IThemeFile;
 }
 
 function sortByName(entries: Array<IThemeEntry>): Array<IThemeEntry> {
@@ -170,25 +176,36 @@ async function loadThemes(dir?: string): Promise<void> {
 	availableThemes.value = [...builtin, ...custom];
 }
 
+function showTheme(parsed: IThemeFile, filePath: string): void {
+	const rootResolved = resolveScope(parsed.themeValues.root);
+	const toolbarResolved = resolveScope(parsed.themeValues.toolbar ?? {}, rootResolved);
+	const tabsbarResolved = resolveScope(parsed.themeValues.tabsbar ?? {}, rootResolved);
+
+	const resolved: IResolvedTheme = {
+		meta: parsed.meta,
+		filePath,
+		root:    rootResolved,
+		toolbar: toolbarResolved,
+		tabsbar: tabsbarResolved,
+	};
+
+	activeTheme.value = resolved;
+	applyCssVars(resolved);
+	themeVersion.value++;
+	refreshGraphColors();
+}
+
+/**
+ * Repaints the app with a theme that is not saved anywhere (the theme editor's live preview).
+ * The saved theme choice is left alone; `applyTheme` brings the saved theme back.
+ */
+function previewTheme(theme: IThemeFile, filePath: string): void {
+	showTheme(theme, filePath);
+}
+
 async function applyTheme(filePath: string): Promise<void> {
 	try {
-		const parsed = await readAndParseTheme(filePath);
-		const rootResolved = resolveScope(parsed.themeValues.root);
-		const toolbarResolved = resolveScope(parsed.themeValues.toolbar ?? {}, rootResolved);
-		const tabsbarResolved = resolveScope(parsed.themeValues.tabsbar ?? {}, rootResolved);
-
-		const resolved: IResolvedTheme = {
-			meta: parsed.meta,
-			filePath,
-			root:    rootResolved,
-			toolbar: toolbarResolved,
-			tabsbar: tabsbarResolved,
-		};
-
-		activeTheme.value = resolved;
-		applyCssVars(resolved);
-		themeVersion.value++;
-		refreshGraphColors();
+		showTheme(await readAndParseTheme(filePath), filePath);
 		localStorage.setItem(THEME_PATH_KEY, filePath);
 	}
 	catch (err) {
@@ -212,6 +229,8 @@ export const useTheme: () => IUseTheme = () => {
 		themeVersion: readonly(themeVersion) as typeof themeVersion,
 		loadThemes,
 		applyTheme,
+		previewTheme,
+		readThemeSource,
 		naiveUiOverrides,
 	};
 

@@ -43,6 +43,78 @@
 				<div class="settings__row">
 					<theme-selector />
 				</div>
+				<div
+					v-if="isTauri"
+					test-id="settings-theme-editor"
+					class="settings__row"
+				>
+					<label class="settings__label">Colors</label>
+					<div
+						v-if="copyName === null"
+						class="settings__buttons"
+					>
+						<n-button
+							test-id="settings-theme-copy-btn"
+							size="small"
+							:disabled="isEditorOpen || !hasActiveTheme"
+							@click="onCopyClick"
+						>
+							Copy theme
+						</n-button>
+						<n-button
+							test-id="settings-theme-edit-btn"
+							size="small"
+							:disabled="isEditorOpen || !canEditActive"
+							@click="onEditClick"
+						>
+							Edit colors
+						</n-button>
+					</div>
+					<div
+						v-else
+						class="settings__buttons"
+					>
+						<n-input
+							ref="copyNameInput"
+							test-id="settings-theme-copy-name-input"
+							:value="copyName"
+							placeholder="Name of the new theme"
+							size="small"
+							@update:value="copyName = $event"
+							@keydown.enter="onCopyConfirm"
+							@keydown.esc.stop="copyName = null"
+						/>
+						<n-button
+							test-id="settings-theme-copy-confirm-btn"
+							size="small"
+							type="primary"
+							:disabled="!copyName.trim()"
+							@click="onCopyConfirm"
+						>
+							Copy
+						</n-button>
+						<n-button
+							size="small"
+							@click="copyName = null"
+						>
+							Cancel
+						</n-button>
+					</div>
+					<p class="settings__hint">
+						<template v-if="isEditorOpen">
+							A theme is being edited in the bar at the bottom of the window.
+						</template>
+						<template v-else-if="!hasActiveTheme">
+							Select a theme first; its copy is what you edit.
+						</template>
+						<template v-else-if="canEditActive">
+							Edit the colors of this theme, or copy it under a new name.
+						</template>
+						<template v-else>
+							Built-in themes cannot be edited; copy the theme to change its colors.
+						</template>
+					</p>
+				</div>
 				<div class="settings__row">
 					<label class="settings__label">Themes directory</label>
 					<n-input

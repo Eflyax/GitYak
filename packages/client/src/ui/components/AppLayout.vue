@@ -1,60 +1,64 @@
 <template>
-	<div class="app-layout">
-		<ProjectsSidebar />
-		<div class="repository">
-			<Toolbar :hide-actions="isVisible" />
+	<!-- The theme editor bar sits under the whole app, across the full window width. -->
+	<div class="app-shell">
+		<div class="app-layout">
+			<ProjectsSidebar />
+			<div class="repository">
+				<Toolbar :hide-actions="isVisible" />
 
-			<ProjectManager
-				v-if="!currentProject"
-			/>
+				<ProjectManager
+					v-if="!currentProject"
+				/>
 
-			<ConnectionStatus v-else-if="isVisible" />
+				<ConnectionStatus v-else-if="isVisible" />
 
-			<Splitpanes
-				v-else
-				class="layout-splitpanes"
-			>
-				<Pane
-					:size="sidebarCollapsed ? 2 : 17"
-					:min-size="sidebarCollapsed ? 2 : 12"
-					:max-size="sidebarCollapsed ? 2 : 30"
-					class="pane-sidebar"
+				<Splitpanes
+					v-else
+					class="layout-splitpanes"
 				>
-					<Sidebar />
-				</Pane>
+					<Pane
+						:size="sidebarCollapsed ? 2 : 17"
+						:min-size="sidebarCollapsed ? 2 : 12"
+						:max-size="sidebarCollapsed ? 2 : 30"
+						class="pane-sidebar"
+					>
+						<Sidebar />
+					</Pane>
 
-				<Pane
-					:size="sidebarCollapsed ? 74 : 59"
-					:min-size="30"
-					class="pane-center"
-				>
-					<FileDiff
-						v-if="activePath"
-						@close="handleClose"
-					/>
-					<CommitHistory
-						v-else
-						@open-diff="openFileDiff($event)"
-					/>
-				</Pane>
+					<Pane
+						:size="sidebarCollapsed ? 74 : 59"
+						:min-size="30"
+						class="pane-center"
+					>
+						<FileDiff
+							v-if="activePath"
+							@close="handleClose"
+						/>
+						<CommitHistory
+							v-else
+							@open-diff="openFileDiff($event)"
+						/>
+					</Pane>
 
-				<Pane
-					:size="24"
-					:min-size="18"
-					:max-size="40"
-					class="pane-right"
-				>
-					<StagingPanel
-						v-if="isWorkingTreeSelected"
-						@open-diff="openFileDiff($event)"
-					/>
-					<CommitDetails
-						v-else
-						@open-diff="openFileDiff($event)"
-					/>
-				</Pane>
-			</Splitpanes>
+					<Pane
+						:size="24"
+						:min-size="18"
+						:max-size="40"
+						class="pane-right"
+					>
+						<StagingPanel
+							v-if="isWorkingTreeSelected"
+							@open-diff="openFileDiff($event)"
+						/>
+						<CommitDetails
+							v-else
+							@open-diff="openFileDiff($event)"
+						/>
+					</Pane>
+				</Splitpanes>
+			</div>
 		</div>
+		<ThemeEditorBar />
 	</div>
 
 	<NModal
@@ -129,6 +133,7 @@ import RebaseModal from './RebaseModal.vue';
 import SafeDirectoryDialog from './SafeDirectoryDialog.vue';
 import RepositoryGraph from './RepositoryGraph/RepositoryGraph.vue';
 import HookOutputDialog from './HookOutputDialog.vue';
+import ThemeEditorBar from './ThemeEditor/ThemeEditorBar.vue';
 import {useCommitAction} from '@/composables/useCommitAction';
 import {useProject} from '@/composables/useProject';
 import {useRepoWatch} from '@/composables/useRepoWatch';
@@ -346,9 +351,17 @@ watch(
 </script>
 
 <style scoped lang="scss">
+.app-shell {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	overflow: hidden;
+}
+
 .app-layout {
 	display: flex;
-	height: 100vh;
+	flex: 1;
+	min-height: 0;
 	overflow: hidden;
 	background-color: $bg-app;
 

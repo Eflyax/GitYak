@@ -1,5 +1,5 @@
 import {defineComponent, h, ref} from 'vue';
-import {NAutoComplete, NInput, NInputNumber, NLayout, NLayoutContent, NLayoutSider, NMenu, NSelect, NSwitch} from 'naive-ui';
+import {NAutoComplete, NButton, NInput, NInputNumber, NLayout, NLayoutContent, NLayoutSider, NMenu, NSelect, NSwitch} from 'naive-ui';
 import type {AutoCompleteOption, MenuOption, SelectOption} from 'naive-ui';
 import Icon from '@/ui/components/Icon.vue';
 import {invoke} from '@tauri-apps/api/core';
@@ -10,11 +10,15 @@ import {useNotify} from '@/composables/useNotify';
 import {useHistorySettings, clampPageSize, clampMaxCommits, PAGE_SIZE_MIN, PAGE_SIZE_MAX} from '@/composables/useHistorySettings';
 import type {ISshProxyJumpConfig, TSshProxyJumpTextField} from '@/domain/models/SshProxyJump';
 import {useDateFormat} from '@/composables/useDateFormat';
+import {useThemeEditor} from '@/composables/useThemeEditor';
+import {useLayout} from '@/composables/useLayout';
 import {DATE_FORMATS, formatGitDate} from '@/domain/services/dateFormat';
 import type {TDateFormat} from '@/domain/services/dateFormat';
 
 const
-	{themesDir, availableThemes, loadThemes} = useTheme(),
+	{themesDir, availableThemes, activeTheme, loadThemes} = useTheme(),
+	themeEditor = useThemeEditor(),
+	{showSettings} = useLayout(),
 	sshProxyJump = useSshProxyJump(),
 	historySettings = useHistorySettings(),
 	{dateFormat} = useDateFormat(),
@@ -53,6 +57,7 @@ function renderIcon(name: string): () => ReturnType<typeof h> {
 export default defineComponent({
 	components: {
 		NAutoComplete,
+		NButton,
 		NInput,
 		NInputNumber,
 		NLayout,
@@ -75,6 +80,8 @@ export default defineComponent({
 			pageSizeMax: PAGE_SIZE_MAX,
 			proxyJumpBusy: false,
 			detectedKeys: [] as Array<string>,
+			// Name typed for a theme copy; null while the name field is hidden.
+			copyName: null as string | null,
 		};
 	},
 
@@ -89,6 +96,18 @@ export default defineComponent({
 
 		activeSectionLabel(): string {
 			return SECTIONS.find(section => section.key === this.activeSection)?.label ?? '';
+		},
+
+		isEditorOpen(): boolean {
+			return themeEditor.isEditorOpen.value;
+		},
+
+		hasActiveTheme(): boolean {
+			return activeTheme.value !== undefined;
+		},
+
+		canEditActive(): boolean {
+			return themeEditor.canEditActive.value;
 		},
 
 		themesDir(): string {
@@ -146,6 +165,38 @@ export default defineComponent({
 	methods: {
 		onSectionSelect(key: string): void {
 			this.activeSection = key as TSettingsSection;
+		},
+
+		async onCopyClick(): Promise<void> {
+			this.copyName = `${activeTheme.value?.meta.name ?? 'Theme'} (copy)`;
+			await this.$nextTick();
+			(this.$refs.copyNameInput as InstanceType<typeof NInput> | undefined)?.select();
+		},
+
+		async onCopyConfirm(): Promise<void> {
+			if (!this.copyName?.trim()) {
+				return;
+			}
+
+			try {
+				await themeEditor.startCopy(this.copyName);
+				this.copyName = null;
+				// The bar edits the theme live; the app has to be visible behind it.
+				showSettings.value = false;
+			}
+			catch (err: unknown) {
+				this.notify.error(this.errorMessage(err));
+			}
+		},
+
+		async onEditClick(): Promise<void> {
+			try {
+				await themeEditor.startEdit();
+				showSettings.value = false;
+			}
+			catch (err: unknown) {
+				this.notify.error(this.errorMessage(err));
+			}
 		},
 
 		onThemesDirInput(value: string): void {
