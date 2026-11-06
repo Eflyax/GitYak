@@ -129,8 +129,12 @@ async function confirm(): Promise<void> {
 			}
 		}
 		else if (props.mode === 'rename') {
-			if (props.type === EReferenceModalType.Branch) {
-				await renameBranch(props.initialName ?? '', trimmed);
+			const oldName = props.initialName ?? '';
+
+			// Unchanged name: nothing to do (git would reject it as "already exists").
+			if (props.type === EReferenceModalType.Branch && oldName && trimmed !== oldName) {
+				await renameBranch(oldName, trimmed);
+				message.success(`Branch ${oldName} renamed to ${trimmed}`);
 			}
 		}
 
