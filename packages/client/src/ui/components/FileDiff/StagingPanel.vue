@@ -78,10 +78,13 @@
 								@click="handleFileClick(file)"
 								@contextmenu.prevent="contextMenuFile($event, file.path)"
 							>
-								<div>
+								<div class="staging-panel__file-info">
 									<FileStatus :status="conflictDetected ? EFileStatus.Conflicted : file.status" />
 
-									<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
+									<span class="staging-panel__file-path">
+										<span class="staging-panel__file-dir">{{ splitPath(file.path).dir }}</span>
+										<span class="staging-panel__file-name">{{ splitPath(file.path).name }}</span>
+									</span>
 								</div>
 
 								<NButton
@@ -149,10 +152,13 @@
 								:class="{'staging-panel__file--active': activePath === file.path}"
 								@click="handleFileClick(file)"
 							>
-								<div>
+								<div class="staging-panel__file-info">
 									<FileStatus :status="file.status" />
 
-									<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
+									<span class="staging-panel__file-path">
+										<span class="staging-panel__file-dir">{{ splitPath(file.path).dir }}</span>
+										<span class="staging-panel__file-name">{{ splitPath(file.path).name }}</span>
+									</span>
 								</div>
 
 								<NButton
@@ -400,10 +406,13 @@ function revealFile(path: string): void {
 	}
 }
 
-function fileName(path: string): string {
-	const parts = path.split('/');
+// Directory part (with trailing slash) shown dimmed before the file name, as in the commit file list.
+function splitPath(path: string): {dir: string; name: string} {
+	const idx = path.lastIndexOf('/');
 
-	return parts[parts.length - 1] ?? path;
+	return idx >= 0
+		? {dir: path.slice(0, idx + 1), name: path.slice(idx + 1)}
+		: {dir: '', name: path};
 }
 
 async function handleFileClick(file: IFileStatus): Promise<void> {
@@ -664,12 +673,39 @@ loadStatus();
 		border: 2px solid red;
 	}
 
-	&__file-name {
-		font-size: 12px;
-		color: $text-default;
+	&__file-info {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		flex: 1;
+		min-width: 0;
+	}
+
+	// A long directory is ellipsised first so the file name itself stays readable.
+	&__file-path {
+		display: flex;
+		flex: 1;
+		min-width: 0;
+		white-space: nowrap;
+	}
+
+	&__file-dir {
+		// Shrinks far faster than the name, so the name only loses space once the dir is gone.
+		flex: 0 1000 auto;
+		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		white-space: nowrap;
+		color: $text-faint;
+		font-size: 11.5px;
+	}
+
+	&__file-name {
+		flex: 0 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 12px;
+		color: $text-default;
 	}
 
 	&__commit-form {
