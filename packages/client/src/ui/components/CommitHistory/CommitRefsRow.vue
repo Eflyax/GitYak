@@ -91,7 +91,10 @@
 					</div>
 				</template>
 
-				<span class="ref-name">{{ ref.name }}</span>
+				<span class="ref-name">
+					<span class="ref-name__head">{{ splitRefName(ref.name).head }}</span>
+					<span class="ref-name__tail">{{ splitRefName(ref.name).tail }}</span>
+				</span>
 			</div>
 
 			<!-- Overflow badge -->
@@ -181,6 +184,19 @@ const LINE_WIDTH_THIN = 1.5;
 const TAG_HEIGHT = 18;
 // Centres the chips on the horizontal line (and thus on the graph node).
 const TAG_TOP = LINE_Y - TAG_HEIGHT / 2;
+
+// A truncated name keeps its last REF_TAIL_CHARS characters visible; the ellipsis goes into the
+// head, which never shrinks below its first few characters (`.ref-name__head` min-width).
+const REF_TAIL_CHARS = 5;
+const REF_HEAD_MIN_CHARS = 3;
+
+function splitRefName(name: string): {head: string; tail: string} {
+	if (name.length <= REF_HEAD_MIN_CHARS + REF_TAIL_CHARS) {
+		return {head: name, tail: ''};
+	}
+
+	return {head: name.slice(0, -REF_TAIL_CHARS), tail: name.slice(-REF_TAIL_CHARS)};
+}
 
 const props = defineProps<{
 	commit: ICommit;
@@ -501,15 +517,29 @@ function getTitle(ref: IMergedRef): string {
 	flex-shrink: 0;
 }
 
+// Middle ellipsis: the head ellipsizes, the tail always stays visible.
 .ref-name {
+	display: inline-flex;
 	min-width: 0;
 	max-width: 110px;
-	overflow: hidden;
-	text-overflow: ellipsis;
+
+	&__head {
+		// Roughly REF_HEAD_MIN_CHARS characters plus the ellipsis.
+		min-width: 4ch;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	&__tail {
+		flex-shrink: 0;
+	}
 }
 
 .tags-wrapper--expanded .ref-name {
 	max-width: none;
-	overflow: visible;
+
+	&__head {
+		overflow: visible;
+	}
 }
 </style>
