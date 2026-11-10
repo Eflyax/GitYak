@@ -1,5 +1,5 @@
 import {defineComponent, h, ref} from 'vue';
-import {NAutoComplete, NButton, NInput, NInputNumber, NLayout, NLayoutContent, NLayoutSider, NMenu, NSelect, NSwitch} from 'naive-ui';
+import {NAutoComplete, NButton, NDynamicTags, NInput, NInputNumber, NLayout, NLayoutContent, NLayoutSider, NMenu, NSelect, NSwitch} from 'naive-ui';
 import type {AutoCompleteOption, MenuOption, SelectOption} from 'naive-ui';
 import Icon from '@/ui/components/Icon.vue';
 import {invoke} from '@tauri-apps/api/core';
@@ -10,6 +10,8 @@ import {useNotify} from '@/composables/useNotify';
 import {useHistorySettings, clampPageSize, clampMaxCommits, PAGE_SIZE_MIN, PAGE_SIZE_MAX} from '@/composables/useHistorySettings';
 import type {ISshProxyJumpConfig, TSshProxyJumpTextField} from '@/domain/models/SshProxyJump';
 import {useDateFormat} from '@/composables/useDateFormat';
+import {useTemplates} from '@/composables/useTemplates';
+import {normalizeTemplates} from '@/domain/services/templates';
 import {useThemeEditor} from '@/composables/useThemeEditor';
 import {useLayout} from '@/composables/useLayout';
 import {DATE_FORMATS, formatGitDate} from '@/domain/services/dateFormat';
@@ -22,11 +24,12 @@ const
 	sshProxyJump = useSshProxyJump(),
 	historySettings = useHistorySettings(),
 	{dateFormat} = useDateFormat(),
+	{globalCommitTemplate, globalBranchTemplates} = useTemplates(),
 	isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 const DATE_FORMAT_SAMPLE = '2026-11-03 14:05';
 
-type TSettingsSection = 'appearance' | 'dates' | 'history' | 'proxyJump';
+type TSettingsSection = 'appearance' | 'dates' | 'history' | 'templates' | 'proxyJump';
 
 interface ISettingsSection {
 	key: TSettingsSection
@@ -40,6 +43,7 @@ const SECTIONS: ReadonlyArray<ISettingsSection> = [
 	{key: 'appearance', label: 'Appearance', icon: 'mdi-palette-outline'},
 	{key: 'dates', label: 'Date & Time', icon: 'mdi-calendar-clock-outline'},
 	{key: 'history', label: 'History', icon: 'mdi-history'},
+	{key: 'templates', label: 'Templates', icon: 'mdi-text-box-edit-outline'},
 	{key: 'proxyJump', label: 'SSH ProxyJump', icon: 'mdi-server-network', tauriOnly: true},
 ];
 
@@ -58,6 +62,7 @@ export default defineComponent({
 	components: {
 		NAutoComplete,
 		NButton,
+		NDynamicTags,
 		NInput,
 		NInputNumber,
 		NLayout,
@@ -116,6 +121,14 @@ export default defineComponent({
 
 		historyPageSize(): number {
 			return historySettings.pageSize.value;
+		},
+
+		commitTemplate(): string {
+			return globalCommitTemplate.value;
+		},
+
+		branchTemplates(): Array<string> {
+			return globalBranchTemplates.value;
 		},
 
 		historyMaxCommits(): number {
@@ -213,6 +226,14 @@ export default defineComponent({
 
 		onPageSizeInput(value: number | null): void {
 			historySettings.pageSize.value = clampPageSize(value ?? undefined);
+		},
+
+		onCommitTemplateInput(value: string): void {
+			globalCommitTemplate.value = value;
+		},
+
+		onBranchTemplatesInput(value: Array<string>): void {
+			globalBranchTemplates.value = normalizeTemplates(value);
 		},
 
 		onMaxCommitsInput(value: number | null): void {

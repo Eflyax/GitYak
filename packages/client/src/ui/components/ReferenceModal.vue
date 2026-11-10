@@ -15,6 +15,23 @@
 			@keydown.enter="confirm"
 		/>
 
+		<div
+			v-if="templates.length"
+			test-id="branch-templates"
+			class="templates"
+		>
+			<NButton
+				v-for="template in templates"
+				:key="template"
+				test-id="branch-template-btn"
+				size="tiny"
+				secondary
+				@click="applyTemplate(template)"
+			>
+				{{ template }}
+			</NButton>
+		</div>
+
 		<template #footer>
 			<div class="modal-footer">
 				<NButton
@@ -38,12 +55,14 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, watch} from 'vue';
+import {ref, computed, watch, nextTick} from 'vue';
 import {NModal, NInput, NButton, useMessage} from 'naive-ui';
 import {useBranches} from '@/composables/useBranches';
 import {useTags} from '@/composables/useTags';
 import {useStash} from '@/composables/useStash';
+import {useTemplates} from '@/composables/useTemplates';
 import {EReferenceModalType} from '@/domain';
+import {applyBranchTemplate} from '@/domain/services/templates';
 
 const props = defineProps<{
 	show: boolean;
@@ -63,6 +82,7 @@ const message = useMessage();
 const {createBranch, renameBranch} = useBranches();
 const {createTag} = useTags();
 const {renameStash} = useStash();
+const {branchTemplates} = useTemplates();
 
 const name = ref('');
 const submitting = ref(false);
@@ -89,6 +109,20 @@ const placeholder = computed(() => {
 	if (props.type === EReferenceModalType.Tag) return 'Tag name';
 	return 'Stash name';
 });
+
+const templates = computed(() => (props.type === EReferenceModalType.Branch ? branchTemplates.value : []));
+
+// The template goes in front of the name (replacing another template already there), and
+// the caret lands at the end so typing continues right after it.
+async function applyTemplate(template: string): Promise<void> {
+	name.value = applyBranchTemplate(name.value, template, templates.value);
+	await nextTick();
+	inputRef.value?.focus();
+
+	const input = inputRef.value?.inputElRef;
+
+	input?.setSelectionRange(input.value.length, input.value.length);
+}
 
 watch(() => props.show, (val) => {
 	if (val) {
@@ -153,6 +187,13 @@ async function confirm(): Promise<void> {
 </script>
 
 <style scoped>
+.templates {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 10px;
+}
+
 .modal-footer {
 	display: flex;
 	justify-content: flex-end;

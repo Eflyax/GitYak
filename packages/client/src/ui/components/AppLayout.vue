@@ -157,7 +157,7 @@ function handleClose(): void {
 
 const {currentProject, openLastOpenProject, openProject, projects, addProject} = useProject();
 const {selectedHashes, loadCommits} = useCommits();
-const {commitSummary} = useCommitForm();
+const {isSummaryEmpty} = useCommitForm();
 
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value.length);
 
@@ -272,7 +272,7 @@ onMounted(() => {
 		label: 'Commit',
 		shortcut: '⌘Enter',
 		keybinding: {key: 'enter', meta: true},
-		isEnabled: () => !!status.value.staged.length && !!commitSummary.value.trim() && !(conflictDetected.value && !!status.value.unstaged.length),
+		isEnabled: () => !!status.value.staged.length && !isSummaryEmpty.value && !(conflictDetected.value && !!status.value.unstaged.length),
 		action: runCommit,
 	});
 

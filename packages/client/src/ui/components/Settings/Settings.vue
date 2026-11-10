@@ -188,6 +188,41 @@
 			</section>
 
 			<section
+				v-else-if="activeSection === 'templates'"
+				test-id="settings-templates-section"
+				class="settings__section"
+			>
+				<div class="settings__row">
+					<label class="settings__label">Commit message template</label>
+					<n-input
+						test-id="settings-commit-template-input"
+						:value="commitTemplate"
+						placeholder="e.g. [IMP] "
+						size="small"
+						@update:value="onCommitTemplateInput"
+					/>
+					<p class="settings__hint">
+						Every new commit summary starts with this text. Include a trailing space if the
+						message should not follow it directly. A project can set its own template in its
+						settings, which then replaces this one.
+					</p>
+				</div>
+				<div class="settings__row">
+					<label class="settings__label">Branch name templates</label>
+					<n-dynamic-tags
+						test-id="settings-branch-templates-input"
+						:value="branchTemplates"
+						size="small"
+						@update:value="onBranchTemplatesInput"
+					/>
+					<p class="settings__hint">
+						Prefixes such as feature/ offered when naming a branch; clicking one fills it in.
+						Templates set on a project are offered before these.
+					</p>
+				</div>
+			</section>
+
+			<section
 				v-else-if="activeSection === 'proxyJump' && isTauri"
 				test-id="settings-proxy-jump-section"
 				class="settings__section"

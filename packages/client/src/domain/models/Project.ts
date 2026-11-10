@@ -18,6 +18,10 @@ export interface IProject {
 	color?: string
 	groupId?: string
 	token?: string
+	/** Overrides the global commit template for this project; empty means use the global one. */
+	commitTemplate?: string
+	/** Branch name prefixes offered in addition to the global ones. */
+	branchTemplates?: ReadonlyArray<string>
 }
 
 export interface IProjectGroup {

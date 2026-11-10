@@ -325,7 +325,7 @@ const {commits, loadCommits} = useCommits();
 const {mergeAbort, activePath, getCommitMessage, callGit, cherryPickAbort, rebaseContinue, rebaseSkip, rebaseAbort} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
-const {commitSummary, commitDescription, amendMode, noVerify, prefill} = useCommitForm();
+const {commitSummary, commitDescription, amendMode, noVerify, isSummaryEmpty, prefill, clearMessage} = useCommitForm();
 const {runCommit, isCommitting} = useCommitAction();
 const {register, unregister, setActive} = useListNav();
 const commitSummaryInput = useTemplateRef<InstanceType<typeof NInput>>('commitSummaryInput');
@@ -350,7 +350,7 @@ const amendDisabled = computed(() => conflictDetected.value || !hasRegularHead.v
 
 const commitDisabled = computed(() => {
 	if (conflictDetected.value && unstagedFiles.value.length > 0) return true;
-	if (!commitSummary.value.trim()) return true;
+	if (isSummaryEmpty.value) return true;
 	if (amendMode.value) return false;
 
 	return !stagedFiles.value.length;
@@ -376,7 +376,7 @@ async function handleAmendToggle(checked: boolean): Promise<void> {
 	}
 	else {
 		amendMode.value = false;
-		prefill('', '');
+		clearMessage();
 	}
 }
 
@@ -460,6 +460,9 @@ onUnmounted(() => unregister('staging'));
 async function handleStageAll(): Promise<void> {
 	if (await stageAll()) {
 		commitSummaryInput.value?.focus();
+		// The summary may already hold the commit template; typing continues after it.
+		const input = commitSummaryInput.value?.inputElRef;
+		input?.setSelectionRange(input.value.length, input.value.length);
 	}
 }
 
