@@ -5,6 +5,7 @@ import {BIND_HOST, defaultAllowlist, isOriginAllowed, resolveToken} from './auth
 import * as GitCall from './commands/GitCall';
 import * as GitRebase from './commands/GitRebase';
 import * as ReadFile from './commands/ReadFile';
+import * as ReadBlob from './commands/ReadBlob';
 import * as WriteFile from './commands/WriteFile';
 import * as BrowseFiles from './commands/BrowseFiles';
 import * as SshAgentInit from './commands/SshAgentInit';
@@ -105,6 +106,10 @@ serve({
 
 					case ENetworkCommand.ReadFile:
 						await ReadFile.run(ws, data);
+						break;
+
+					case ENetworkCommand.ReadBlob:
+						await ReadBlob.run(ws, data);
 						break;
 
 					case ENetworkCommand.WriteFile:

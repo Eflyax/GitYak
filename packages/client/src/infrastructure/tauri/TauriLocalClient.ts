@@ -4,6 +4,8 @@ import type {ITransportClient} from '../ITransportClient';
 import {getShellPath} from './shellPath';
 import {buildRebasePlan, validateRepoPath} from './rebaseArgs';
 import {ENetworkCommand} from '@/domain';
+import {blobObjectName} from '@git-yak/protocol';
+import {bytesToBase64} from '@/domain/services/base64';
 
 interface IDirEntry {
 	name: string;
@@ -76,6 +78,31 @@ export class TauriLocalClient implements ITransportClient {
 				}
 
 				return content;
+			}
+
+			case ENetworkCommand.ReadBlob: {
+				const repoPath = payload['repo_path'] as string;
+				const filePath = payload['file_path'] as string;
+				const revision = payload['revision'] as string | undefined;
+
+				if (!revision) {
+					const fullPath = filePath.startsWith('/') ? filePath : `${repoPath}/${filePath}`;
+
+					return bytesToBase64(new Uint8Array(await invoke<ArrayBuffer>('read_file_bytes', {path: fullPath})));
+				}
+
+				// Raw encoding: the default decodes stdout as UTF-8, which mangles binary files.
+				const result = await Command.create(
+					'git',
+					['-C', repoPath, 'cat-file', 'blob', blobObjectName(revision, filePath)],
+					{encoding: 'raw', env: {PATH: await getShellPath(), GIT_OPTIONAL_LOCKS: '0'}},
+				).execute();
+
+				if (result.code !== 0) {
+					throw new Error(new TextDecoder().decode(result.stderr).trim() || `Cannot read ${revision}:${filePath}`);
+				}
+
+				return bytesToBase64(result.stdout);
 			}
 
 			case ENetworkCommand.WriteFile: {

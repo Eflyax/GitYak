@@ -1,6 +1,7 @@
 import {Command} from '@tauri-apps/plugin-shell';
 import type {ITransportClient} from '../ITransportClient';
 import {ENetworkCommand} from '@/domain';
+import {blobObjectName} from '@git-yak/protocol';
 
 /**
  * Escape a string so it is safe as a single-quoted shell argument.
@@ -99,6 +100,30 @@ export class SshClient implements ITransportClient {
 				}
 
 				return result.stdout;
+			}
+
+			// The bytes are base64-encoded on the remote host, so binary content crosses the
+			// ssh stdout (read as text) unharmed.
+			case ENetworkCommand.ReadBlob: {
+				const repoPath = payload['repo_path'] as string;
+				const filePath = payload['file_path'] as string;
+				const revision = payload['revision'] as string | undefined;
+				const fullPath = filePath.startsWith('/') ? filePath : `${repoPath}/${filePath}`;
+				// The assignment stays unquoted: a quoted 'LC_ALL=C' is run as a command name.
+				const git = `LC_ALL=C ${['git', '-C', repoPath, 'cat-file'].map(sq).join(' ')}`;
+				// A pipe reports only base64's exit code, so a missing object is checked first
+				// (`-e`); a missing file fails the input redirection, which base64 never runs past.
+				const remoteCmd = revision
+					? `${git} -e ${sq(blobObjectName(revision, filePath))} && ${git} blob ${sq(blobObjectName(revision, filePath))} | base64`
+					: `base64 < ${sq(fullPath)}`;
+				const result = await Command.create('ssh', this.buildSshArgs(remoteCmd)).execute();
+
+				if (result.code !== 0) {
+					throw new Error(result.stderr.trim() || 'Read file failed');
+				}
+
+				// GNU base64 wraps lines at 76 characters.
+				return result.stdout.replace(/\s+/g, '');
 			}
 
 			case ENetworkCommand.WriteFile: {

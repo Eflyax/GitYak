@@ -97,6 +97,20 @@ export function useGit() {
 		return result as string;
 	}
 
+	/**
+	 * Bytes of a file as base64: from the working tree, or at `revision` (e.g. "HEAD", ":0"
+	 * for the index). Unlike readFile, binary content arrives intact.
+	 */
+	async function readBlob(filePath: string, revision?: string): Promise<string> {
+		const result = await call(ENetworkCommand.ReadBlob, {
+			repo_path: repoPath(),
+			file_path: filePath,
+			revision,
+		});
+
+		return result as string;
+	}
+
 	async function writeFile(filePath: string, content: string): Promise<void> {
 		await call(ENetworkCommand.WriteFile, {
 			repo_path: repoPath(),
@@ -542,6 +556,7 @@ export function useGit() {
 		activePath,
 		callGit,
 		readFile,
+		readBlob,
 		writeFile,
 		fetch,
 		pull,

@@ -2,7 +2,7 @@ import {resolve, isAbsolute} from 'path';
 import {promises as fs} from 'fs';
 import type {IWsRequest} from '@git-yak/protocol';
 
-function resolveFilePath(repoPath: string, filePath: string): string {
+export function resolveFilePath(repoPath: string, filePath: string): string {
 	const resolved = isAbsolute(filePath) ? filePath : resolve(repoPath, filePath);
 
 	// Prevent directory traversal outside repository

@@ -2,6 +2,7 @@ mod browse_files;
 mod git_call;
 mod git_rebase;
 mod heartbeat;
+mod read_blob;
 mod read_file;
 mod write_file;
 pub mod watch_repo;
@@ -31,6 +32,7 @@ pub async fn dispatch(raw: &str, state: &AppState, tx: &UnboundedSender<String>)
 		"gitCall" => git_call::run(&req).await,
 		"gitRebase" => git_rebase::run(&req).await,
 		"readFile" => read_file::run(&req).await,
+		"readBlob" => read_blob::run(&req).await,
 		"writeFile" => write_file::run(&req).await,
 		"browseFiles" => browse_files::run(&req),
 		"heartbeat" => heartbeat::run(&req, state),
