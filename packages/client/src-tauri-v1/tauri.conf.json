@@ -1,0 +1,65 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/1.x/core/tauri-config-schema/schema.json",
+  "package": {
+    "productName": "GitYak",
+    "version": "2.0.0"
+  },
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devPath": "../dist-tauri-v1",
+    "distDir": "../dist-tauri-v1",
+    "withGlobalTauri": false
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "execute": true,
+        "open": true,
+        "scope": [
+          { "name": "ssh", "cmd": "ssh", "args": true },
+          { "name": "scp", "cmd": "scp", "args": true },
+          { "name": "git", "cmd": "git", "args": true }
+        ]
+      },
+      "path": {
+        "all": true
+      },
+      "window": {
+        "all": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": ["deb"],
+      "identifier": "com.git-yak.app",
+      "category": "DeveloperTool",
+      "shortDescription": "Git client",
+      "icon": [
+        "../src-tauri/icons/32x32.png",
+        "../src-tauri/icons/128x128.png",
+        "../src-tauri/icons/128x128@2x.png",
+        "../src-tauri/icons/icon.png"
+      ],
+      "resources": ["../../remote-worker/dist/remote-worker-linux-x64"],
+      "deb": {
+        "depends": ["git", "openssh-client"],
+        "desktopTemplate": "gityak.desktop"
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "title": "GitYak",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false,
+        "fileDropEnabled": false
+      }
+    ]
+  }
+}

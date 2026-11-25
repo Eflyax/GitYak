@@ -93,6 +93,7 @@ import {WebSocketClient} from '@/infrastructure/websocket/WebSocketClient';
 import {ENetworkCommand} from '@/domain';
 import {ancestorPaths, parentPath as parentOf} from '@/domain/services/directoryPaths';
 import Icon from '@/ui/components/Icon.vue';
+import {isTauri} from '@/infrastructure/tauri/isTauri';
 
 interface IDirEntry {
 	name: string;
@@ -108,8 +109,6 @@ interface ITauriDirEntry {
 	name: string;
 	is_directory: boolean;
 }
-
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 const props = defineProps<{
 	server: string;

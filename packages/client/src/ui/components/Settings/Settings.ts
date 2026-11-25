@@ -3,6 +3,7 @@ import {NAutoComplete, NButton, NDynamicTags, NInput, NInputNumber, NLayout, NLa
 import type {AutoCompleteOption, MenuOption, SelectOption} from 'naive-ui';
 import Icon from '@/ui/components/Icon.vue';
 import {invoke} from '@tauri-apps/api/core';
+import {isTauri as isTauriRuntime} from '@/infrastructure/tauri/isTauri';
 import ThemeSelector from '@/ui/components/ThemeSelector/ThemeSelector.vue';
 import {useTheme} from '@/composables/useTheme';
 import {useSshProxyJump} from '@/composables/useSshProxyJump';
@@ -25,7 +26,7 @@ const
 	historySettings = useHistorySettings(),
 	{dateFormat} = useDateFormat(),
 	{globalCommitTemplate, globalBranchTemplates} = useTemplates(),
-	isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+	isTauri = isTauriRuntime;
 
 const DATE_FORMAT_SAMPLE = '2026-11-03 14:05';
 

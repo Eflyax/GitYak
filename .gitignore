@@ -16,6 +16,10 @@ packages/client/src-tauri/WixTools/
 packages/remote-worker-rs/target/
 
 # Build artifacts
+dist-linux/
+packages/client/dist-tauri-v1/
+packages/client/src-tauri-v1/target/
+packages/client/src-tauri-v1/gen/
 packages/remote-worker/dist/
 packages/e2e/test-results/
 

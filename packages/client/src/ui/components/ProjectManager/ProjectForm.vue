@@ -298,6 +298,7 @@ import type {IProject} from '@/domain';
 import {EServerType} from '@/domain';
 import Icon from '@/ui/components/Icon.vue';
 import FileBrowser from './FileBrowser.vue';
+import {isTauri} from '@/infrastructure/tauri/isTauri';
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_SSH_PORT = 22;
@@ -312,8 +313,6 @@ const PRESET_COLORS = [
 	'#fbbf24',
 	'#f472b6',
 ] as const;
-
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 interface IFormData {
 	alias: string;

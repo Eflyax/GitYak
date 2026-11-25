@@ -17,6 +17,7 @@
 		"build:remote-worker": "PATH=$HOME/.cargo/bin:$PATH cargo zigbuild --manifest-path packages/remote-worker-rs/Cargo.toml --target x86_64-unknown-linux-musl --release && mkdir -p packages/remote-worker/dist && cp packages/remote-worker-rs/target/x86_64-unknown-linux-musl/release/remote-worker-rs packages/remote-worker/dist/remote-worker-linux-x64",
 		"tauri:dev": "yarn build:remote-worker && concurrently --kill-others \"yarn workspace @git-yak/server dev\" \"yarn workspace @git-yak/client tauri:dev\"",
 		"tauri:build": "yarn build:remote-worker && yarn workspace @git-yak/client tauri:build",
+		"tauri:build:focal": "bash scripts/build-linux-focal.sh",
 		"lint": "eslint --no-error-on-unmatched-pattern 'packages/*/src/**' 'packages/*/scripts/**' 'packages/*/*.config.ts' packages/e2e scripts '*.config.js' '*.config.ts'",
 		"lint:fix": "eslint --fix --no-error-on-unmatched-pattern 'packages/*/src/**' 'packages/*/scripts/**' 'packages/*/*.config.ts' packages/e2e scripts '*.config.js' '*.config.ts'",
 		"typecheck:scripts": "tsc -p tsconfig.scripts.json",

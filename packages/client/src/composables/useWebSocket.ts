@@ -8,8 +8,7 @@ import type {ITransportClient} from '@/infrastructure/ITransportClient';
 import {EConnectionStatus, ENetworkCommand, EServerType} from '@/domain';
 import type {IProject} from '@/domain';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
-
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+import {isTauri} from '@/infrastructure/tauri/isTauri';
 
 const client = ref<ITransportClient | null>(null);
 const status = ref<EConnectionStatus>(EConnectionStatus.Idle);
