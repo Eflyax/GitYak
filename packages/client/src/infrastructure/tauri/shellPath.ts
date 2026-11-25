@@ -1,4 +1,5 @@
 import {invoke} from '@tauri-apps/api/core';
+import {isWindowsHost, PATH_DELIMITER} from '@/infrastructure/platform';
 
 // Node tooling used by git hooks (npx/node via Homebrew, nvm, fnm, volta) lives
 // outside the minimal PATH a Finder-launched macOS app inherits. Resolve the
@@ -10,14 +11,17 @@ let cached: Promise<string> | undefined;
 async function resolve(): Promise<string> {
 	try {
 		const login = await invoke<string>('get_login_shell_path');
-		const parts = new Set(login.split(':').filter(Boolean));
+		const parts = new Set(login.split(PATH_DELIMITER).filter(Boolean));
 
-		FALLBACK_DIRS.forEach(dir => parts.add(dir));
+		// Windows apps inherit the user's full PATH; the Unix directories mean nothing there.
+		if (!isWindowsHost) {
+			FALLBACK_DIRS.forEach(dir => parts.add(dir));
+		}
 
-		return Array.from(parts).join(':');
+		return Array.from(parts).join(PATH_DELIMITER);
 	}
 	catch {
-		return FALLBACK_DIRS.join(':');
+		return isWindowsHost ? '' : FALLBACK_DIRS.join(':');
 	}
 }
 

@@ -2,9 +2,16 @@
 //! and the Tauri 1 shell for older Linux (`src-tauri-v1`), which includes this file by path.
 //! Anything here must compile against both Tauri versions: plain std types only.
 
+/// The user's home directory: $HOME on Unix, %USERPROFILE% on Windows.
+fn home_dir() -> String {
+    std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_default()
+}
+
 #[tauri::command]
 pub fn detect_ssh_keys() -> Vec<String> {
-    let home = std::env::var("HOME").unwrap_or_default();
+    let home = home_dir();
     let ssh_dir = std::path::Path::new(&home).join(".ssh");
 
     ["id_rsa", "id_ed25519", "id_ecdsa", "id_dsa"]
@@ -40,6 +47,27 @@ pub fn write_log(msg: String) {
     eprintln!("[app] {}", msg);
 }
 
+/// The OS and CPU architecture the app was built for (`std::env::consts`), e.g. "macos" and
+/// "aarch64"; the update check uses them to pick the matching installer.
+#[derive(serde::Serialize)]
+pub struct Platform {
+    os: &'static str,
+    arch: &'static str,
+}
+
+#[tauri::command]
+pub fn get_platform() -> Platform {
+    Platform { os: std::env::consts::OS, arch: std::env::consts::ARCH }
+}
+
+/// Windows has no login shell to ask; the app inherits the user's PATH there.
+#[cfg(windows)]
+#[tauri::command]
+pub fn get_login_shell_path() -> Result<String, String> {
+    std::env::var("PATH").map_err(|e| e.to_string())
+}
+
+#[cfg(not(windows))]
 #[tauri::command]
 pub fn get_login_shell_path() -> Result<String, String> {
     let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
@@ -89,7 +117,7 @@ pub struct DirEntry {
 #[tauri::command]
 pub fn browse_directory(path: String) -> Result<Vec<DirEntry>, String> {
     let expanded = if path.starts_with("~/") {
-        let home = std::env::var("HOME").unwrap_or_default();
+        let home = home_dir();
         std::path::PathBuf::from(format!("{}/{}", home, &path[2..]))
     } else {
         std::path::PathBuf::from(&path)
@@ -116,7 +144,7 @@ pub fn browse_directory(path: String) -> Result<Vec<DirEntry>, String> {
 #[tauri::command]
 pub fn list_theme_files(dir: String) -> Result<Vec<String>, String> {
     let expanded = if dir.starts_with("~/") {
-        let home = std::env::var("HOME").unwrap_or_default();
+        let home = home_dir();
         std::path::PathBuf::from(format!("{}/{}", home, &dir[2..]))
     } else {
         std::path::PathBuf::from(&dir)

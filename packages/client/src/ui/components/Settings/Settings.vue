@@ -308,6 +308,90 @@
 					/>
 				</div>
 			</section>
+
+			<section
+				v-else-if="activeSection === 'about'"
+				test-id="settings-about-section"
+				class="settings__section"
+			>
+				<div class="settings__row">
+					<label class="settings__label">Version</label>
+					<span
+						test-id="settings-app-version"
+						class="settings__value"
+					>GitYak {{ appVersion }}</span>
+					<p class="settings__hint">
+						Downloads, release notes and documentation are on
+						<a
+							class="settings__link"
+							href="#"
+							@click.prevent="openUrl(websiteUrl)"
+						>gityak.com</a>.
+					</p>
+				</div>
+
+				<template v-if="isTauri">
+					<div class="settings__toggle">
+						<n-switch
+							test-id="settings-auto-update-switch"
+							:value="autoCheckUpdates"
+							@update:value="onAutoCheckUpdatesInput"
+						/>
+						<span class="settings__label">Check for updates on startup</span>
+					</div>
+
+					<div class="settings__row">
+						<div class="settings__buttons">
+							<n-button
+								test-id="settings-check-updates-btn"
+								size="small"
+								:loading="updateStatus === 'checking'"
+								@click="onCheckUpdatesClick"
+							>
+								Check now
+							</n-button>
+							<template v-if="updateStatus === 'available' && availableUpdate">
+								<n-button
+									test-id="settings-download-update-btn"
+									size="small"
+									type="primary"
+									@click="onDownloadUpdateClick"
+								>
+									Download {{ availableUpdate.version }}
+								</n-button>
+								<n-button
+									size="small"
+									quaternary
+									@click="onReleaseNotesClick"
+								>
+									Release notes
+								</n-button>
+							</template>
+						</div>
+						<p
+							v-if="updateStatus === 'upToDate'"
+							test-id="settings-update-status"
+							class="settings__hint"
+						>
+							You are using the latest version.
+						</p>
+						<p
+							v-else-if="updateStatus === 'available' && availableUpdate"
+							test-id="settings-update-status"
+							class="settings__hint"
+						>
+							GitYak {{ availableUpdate.version }} is available.
+						</p>
+						<p
+							v-else-if="updateStatus === 'error'"
+							test-id="settings-update-status"
+							class="settings__hint settings__hint--error"
+						>
+							Cannot check for updates: {{ updateError }}
+						</p>
+					</div>
+				</template>
+			</section>
 		</n-layout-content>
 	</n-layout>
 </template>

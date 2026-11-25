@@ -1,0 +1,28 @@
+name: Node + Yarn
+description: Node.js with the Yarn 4 release the lockfile was written by, and installed dependencies.
+inputs:
+  node-version:
+    required: true
+  yarn-version:
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    # package.json pins no packageManager (a global Yarn 1 would refuse to run then), so the
+    # Yarn version is activated explicitly.
+    - shell: bash
+      run: |
+        npm install -g corepack@latest
+        corepack enable
+        corepack prepare "yarn@${{ inputs.yarn-version }}" --activate
+        yarn --version
+    - uses: actions/cache@v4
+      with:
+        path: ~/.yarn/berry/cache
+        key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+        restore-keys: yarn-${{ runner.os }}-
+    - shell: bash
+      run: yarn install --immutable

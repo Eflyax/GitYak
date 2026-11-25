@@ -4,6 +4,7 @@
 import {Command as V1Command} from '@tauri-apps/api-v1/shell';
 import {invoke} from '@tauri-apps/api-v1/tauri';
 
+export {open} from '@tauri-apps/api-v1/shell';
 export type {Child} from '@tauri-apps/api-v1/shell';
 
 interface ISpawnOptions {

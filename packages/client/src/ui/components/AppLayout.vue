@@ -141,6 +141,7 @@ import {useCommits} from '@/composables/useCommits';
 import {useLayout} from '@/composables/useLayout';
 import {useGit} from '@/composables/useGit';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
+import {useUpdateNotifier} from '@/composables/useUpdateNotifier';
 
 const keyboard = useKeyboard();
 const {registerCommand, unregisterCommand} = useCommands();
@@ -149,6 +150,7 @@ const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSetti
 const {isVisible} = useConnectionStatus();
 const {activePath} = useGit();
 const {runCommit, showHookOutput, hookOutput, hookOutputSuccess} = useCommitAction();
+const updateNotifier = useUpdateNotifier();
 
 function handleClose(): void {
 	activePath.value = null;
@@ -259,6 +261,7 @@ function setupDeepLinks(): void {
 onMounted(() => {
 	openLastOpenProject();
 	setupDeepLinks();
+	updateNotifier.checkOnStartup();
 	keyboard.mount();
 	windowFocus.onFocus(() => {
 		if (!currentProject.value || isVisible.value) {

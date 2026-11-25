@@ -38,3 +38,6 @@ graphify-out/
 # Yarn
 .yarn/install-state.gz
 graphify-out
+
+# Website screenshots are sources (yarn workspace @git-yak/e2e screenshots).
+!packages/website/public/screenshots/*.png

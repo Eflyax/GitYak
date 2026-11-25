@@ -172,7 +172,7 @@ test('the conflict navigation walks the unresolved conflicts and skips the resol
 	await openConflictedFile(page, repo, openRepo);
 
 	// Nothing is focused until the first jump.
-	await expect(byTestId(page, 'conflict-position')).toHaveText('– / 2');
+	await expect(byTestId(page, 'conflict-position')).toHaveText('- / 2');
 
 	await byTestId(page, 'next-conflict-btn').click();
 	await expect(byTestId(page, 'conflict-position')).toHaveText('1 / 2');

@@ -254,3 +254,21 @@ textarea {
 .n-notification:has(.gy-notify--info) {
 	@include notification-tint($color-accent);
 }
+
+// The update notice (useUpdateNotifier): a short excerpt of the release notes and its buttons.
+.gy-update-notice__notes {
+	max-height: 120px;
+	margin: 0;
+	overflow: auto;
+	color: $text-secondary;
+	font-family: inherit;
+	font-size: 12px;
+	white-space: pre-wrap;
+}
+
+.gy-update-notice__actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 6px;
+}

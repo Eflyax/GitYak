@@ -15,6 +15,10 @@ const remoteWorkerVersion = parseCargoVersion(
 	readFileSync(join(currentDir, '..', 'remote-worker-rs', 'Cargo.toml'), 'utf8'),
 );
 
+// The repository version (root package.json), kept in step with the Tauri configs by
+// scripts/release.ts; the update check compares it with the latest published release.
+const appVersion = (JSON.parse(readFileSync(join(currentDir, '..', '..', 'package.json'), 'utf8')) as {version: string}).version;
+
 // Dev-server convenience only: a browser cannot read the user's home directory, so the
 // token is injected at dev time. Guarded on `command === 'serve'` so a production build
 // always embeds an empty string.
@@ -47,6 +51,9 @@ export default defineConfig(({command, mode}) => ({
 	define: {
 		__REMOTE_WORKER_VERSION__: JSON.stringify(remoteWorkerVersion),
 		__DEV_SERVER_TOKEN__: JSON.stringify(command === 'serve' ? readDevToken() : ''),
+		__APP_VERSION__: JSON.stringify(appVersion),
+		// Which desktop shell the bundle is built for; picks the installer an update points to.
+		__APP_FLAVOR__: JSON.stringify(mode === TAURI_V1_MODE ? 'tauri-v1' : 'tauri'),
 	},
 	plugins: [
 		vue(),

@@ -55,4 +55,22 @@
 		color: $text-muted;
 		font-size: 11px;
 	}
+
+	.settings__hint--error {
+		color: $color-danger;
+	}
+
+	.settings__value {
+		color: $text-primary;
+		font-size: 13px;
+	}
+
+	.settings__link {
+		color: $color-accent;
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
 }

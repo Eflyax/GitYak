@@ -1,0 +1,13 @@
+{
+	"version": "2.1.0",
+	"tag": "v2.1.0",
+	"date": "2026-11-25T10:00:00.000Z",
+	"notes": "Sample manifest for `yarn workspace @git-yak/website dev`.\n\n- Image preview in diffs, with zoom and pan\n- Commit message and branch name templates\n- Builds for Ubuntu 20.04 and Windows",
+	"assets": [
+		{"platform": "macos-arm64", "file": "GitYak-2.1.0-macos-arm64.dmg", "url": "/releases/v2.1.0/GitYak-2.1.0-macos-arm64.dmg", "size": 9437184, "sha256": "0000000000000000000000000000000000000000000000000000000000000001"},
+		{"platform": "macos-x64", "file": "GitYak-2.1.0-macos-x64.dmg", "url": "/releases/v2.1.0/GitYak-2.1.0-macos-x64.dmg", "size": 9961472, "sha256": "0000000000000000000000000000000000000000000000000000000000000002"},
+		{"platform": "windows-x64", "file": "GitYak-2.1.0-windows-x64-setup.exe", "url": "/releases/v2.1.0/GitYak-2.1.0-windows-x64-setup.exe", "size": 5242880, "sha256": "0000000000000000000000000000000000000000000000000000000000000003"},
+		{"platform": "linux-x64", "file": "GitYak-2.1.0-linux-x64.deb", "url": "/releases/v2.1.0/GitYak-2.1.0-linux-x64.deb", "size": 5033164, "sha256": "0000000000000000000000000000000000000000000000000000000000000004"},
+		{"platform": "linux-x64-focal", "file": "GitYak-2.1.0-linux-x64-focal.deb", "url": "/releases/v2.1.0/GitYak-2.1.0-linux-x64-focal.deb", "size": 5033164, "sha256": "0000000000000000000000000000000000000000000000000000000000000005"}
+	]
+}

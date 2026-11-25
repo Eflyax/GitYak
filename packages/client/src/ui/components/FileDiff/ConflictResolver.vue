@@ -562,7 +562,7 @@ const positionLabel = computed(() => {
 
 	if (!total) return '';
 
-	return `${activeConflict.value >= 0 ? activeConflict.value + 1 : '–'} / ${total}`;
+	return `${activeConflict.value >= 0 ? activeConflict.value + 1 : '-'} / ${total}`;
 });
 
 // Read from the result text rather than from what was picked, so a conflict edited by hand

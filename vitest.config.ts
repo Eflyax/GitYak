@@ -31,6 +31,7 @@ export default defineConfig({
 			'packages/client/scripts/**/*.spec.ts',
 			'packages/protocol/src/**/*.spec.ts',
 			'packages/server/src/**/*.spec.ts',
+			'packages/website/src/**/*.spec.ts',
 			'scripts/**/*.spec.ts',
 		],
 	},

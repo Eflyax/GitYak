@@ -17,6 +17,11 @@ import {useThemeEditor} from '@/composables/useThemeEditor';
 import {useLayout} from '@/composables/useLayout';
 import {DATE_FORMATS, formatGitDate} from '@/domain/services/dateFormat';
 import type {TDateFormat} from '@/domain/services/dateFormat';
+import {APP_VERSION, useUpdateCheck} from '@/composables/useUpdateCheck';
+import type {TUpdateCheckStatus} from '@/composables/useUpdateCheck';
+import {WEBSITE_URL} from '@/domain/services/updates';
+import type {IAvailableUpdate} from '@/domain/services/updates';
+import {openExternal} from '@/infrastructure/openExternal';
 
 const
 	{themesDir, availableThemes, activeTheme, loadThemes} = useTheme(),
@@ -26,11 +31,12 @@ const
 	historySettings = useHistorySettings(),
 	{dateFormat} = useDateFormat(),
 	{globalCommitTemplate, globalBranchTemplates} = useTemplates(),
+	updateCheck = useUpdateCheck(),
 	isTauri = isTauriRuntime;
 
 const DATE_FORMAT_SAMPLE = '2026-11-03 14:05';
 
-type TSettingsSection = 'appearance' | 'dates' | 'history' | 'templates' | 'proxyJump';
+type TSettingsSection = 'appearance' | 'dates' | 'history' | 'templates' | 'proxyJump' | 'about';
 
 interface ISettingsSection {
 	key: TSettingsSection
@@ -46,6 +52,7 @@ const SECTIONS: ReadonlyArray<ISettingsSection> = [
 	{key: 'history', label: 'History', icon: 'mdi-history'},
 	{key: 'templates', label: 'Templates', icon: 'mdi-text-box-edit-outline'},
 	{key: 'proxyJump', label: 'SSH ProxyJump', icon: 'mdi-server-network', tauriOnly: true},
+	{key: 'about', label: 'About & Updates', icon: 'mdi-information-outline'},
 ];
 
 const visibleSections = SECTIONS.filter(section => !section.tauriOnly || isTauri);
@@ -82,6 +89,8 @@ export default defineComponent({
 	data() {
 		return {
 			isTauri,
+			appVersion: APP_VERSION,
+			websiteUrl: WEBSITE_URL,
 			pageSizeMin: PAGE_SIZE_MIN,
 			pageSizeMax: PAGE_SIZE_MAX,
 			proxyJumpBusy: false,
@@ -158,6 +167,22 @@ export default defineComponent({
 
 		proxyJumpEnabled(): boolean {
 			return sshProxyJump.enabled.value;
+		},
+
+		autoCheckUpdates(): boolean {
+			return updateCheck.autoCheck.value;
+		},
+
+		updateStatus(): TUpdateCheckStatus {
+			return updateCheck.status.value;
+		},
+
+		availableUpdate(): Readonly<IAvailableUpdate> | null {
+			return updateCheck.update.value;
+		},
+
+		updateError(): string {
+			return updateCheck.errorMessage.value;
 		},
 
 		identityFileOptions(): Array<AutoCompleteOption> {
@@ -298,6 +323,35 @@ export default defineComponent({
 			}
 			finally {
 				this.proxyJumpBusy = false;
+			}
+		},
+
+		onAutoCheckUpdatesInput(value: boolean): void {
+			updateCheck.autoCheck.value = value;
+		},
+
+		async onCheckUpdatesClick(): Promise<void> {
+			await updateCheck.checkForUpdates({includeSkipped: true});
+		},
+
+		async onDownloadUpdateClick(): Promise<void> {
+			if (this.availableUpdate) {
+				await this.openUrl(this.availableUpdate.downloadUrl);
+			}
+		},
+
+		async onReleaseNotesClick(): Promise<void> {
+			if (this.availableUpdate) {
+				await this.openUrl(this.availableUpdate.releaseNotesUrl);
+			}
+		},
+
+		async openUrl(url: string): Promise<void> {
+			try {
+				await openExternal(url);
+			}
+			catch (err: unknown) {
+				this.notify.error(`Cannot open ${url}: ${this.errorMessage(err)}`);
 			}
 		},
 

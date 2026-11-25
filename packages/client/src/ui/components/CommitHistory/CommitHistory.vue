@@ -42,7 +42,7 @@
 			<n-spin size="small" />
 		</div>
 
-		<!-- Empty state – no project -->
+		<!-- Empty state - no project -->
 		<div
 			v-else-if="!currentProject"
 			class="commit-history__empty"
@@ -51,7 +51,7 @@
 			<span>No repository open</span>
 		</div>
 
-		<!-- Empty state – needs init -->
+		<!-- Empty state - needs init -->
 		<div
 			v-else-if="needsInit && !loading"
 			class="commit-history__empty"
@@ -68,7 +68,7 @@
 			</NButton>
 		</div>
 
-		<!-- Empty state – nothing matched the search -->
+		<!-- Empty state - nothing matched the search -->
 		<div
 			v-else-if="!commits.length && !loading && isSearching"
 			test-id="commit-search-empty"
@@ -84,7 +84,7 @@
 			</NButton>
 		</div>
 
-		<!-- Empty state – no commits yet -->
+		<!-- Empty state - no commits yet -->
 		<div
 			v-else-if="!commits.length && !loading"
 			class="commit-history__empty"

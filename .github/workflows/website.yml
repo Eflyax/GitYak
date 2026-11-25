@@ -1,0 +1,42 @@
+# Deploys the static website (packages/website) to https://gityak.com. The download section
+# and the changelog read /releases/*.json at runtime, so releases never need a redeploy.
+name: Website
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'packages/website/**'
+      - 'packages/protocol/src/releases.ts'
+      - '.github/workflows/website.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: website
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: 85.255.6.155
+      DEPLOY_USER: gityak-deploy
+      DEPLOY_ROOT: /var/www/gityak.com
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-yarn
+        with:
+          node-version: '22'
+          yarn-version: '4.17.1'
+      - run: yarn workspace @git-yak/website build
+      - name: SSH access
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+      - name: Upload
+        run: rsync -a --delete --chmod=D755,F644 packages/website/dist/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_ROOT/site/"

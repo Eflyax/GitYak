@@ -64,6 +64,13 @@ async fn run_git_raw(args: Vec<String>, env: HashMap<String, String>) -> Result<
 }
 
 fn main() {
+    // With accelerated compositing, focal's webkit2gtk paints a blank window on every start
+    // after the first (seen under Xvfb with software GL). The UI needs no GPU compositing;
+    // a value the user sets still wins.
+    if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             if let Some(window) = app.get_window("main") {
@@ -84,6 +91,7 @@ fn main() {
             get_file_size,
             write_log,
             get_login_shell_path,
+            get_platform,
             browse_directory,
             read_file_at,
             read_file_bytes,

@@ -80,3 +80,4 @@ export function isRepoChangedEvent(value: unknown): value is IWsEvent {
 
 export {describeForbiddenGitOption, findForbiddenGitOption} from './gitArgs';
 export {blobObjectName} from './blob';
+export * from './releases';

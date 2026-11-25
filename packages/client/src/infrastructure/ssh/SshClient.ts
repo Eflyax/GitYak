@@ -2,6 +2,7 @@ import {Command} from '@tauri-apps/plugin-shell';
 import type {ITransportClient} from '../ITransportClient';
 import {ENetworkCommand} from '@/domain';
 import {blobObjectName} from '@git-yak/protocol';
+import {isWindowsHost} from '@/infrastructure/platform';
 
 /**
  * Escape a string so it is safe as a single-quoted shell argument.
@@ -29,6 +30,22 @@ export class SshClient implements ITransportClient {
 	}
 
 	/**
+	 * Reuse one connection for every command. Windows OpenSSH has no ControlMaster support,
+	 * so there each command opens its own connection.
+	 */
+	private multiplexArgs(): string[] {
+		if (isWindowsHost) {
+			return [];
+		}
+
+		return [
+			'-o', 'ControlMaster=auto',
+			'-o', `ControlPath=${this.controlPath}`,
+			'-o', 'ControlPersist=60',
+		];
+	}
+
+	/**
 	 * Build the SSH argv prefix (everything before the remote command string).
 	 * The remote command must be passed as a SINGLE pre-escaped string so SSH
 	 * hands it verbatim to the remote shell instead of joining it with spaces.
@@ -40,9 +57,7 @@ export class SshClient implements ITransportClient {
 			// upstreams (e.g. git@host) using the user's locally loaded keys.
 			'-A',
 			'-o', 'ForwardAgent=yes',
-			'-o', 'ControlMaster=auto',
-			'-o', `ControlPath=${this.controlPath}`,
-			'-o', 'ControlPersist=60',
+			...this.multiplexArgs(),
 			'-o', 'BatchMode=yes',
 			'-o', 'StrictHostKeyChecking=accept-new',
 			'-o', 'SendEnv=NONE',
@@ -161,6 +176,10 @@ export class SshClient implements ITransportClient {
 	}
 
 	close(): void {
+		if (isWindowsHost) {
+			return;
+		}
+
 		const args = [
 			'-O', 'exit',
 			'-o', `ControlPath=${this.controlPath}`,

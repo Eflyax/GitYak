@@ -420,6 +420,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@git-yak/website@workspace:packages/website":
+  version: 0.0.0-use.local
+  resolution: "@git-yak/website@workspace:packages/website"
+  dependencies:
+    "@types/node": "npm:^22.10.0"
+    sass-embedded: "npm:^1.97.3"
+    typescript: "npm:^5.7.3"
+    vite: "npm:^7.3.1"
+  languageName: unknown
+  linkType: soft
+
 "@guolao/vue-monaco-editor@npm:^1.5.1":
   version: 1.6.0
   resolution: "@guolao/vue-monaco-editor@npm:1.6.0"

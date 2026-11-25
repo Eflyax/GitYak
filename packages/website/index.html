@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<!-- Google Tag Manager -->
+	<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KHQBMV29"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+	</script>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>GitYak - Git GUI for local and remote repositories</title>
+	<meta name="description" content="GitYak is a free, cross-platform Git client with a visual commit graph that works on repositories on remote servers over SSH, with nothing to install on the server.">
+	<meta property="og:title" content="GitYak - Git GUI for local and remote repositories">
+	<meta property="og:description" content="A visual Git client that works over SSH. macOS, Windows and Linux.">
+	<meta property="og:image" content="https://gityak.com/screenshots/history.png">
+	<meta name="theme-color" content="#0d0c12">
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+	<header class="nav">
+		<div class="container nav__inner">
+			<a class="nav__brand" href="/">
+				<img src="/favicon.svg" alt="" width="32" height="32">
+				<span>GitYak</span>
+			</a>
+			<nav class="nav__links">
+				<a href="#features">Features</a>
+				<a href="/changelog.html">Changelog</a>
+				<a href="https://github.com/Eflyax/GitYak" rel="noopener">GitHub</a>
+				<a class="button button--small" href="#download">Download</a>
+			</nav>
+		</div>
+	</header>
+
+	<main>
+		<section class="hero">
+			<div class="container hero__inner">
+				<img class="hero__logo" src="/favicon.svg" alt="GitYak logo" width="120" height="120">
+				<h1 class="hero__title">The Git GUI that<br><span class="accent">goes where your code lives</span></h1>
+				<p class="hero__lead">
+					A visual Git client for repositories on your machine <em>and</em> on remote servers over SSH.
+					No agent to install, no copying code around — just your SSH access.
+				</p>
+				<div class="hero__actions" id="hero-download">
+					<a class="button button--primary" href="#download">Download</a>
+					<a class="button" href="https://github.com/Eflyax/GitYak" rel="noopener">View on GitHub</a>
+				</div>
+				<p class="hero__meta" id="hero-version">Free and open source · macOS · Windows · Linux</p>
+			</div>
+			<div class="container">
+				<figure class="screenshot screenshot--hero">
+					<img src="/screenshots/history.png" alt="GitYak showing the commit graph of a repository" width="1440" height="900">
+				</figure>
+			</div>
+		</section>
+
+		<section class="section" id="features">
+			<div class="container">
+				<h2 class="section__title">Everything you reach for every day</h2>
+				<p class="section__lead">Built out of necessity: a GitKraken-style workflow that also works on the repository on your server.</p>
+
+				<div class="features">
+					<article class="feature feature--wide">
+						<h3>Remote repositories over SSH</h3>
+						<p>
+							Open a repository on any server you can <code>ssh</code> into and work with it like a local one.
+							GitYak uses your system SSH with its keys, agent and <code>~/.ssh/config</code>, reuses one connection
+							for every command, and supports jump hosts (ProxyJump). Nothing has to be installed on the server.
+						</p>
+					</article>
+					<article class="feature">
+						<h3>Commit graph</h3>
+						<p>Branches, merges and tags drawn as a graph, with search, multi-select and paging that keeps even very long histories fast.</p>
+					</article>
+					<article class="feature">
+						<h3>Stage by hunk</h3>
+						<p>Stage, unstage or discard whole files or single hunks right in the side-by-side diff.</p>
+					</article>
+					<article class="feature">
+						<h3>Interactive rebase</h3>
+						<p>Reorder, squash, reword and drop commits in a dialog instead of a todo file. Drag a branch onto another to merge or rebase.</p>
+					</article>
+					<article class="feature">
+						<h3>Conflict resolver</h3>
+						<p>Pick ours or theirs for each conflict, side by side, and see the result before you continue the merge or rebase.</p>
+					</article>
+					<article class="feature">
+						<h3>Image diffs</h3>
+						<p>PNG, JPG, GIF, WebP and SVG changes shown before and after, with synced zoom and pan.</p>
+					</article>
+					<article class="feature">
+						<h3>Stash, cherry-pick, tags</h3>
+						<p>The everyday operations a right-click away, plus file history and blame.</p>
+					</article>
+					<article class="feature">
+						<h3>Command palette</h3>
+						<p>Every action and project is a few keystrokes away; keyboard shortcuts for the frequent ones.</p>
+					</article>
+					<article class="feature">
+						<h3>Themes</h3>
+						<p>A set of built-in themes, including a colour-blind friendly light one, and a live editor for your own.</p>
+					</article>
+					<article class="feature">
+						<h3>Templates</h3>
+						<p>Commit message prefixes and branch name templates, globally or per project.</p>
+					</article>
+					<article class="feature">
+						<h3>All your projects</h3>
+						<p>Local and remote repositories side by side, one click apart. A <code>gityak://</code> link adds a project from anywhere.</p>
+					</article>
+					<article class="feature">
+						<h3>Desktop or browser</h3>
+						<p>A native app for macOS, Windows and Linux, or a small local server and any browser.</p>
+					</article>
+					<article class="feature">
+						<h3>Activity log</h3>
+						<p>Every git command GitYak runs, with its output, so nothing happens behind your back. Hook output included.</p>
+					</article>
+				</div>
+			</div>
+		</section>
+
+		<section class="section section--alt">
+			<div class="container showcase">
+				<div class="showcase__text">
+					<h2 class="section__title">See what changed — even in images</h2>
+					<p>
+						Text changes open in a full side-by-side editor. Images get a preview of both versions with a
+						checkerboard background for transparency; zoom in to compare single pixels.
+					</p>
+				</div>
+				<figure class="screenshot">
+					<img src="/screenshots/image-diff.png" alt="An SVG change previewed before and after" width="1440" height="900" loading="lazy">
+				</figure>
+			</div>
+		</section>
+
+		<section class="section" id="download">
+			<div class="container">
+				<h2 class="section__title">Download</h2>
+				<p class="section__lead" id="download-lead">Loading the latest release…</p>
+
+				<div class="download__suggested" id="download-suggested"></div>
+
+				<table class="downloads" id="download-table" hidden>
+					<thead>
+						<tr><th>Platform</th><th>File</th><th>Size</th><th>SHA-256</th></tr>
+					</thead>
+					<tbody></tbody>
+				</table>
+
+				<div class="install-notes">
+					<article>
+						<h3>macOS</h3>
+						<p>
+							GitYak is not signed with an Apple Developer ID yet, so macOS blocks the first start. Open the
+							<code>.dmg</code>, drag GitYak to Applications, then either right-click it and choose <strong>Open</strong>,
+							or run:
+						</p>
+						<pre><code>xattr -cr /Applications/GitYak.app</code></pre>
+					</article>
+					<article>
+						<h3>Ubuntu / Debian</h3>
+						<p>Install the package with apt, which also installs git and the SSH client when they are missing:</p>
+						<pre><code>sudo apt install ./GitYak-*-linux-x64.deb</code></pre>
+						<p>On Ubuntu 20.04 use the <strong>Ubuntu 20.04</strong> package; it is built for its older system libraries.</p>
+					</article>
+					<article>
+						<h3>Windows <span class="badge">beta</span></h3>
+						<p>
+							Windows SmartScreen may warn about an unknown publisher: choose <strong>More info → Run anyway</strong>.
+							GitYak needs <a href="https://git-scm.com/download/win" rel="noopener">Git for Windows</a>.
+							The Windows build is new and less tested than the others.
+						</p>
+					</article>
+				</div>
+				<p class="download__updates">GitYak checks for new versions on startup and tells you when one is available (you can turn this off in Settings).</p>
+			</div>
+		</section>
+	</main>
+
+	<footer class="footer">
+		<div class="container footer__inner">
+			<span>© GitYak · MIT licence</span>
+			<nav>
+				<a href="/changelog.html">Changelog</a>
+				<a href="https://github.com/Eflyax/GitYak" rel="noopener">Source code</a>
+				<a href="https://github.com/Eflyax/GitYak/issues" rel="noopener">Report a bug</a>
+			</nav>
+		</div>
+	</footer>
+
+	<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

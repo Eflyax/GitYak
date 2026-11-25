@@ -6,6 +6,8 @@
 # focal's glibc 2.31 and webkit2gtk-4.0. Output: dist-linux/*.deb
 #
 # Requires Docker, plus what `yarn build:remote-worker` needs (Rust, cargo-zigbuild, zig).
+# SKIP_REMOTE_WORKER=1 uses the worker already in packages/remote-worker/dist (CI builds it
+# in a separate job).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,8 +16,13 @@ OUT="$ROOT/dist-linux"
 
 cd "$ROOT"
 
-echo "==> Remote worker (bundled as a resource)"
-yarn build:remote-worker
+if [[ "${SKIP_REMOTE_WORKER:-}" == "1" ]]; then
+	test -f packages/remote-worker/dist/remote-worker-linux-x64 \
+		|| { echo "SKIP_REMOTE_WORKER=1 but packages/remote-worker/dist/remote-worker-linux-x64 is missing" >&2; exit 1; }
+else
+	echo "==> Remote worker (bundled as a resource)"
+	yarn build:remote-worker
+fi
 
 echo "==> Frontend for Tauri 1"
 yarn workspace @git-yak/client build:tauri-v1
