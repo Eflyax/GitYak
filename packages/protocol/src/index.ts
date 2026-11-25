@@ -3,6 +3,8 @@ export enum ENetworkCommand {
 	GitRebase = 'gitRebase',
 	WriteFile = 'writeFile',
 	ReadFile = 'readFile',
+	/** Bytes of a file, base64-encoded: from the working tree, or at a revision when `revision` is set. */
+	ReadBlob = 'readBlob',
 	BrowseFiles = 'browseFiles',
 	SshAgentInit = 'sshAgentInit',
 	Heartbeat = 'heartbeat',
@@ -77,3 +79,4 @@ export function isRepoChangedEvent(value: unknown): value is IWsEvent {
 }
 
 export {describeForbiddenGitOption, findForbiddenGitOption} from './gitArgs';
+export {blobObjectName} from './blob';

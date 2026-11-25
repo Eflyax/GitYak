@@ -1,7 +1,6 @@
 import {invoke} from '@tauri-apps/api/core';
 import type {IProject} from '@/domain';
-
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+import {isTauri} from '@/infrastructure/tauri/isTauri';
 
 // Where the token comes from depends on what can reach the user's home directory:
 // Tauri reads the file directly; the Vite dev server injects it at build time; anything

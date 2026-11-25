@@ -48,6 +48,23 @@
 					</svg>
 				</button>
 				<button
+					v-if="imageKind === 'svg'"
+					test-id="toggle-image-preview-btn"
+					class="file-diff__action-btn"
+					:class="{'file-diff__action-btn--on': previewOn}"
+					title="Image preview"
+					@click="previewOn = !previewOn"
+				>
+					<svg
+						width="13"
+						height="13"
+						viewBox="0 0 24 24"
+						fill="currentColor"
+					>
+						<path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
+					</svg>
+				</button>
+				<button
 					test-id="toggle-blame-btn"
 					class="file-diff__action-btn"
 					:class="{'file-diff__action-btn--on': blameOn}"
@@ -146,7 +163,7 @@
 					@click="showRevision(entry)"
 				>
 					<span class="file-diff__history-subject">{{ entry.subject }}</span>
-					<span class="file-diff__history-meta">{{ entry.author }} · {{ entry.date }}</span>
+					<span class="file-diff__history-meta">{{ entry.author }} · {{ formatDate(entry.date) }}</span>
 				</button>
 			</div>
 
@@ -177,17 +194,37 @@
 
 			<div
 				v-else
-				class="file-diff__editor"
+				class="file-diff__editor file-diff__editor--stack"
 			>
-				<vue-monaco-diff-editor
-					:original="original"
-					:modified="modified"
-					:language="language"
-					theme="vs-dark"
-					:options="editorOptions"
-					class="file-diff__monaco"
-					@mount="handleEditorMount"
-				/>
+				<!-- v-show, not v-if: the hunk widgets and edit checks hold on to this editor. -->
+				<div
+					v-show="imageKind !== 'raster'"
+					class="file-diff__code"
+				>
+					<vue-monaco-diff-editor
+						:original="original"
+						:modified="modified"
+						:language="language"
+						theme="vs-dark"
+						:options="editorOptions"
+						class="file-diff__monaco"
+						@mount="handleEditorMount"
+					/>
+				</div>
+
+				<!-- A raster image has no text to diff, so its preview takes the whole area;
+				     an SVG preview sits under its source. -->
+				<div
+					v-if="imageKind === 'raster' || (imageKind === 'svg' && previewOn)"
+					class="file-diff__preview"
+					:class="{'file-diff__preview--full': imageKind === 'raster'}"
+				>
+					<ImagePreview
+						:key="loadCount"
+						:original="originalImage"
+						:modified="previewModified"
+					/>
+				</div>
 			</div>
 		</div>
 
@@ -208,11 +245,16 @@ import {NButton} from 'naive-ui';
 import {VueMonacoDiffEditor, VueMonacoEditor} from '@guolao/vue-monaco-editor';
 import {useGit} from '@/composables/useGit';
 import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useStagingActions} from '@/composables/useStagingActions';
+import {useDateFormat} from '@/composables/useDateFormat';
 import {useFileDiff} from '@/composables/useFileDiff';
 import {useFileHistory} from '@/composables/useFileHistory';
 import {getMonacoLanguage} from '@/composables/useMonacoLanguage';
 import {useCommands} from '@/composables/useCommands';
 import ConflictResolver from './ConflictResolver.vue';
+import ImagePreview from './ImagePreview.vue';
+import type {IImageSide} from '@/composables/useFileDiff';
+import {formatBytes, isRasterImagePath, isSvgPath, svgDataUrl} from '@/domain/services/imagePreview';
 import ConfirmDialog from '../ConfirmDialog.vue';
 import {useNotify} from '@/composables/useNotify';
 import type {IHunk} from '@/domain/services/patch';
@@ -237,9 +279,11 @@ function onKeydown(event: KeyboardEvent): void {
 onMounted(() => document.addEventListener('keydown', onKeydown, true));
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown, true));
 
-const {activePath, stageFile} = useGit();
+const {activePath} = useGit();
 const {loadStatus} = useWorkingTree();
-const {original, modified, patch, hunkActions, applyHunk, loadDiff} = useFileDiff();
+const {stageFile} = useStagingActions();
+const {formatDate} = useDateFormat();
+const {original, modified, originalImage, modifiedImage, loadCount, patch, hunkActions, applyHunk, loadDiff} = useFileDiff();
 const {entries: historyEntries, blame, loadHistory, loadBlame, clear: clearHistory} = useFileHistory();
 const notify = useNotify();
 
@@ -258,10 +302,37 @@ const language = computed(() => getMonacoLanguage(activePath.value ?? ''));
 const pathParts = computed(() => (activePath.value ?? '').split('/'));
 const isConflictFile = computed(() => modified.value.includes('<<<<<<<'));
 
+// ── Image preview ────────────────────────────────────────────────────────────
+
+const imageKind = computed<'svg' | 'raster' | null>(() => {
+	const path = activePath.value ?? '';
+
+	if (isSvgPath(path)) return 'svg';
+
+	return isRasterImagePath(path) ? 'raster' : null;
+});
+
+const previewOn = ref(true);
+
+// SVG source edited in the diff editor; null until the user changes it. The preview follows
+// the edits, so the effect of a change is visible before it is saved.
+const editedSvg = ref<string | null>(null);
+
+watch(modified, () => (editedSvg.value = null));
+
+const previewModified = computed<IImageSide | null>(() => {
+	if (imageKind.value !== 'svg' || editedSvg.value === null || editedSvg.value === modified.value) {
+		return modifiedImage.value;
+	}
+
+	return editedSvg.value
+		? {url: svgDataUrl(editedSvg.value), size: formatBytes(new TextEncoder().encode(editedSvg.value).length)}
+		: null;
+});
+
 async function handleStageFile(): Promise<void> {
 	if (!activePath.value) return;
 	await stageFile(activePath.value);
-	await loadStatus();
 }
 
 let diffEditor: editor.IStandaloneDiffEditor | null = null;
@@ -398,6 +469,14 @@ watch([patch, hunkActions], renderHunkWidgets);
 function handleEditorMount(editorInstance: editor.IStandaloneDiffEditor, monacoInstance: typeof Monaco): void {
 	diffEditor = editorInstance;
 	monaco = monacoInstance;
+
+	const modifiedEditor = editorInstance.getModifiedEditor();
+
+	modifiedEditor.onDidChangeModelContent(() => {
+		if (imageKind.value === 'svg') {
+			editedSvg.value = modifiedEditor.getValue();
+		}
+	});
 	// The editor mounts asynchronously — later than the first click, in practice. Whatever
 	// was requested while it was still loading is applied here, or it would never appear.
 	renderHunkWidgets();
@@ -719,6 +798,29 @@ const editorOptions = {
 		flex: 1;
 		overflow: hidden;
 		min-width: 0;
+	}
+
+	&__editor--stack {
+		display: flex;
+		flex-direction: column;
+	}
+
+	&__code {
+		flex: 1;
+		min-height: 0;
+	}
+
+	&__preview {
+		height: 40%;
+		min-height: 120px;
+		flex-shrink: 0;
+		border-top: 1px solid $border;
+
+		&--full {
+			flex: 1;
+			height: auto;
+			border-top: none;
+		}
 	}
 
 	&__blame-loading {

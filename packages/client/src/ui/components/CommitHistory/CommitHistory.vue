@@ -135,13 +135,14 @@
 				<!-- Commit rows -->
 				<div
 					class="commit-history__rows"
-					:style="{marginLeft: totalLeftMargin + 'px', transform: `translateY(${windowStart * ROW_HEIGHT}px)`}"
+					:style="{transform: `translateY(${windowStart * ROW_HEIGHT}px)`}"
 				>
 					<CommitRow
 						v-for="commit in windowCommits"
 						:key="commit.hash"
 						:commit="commit"
 						:is-selected="selectedHashes.includes(commit.hash)"
+						:offset="totalLeftMargin"
 						@select="handleSelectCommit(commit, $event)"
 						@contextmenu="onContextMenu(commit, $event)"
 					/>
@@ -587,6 +588,8 @@ watch(commits, newCommits => {
 		left: 0;
 		width: 180px;
 		z-index: 1;
+		// Clicks pass through to the full-width commit rows below; the chips opt back in.
+		pointer-events: none;
 	}
 
 	&__graph-col {

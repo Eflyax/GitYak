@@ -5,6 +5,7 @@ describe('ENetworkCommand', () => {
 	it('pins the wire values the Rust worker matches on', () => {
 		expect(ENetworkCommand.GitCall).toBe('gitCall');
 		expect(ENetworkCommand.ReadFile).toBe('readFile');
+		expect(ENetworkCommand.ReadBlob).toBe('readBlob');
 		expect(ENetworkCommand.WriteFile).toBe('writeFile');
 		expect(ENetworkCommand.BrowseFiles).toBe('browseFiles');
 		expect(ENetworkCommand.Heartbeat).toBe('heartbeat');

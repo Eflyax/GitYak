@@ -4,6 +4,7 @@ import {useBranches} from '@/composables/useBranches';
 import {useRebase} from '@/composables/useRebase';
 import {useNotify} from '@/composables/useNotify';
 import type {IMenuDeps, IRefContextTarget} from '@/composables/useContextMenu';
+import {EReferenceModalType} from '@/domain';
 
 export function useBranchMenu(deps: IMenuDeps) {
 	const
@@ -128,6 +129,22 @@ export function useBranchMenu(deps: IMenuDeps) {
 					label: 'Push',
 					icon: deps.menuIcon('mdi-cloud-upload'),
 					onClick: () => runAction(`Branch ${target.name} pushed`, () => pushBranch(target.name)),
+				});
+			}
+
+			// Renames the local branch only; its remote counterpart and upstream config are kept.
+			if (target.isLocal) {
+				items.push({
+					label: 'Rename…',
+					icon: deps.menuIcon('mdi-pencil'),
+					onClick: () => {
+						deps.referenceModalType.value = EReferenceModalType.Branch;
+						deps.referenceModalMode.value = 'rename';
+						deps.referenceModalCommitHash.value = undefined;
+						deps.referenceModalInitialName.value = target.name;
+						deps.referenceModalStashId.value = undefined;
+						deps.showReferenceModal.value = true;
+					},
 				});
 			}
 

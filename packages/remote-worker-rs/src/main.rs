@@ -1,3 +1,4 @@
+mod base64;
 mod commands;
 mod git_args;
 mod protocol;

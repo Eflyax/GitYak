@@ -8,6 +8,7 @@
 			:value="selectedPath"
 			:options="options"
 			placeholder="Select theme"
+			:disabled="isEditorOpen"
 			:input-props="{
 				'aria-label': 'Theme selector',
 				'role': 'listbox',

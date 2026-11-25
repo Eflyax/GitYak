@@ -16,7 +16,7 @@
 				:y1="LINE_Y"
 				x2="100%"
 				:y2="LINE_Y"
-				:stroke="lineColor"
+				:style="{stroke: shadeColor}"
 				:stroke-width="shownRefs.some(ref => isActive(ref)) ? LINE_WIDTH_THICK : LINE_WIDTH_THIN"
 			/>
 		</svg>
@@ -26,6 +26,7 @@
 			v-if="mergedRefs.length"
 			class="tags-wrapper"
 			:class="{'tags-wrapper--expanded': expanded}"
+			:style="{paddingTop: TAG_TOP + 'px'}"
 			@mouseenter="expanded = true"
 			@mouseleave="expanded = false"
 		>
@@ -34,7 +35,7 @@
 				:key="ref.id"
 				class="ref-tag"
 				:class="{'ref-tag--active': isActive(ref)}"
-				:style="{backgroundColor: tagColor}"
+				:style="{backgroundColor: isActive(ref) ? activeColor : shadeColor}"
 				:title="getTitle(ref)"
 				:test-id="`ref-${ref.id}`"
 				draggable="true"
@@ -90,14 +91,17 @@
 					</div>
 				</template>
 
-				<span class="ref-name">{{ ref.name }}</span>
+				<span class="ref-name">
+					<span class="ref-name__head">{{ splitRefName(ref.name).head }}</span>
+					<span class="ref-name__tail">{{ splitRefName(ref.name).tail }}</span>
+				</span>
 			</div>
 
 			<!-- Overflow badge -->
 			<div
 				v-if="!expanded && overflowCount > 0"
 				class="ref-tag ref-tag--overflow"
-				:style="{backgroundColor: tagColor}"
+				:style="{backgroundColor: shadeColor}"
 				:title="`${overflowCount} more`"
 			>
 				<span class="ref-name">+{{ overflowCount }}</span>
@@ -112,7 +116,7 @@ import {useDialog} from 'naive-ui';
 import type {IReference} from '@/domain';
 import {EReferenceType} from '@/domain';
 import Icon from '@/ui/components/Icon.vue';
-import {getGraphColor} from './graphColors';
+import {getGraphColor, getGraphShadeColor} from './graphColors';
 import type {ICommit} from '@/domain';
 import {useBranches} from '@/composables/useBranches';
 import {useContextMenu} from '@/composables/useContextMenu';
@@ -176,6 +180,23 @@ const LINE_Y = 13;
 const PADDING_LEFT = 12;
 const LINE_WIDTH_THICK = 4;
 const LINE_WIDTH_THIN = 1.5;
+// Must match `.ref-tag` height in the styles below.
+const TAG_HEIGHT = 18;
+// Centres the chips on the horizontal line (and thus on the graph node).
+const TAG_TOP = LINE_Y - TAG_HEIGHT / 2;
+
+// A truncated name keeps its last REF_TAIL_CHARS characters visible; the ellipsis goes into the
+// head, which never shrinks below its first few characters (`.ref-name__head` min-width).
+const REF_TAIL_CHARS = 5;
+const REF_HEAD_MIN_CHARS = 3;
+
+function splitRefName(name: string): {head: string; tail: string} {
+	if (name.length <= REF_HEAD_MIN_CHARS + REF_TAIL_CHARS) {
+		return {head: name, tail: ''};
+	}
+
+	return {head: name.slice(0, -REF_TAIL_CHARS), tail: name.slice(-REF_TAIL_CHARS)};
+}
 
 const props = defineProps<{
 	commit: ICommit;
@@ -241,8 +262,10 @@ const mergedRefs = computed((): IMergedRef[] => {
 	return [...mergedBranches, ...otherMerged];
 });
 
-const lineColor = computed(() => getGraphColor(props.commit.level ?? 0));
-const tagColor = computed(() => getGraphColor(props.commit.level ?? 0));
+// The line and the chips share the darker shade of the node border; only the chip of the
+// checked-out branch keeps the full lane colour as its highlight.
+const shadeColor = computed(() => getGraphShadeColor(props.commit.level ?? 0));
+const activeColor = computed(() => getGraphColor(props.commit.level ?? 0));
 
 const sortedRefs = computed((): IMergedRef[] => {
 	const all = mergedRefs.value;
@@ -391,6 +414,9 @@ function getTitle(ref: IMergedRef): string {
 <style scoped lang="scss">
 .commit-refs-row {
 	position: relative;
+	// Empty space here belongs to the commit row underneath (it selects the commit and opens
+	// its context menu); only the chips themselves take the pointer.
+	pointer-events: none;
 	display: flex;
 	align-items: center;
 	box-sizing: border-box;
@@ -414,12 +440,22 @@ function getTitle(ref: IMergedRef): string {
 	display: flex;
 	align-items: flex-start;
 	gap: 3px;
-	padding: 1px 6px 0;
+	padding: 0 6px;
 	width: 100%;
+	box-sizing: border-box;
 	overflow: hidden;
 	cursor: pointer;
 
+	// Collapsed: the first chip gives up width (its name ellipsizes) so the
+	// "+N" badge next to it always stays fully visible.
+	&:not(.tags-wrapper--expanded) .ref-tag:not(.ref-tag--overflow) {
+		flex-shrink: 1;
+		min-width: 0;
+	}
+
 	&--expanded {
+		// Keeps the hover across the gaps between stacked chips so the list does not collapse.
+		pointer-events: auto;
 		flex-direction: column;
 		gap: 2px;
 		width: auto;
@@ -433,7 +469,8 @@ function getTitle(ref: IMergedRef): string {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	height: 17px;
+	height: 18px;
+	box-sizing: border-box;
 	padding: 0 5px;
 	border-radius: 3px;
 	font-size: 12px;
@@ -442,10 +479,9 @@ function getTitle(ref: IMergedRef): string {
 	white-space: nowrap;
 	flex-shrink: 0;
 	cursor: pointer;
-	box-shadow: inset 0 0 0 999px rgba(black, 0.55);
+	pointer-events: auto;
 
 	&--active {
-		box-shadow: none;
 		color: $text-white;
 
 		svg {
@@ -454,7 +490,6 @@ function getTitle(ref: IMergedRef): string {
 	}
 
 	&--overflow {
-		box-shadow: inset 0 0 0 999px rgba(black, 0.55);
 		color: $text-white;
 	}
 
@@ -482,14 +517,29 @@ function getTitle(ref: IMergedRef): string {
 	flex-shrink: 0;
 }
 
+// Middle ellipsis: the head ellipsizes, the tail always stays visible.
 .ref-name {
+	display: inline-flex;
+	min-width: 0;
 	max-width: 110px;
-	overflow: hidden;
-	text-overflow: ellipsis;
+
+	&__head {
+		// Roughly REF_HEAD_MIN_CHARS characters plus the ellipsis.
+		min-width: 4ch;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	&__tail {
+		flex-shrink: 0;
+	}
 }
 
 .tags-wrapper--expanded .ref-name {
 	max-width: none;
-	overflow: visible;
+
+	&__head {
+		overflow: visible;
+	}
 }
 </style>

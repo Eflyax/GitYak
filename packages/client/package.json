@@ -10,7 +10,8 @@
 		"check:themes": "bun run scripts/check-themes.ts",
 		"tauri": "tauri",
 		"tauri:dev": "PATH=$HOME/.cargo/bin:$PATH tauri dev",
-		"tauri:build": "PATH=$HOME/.cargo/bin:$PATH tauri build"
+		"tauri:build": "PATH=$HOME/.cargo/bin:$PATH tauri build",
+		"build:tauri-v1": "vue-tsc --noEmit && vite build --mode tauri-v1"
 	},
 	"dependencies": {
 		"@git-yak/protocol": "workspace:*",
@@ -18,6 +19,7 @@
 		"@imengyu/vue3-context-menu": "^1.5.4",
 		"@mdi/js": "^7.4.47",
 		"@tauri-apps/api": "^2.0.0",
+		"@tauri-apps/api-v1": "npm:@tauri-apps/api@^1.6.0",
 		"@tauri-apps/plugin-deep-link": "^2",
 		"@tauri-apps/plugin-shell": "^2.0.0",
 		"chroma-js": "^3.2.0",

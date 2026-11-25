@@ -4,6 +4,15 @@ import {EFileArea, EFileStatus} from '@/domain';
 import {parseFilePatch, buildPatch} from '@/domain/services/patch';
 import type {IHunk, IFilePatch} from '@/domain/services/patch';
 import {useGit} from './useGit';
+import {
+	base64DataUrl,
+	formatBase64Size,
+	formatBytes,
+	getImageMimeType,
+	isRasterImagePath,
+	isSvgPath,
+	svgDataUrl,
+} from '@/domain/services/imagePreview';
 
 const EMPTY_TREE_HASH = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
@@ -15,50 +24,80 @@ const WORKING_TREE_REVISIONS: [string, string] = ['WORKING_TREE', 'HEAD'];
 const
 	original = ref(''),
 	modified = ref(''),
+	originalImage = ref<IImageSide | null>(null),
+	modifiedImage = ref<IImageSide | null>(null),
 	activeFile = ref<IFileStatus | null>(null),
-	patch = ref<IFilePatch | null>(null);
+	patch = ref<IFilePatch | null>(null),
+	// Bumped by every loadDiff, so views can start fresh for each file or revision shown.
+	loadCount = ref(0);
+
+/** One side of an image diff, ready for an <img>. */
+export interface IImageSide {
+	url: string;
+	/** Human-readable file size, e.g. "12.4 KB". */
+	size: string;
+}
+
+/** Where one side of a diff is read from; `revision: null` is the working tree. */
+interface IContentSource {
+	revision: string | null;
+	path: string;
+}
+
+function originalSource(file: IFileStatus, rev1: string): IContentSource | null {
+	if (file.status === EFileStatus.Added) return null;
+
+	const revision = file.area === EFileArea.Unstaged ? ':0' : rev1;
+
+	if (revision === 'EMPTY_ROOT' || revision === EMPTY_TREE_HASH) return null;
+
+	const path = ([EFileStatus.Renamed, EFileStatus.Conflicted] as string[]).includes(file.status)
+		? (file.oldPath ?? file.path)
+		: file.path;
+
+	return {revision, path};
+}
+
+function modifiedSource(file: IFileStatus, rev0: string): IContentSource | null {
+	if (file.status === EFileStatus.Deleted) return null;
+
+	const revision = file.area === EFileArea.Staged ? ':0' : rev0;
+
+	return {revision: revision === 'WORKING_TREE' ? null : revision, path: file.path};
+}
+
+function svgSide(source: string): IImageSide | null {
+	return source
+		? {url: svgDataUrl(source), size: formatBytes(new TextEncoder().encode(source).length)}
+		: null;
+}
 
 export function useFileDiff() {
-	const {callGit, readFile, activePath, getFilePatch, applyPatch} = useGit();
+	const {callGit, readFile, readBlob, activePath, getFilePatch, applyPatch} = useGit();
 
-	async function loadOriginal(file: IFileStatus, rev1: string): Promise<string> {
-		if (file.status === EFileStatus.Added) return '';
-
-		const rev = file.area === EFileArea.Unstaged ? ':0' : rev1;
-
-		if (rev === 'EMPTY_ROOT' || rev === EMPTY_TREE_HASH) return '';
-
-		const filePath = ([EFileStatus.Renamed, EFileStatus.Conflicted] as string[]).includes(file.status)
-			? (file.oldPath ?? file.path)
-			: file.path;
+	async function loadText(source: IContentSource | null): Promise<string> {
+		if (!source) return '';
 
 		try {
-			return await callGit('show', `${rev}:${filePath}`);
+			return source.revision === null
+				? await readFile(source.path)
+				: await callGit('show', `${source.revision}:${source.path}`);
 		}
 		catch {
 			return '';
 		}
 	}
 
-	async function loadModified(file: IFileStatus, rev0: string): Promise<string> {
-		if (file.status === EFileStatus.Deleted) return '';
-
-		const rev = file.area === EFileArea.Staged ? ':0' : rev0;
-
-		if (rev === 'WORKING_TREE') {
-			try {
-				return await readFile(file.path);
-			}
-			catch {
-				return '';
-			}
-		}
+	async function loadRasterImage(source: IContentSource | null, mimeType: string): Promise<IImageSide | null> {
+		if (!source) return null;
 
 		try {
-			return await callGit('show', `${rev}:${file.path}`);
+			const base64 = await readBlob(source.path, source.revision ?? undefined);
+
+			return {url: base64DataUrl(mimeType, base64), size: formatBase64Size(base64)};
 		}
 		catch {
-			return '';
+			return null;
 		}
 	}
 
@@ -85,13 +124,39 @@ export function useFileDiff() {
 		activePath.value = file.path;
 		activeFile.value = file;
 
-		const [rev0, rev1] = revisions;
+		const
+			[rev0, rev1] = revisions,
+			from = originalSource(file, rev1),
+			to = modifiedSource(file, rev0),
+			mimeType = getImageMimeType(file.path);
+
+		// A raster image is binary: read as text it is garbage for the editor, and its patch
+		// has no hunks. Only its bytes are loaded, for the preview.
+		if (mimeType && isRasterImagePath(file.path)) {
+			[originalImage.value, modifiedImage.value] = await Promise.all([
+				loadRasterImage(from, mimeType),
+				loadRasterImage(to, mimeType),
+			]);
+			original.value = '';
+			modified.value = '';
+			patch.value = null;
+			loadCount.value++;
+
+			return;
+		}
 
 		[original.value, modified.value, patch.value] = await Promise.all([
-			loadOriginal(file, rev1),
-			loadModified(file, rev0),
+			loadText(from),
+			loadText(to),
 			loadPatch(file, revisions),
 		]);
+
+		// SVG is text: the editor shows its source and the preview renders that same source.
+		const isSvg = isSvgPath(file.path);
+
+		originalImage.value = isSvg ? svgSide(original.value) : null;
+		modifiedImage.value = isSvg ? svgSide(modified.value) : null;
+		loadCount.value++;
 	}
 
 	/** Which per-hunk actions the current diff supports; empty when it has no stageable hunks. */
@@ -126,7 +191,10 @@ export function useFileDiff() {
 	return {
 		original: readonly(original),
 		modified: readonly(modified),
+		originalImage: readonly(originalImage),
+		modifiedImage: readonly(modifiedImage),
 		patch: readonly(patch),
+		loadCount: readonly(loadCount),
 		activeFile: readonly(activeFile),
 		hunkActions,
 		loadDiff,

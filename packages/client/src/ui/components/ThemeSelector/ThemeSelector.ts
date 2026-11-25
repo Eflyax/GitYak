@@ -3,8 +3,11 @@ import {NSelect} from 'naive-ui';
 import type {SelectGroupOption, SelectOption} from 'naive-ui';
 import type {IThemeEntry} from '@/domain/models/Theme';
 import {useTheme} from '@/composables/useTheme';
+import {useThemeEditor} from '@/composables/useThemeEditor';
 
-const {availableThemes, activeTheme, applyTheme} = useTheme();
+const
+	{availableThemes, activeTheme, applyTheme} = useTheme(),
+	{isEditorOpen} = useThemeEditor();
 
 export default defineComponent({
 	components: {NSelect},
@@ -33,6 +36,11 @@ export default defineComponent({
 					children: custom,
 				},
 			];
+		},
+
+		// Switching themes mid-edit would drop the live preview; finish or cancel the edit first.
+		isEditorOpen(): boolean {
+			return isEditorOpen.value;
 		},
 
 		selectedPath(): string | undefined {

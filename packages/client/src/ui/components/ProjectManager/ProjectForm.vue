@@ -202,6 +202,27 @@
 				/>
 			</n-form-item>
 
+			<n-form-item
+				label="Commit template"
+				feedback="Replaces the global commit template from Settings. Leave empty to use the global one."
+			>
+				<n-input
+					v-model:value="form.commitTemplate"
+					test-id="project-commit-template-input"
+					:placeholder="globalCommitTemplate ? `Global: ${globalCommitTemplate}` : 'e.g. [IMP] '"
+				/>
+			</n-form-item>
+
+			<n-form-item
+				label="Branch templates"
+				feedback="Offered when naming a branch, before the global templates from Settings."
+			>
+				<n-dynamic-tags
+					v-model:value="form.branchTemplates"
+					test-id="project-branch-templates-input"
+				/>
+			</n-form-item>
+
 			<n-form-item label="Color">
 				<div class="color-picker">
 					<button
@@ -261,6 +282,7 @@ import {
 	NInputGroup,
 	NInputNumber,
 	NButton,
+	NDynamicTags,
 	NModal,
 	NRadioGroup,
 	NRadioButton,
@@ -270,10 +292,13 @@ import {
 } from 'naive-ui';
 import {invoke} from '@tauri-apps/api/core';
 import {useProject} from '@/composables/useProject';
+import {useTemplates} from '@/composables/useTemplates';
+import {normalizeTemplates} from '@/domain/services/templates';
 import type {IProject} from '@/domain';
 import {EServerType} from '@/domain';
 import Icon from '@/ui/components/Icon.vue';
 import FileBrowser from './FileBrowser.vue';
+import {isTauri} from '@/infrastructure/tauri/isTauri';
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_SSH_PORT = 22;
@@ -289,8 +314,6 @@ const PRESET_COLORS = [
 	'#f472b6',
 ] as const;
 
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-
 interface IFormData {
 	alias: string;
 	path: string;
@@ -303,6 +326,8 @@ interface IFormData {
 	token: string;
 	groupId: string | null;
 	color: string;
+	commitTemplate: string;
+	branchTemplates: Array<string>;
 }
 
 const props = defineProps<{
@@ -315,6 +340,7 @@ const emit = defineEmits<{
 }>();
 
 const {groups, addProject, updateProject} = useProject();
+const {globalCommitTemplate} = useTemplates();
 const showBrowser = ref(false);
 const showKeySelect = ref(false);
 const detectedKeys = ref<string[]>([]);
@@ -347,6 +373,8 @@ function makeForm(project?: IProject | null): IFormData {
 		token: project?.token ?? '',
 		groupId: project?.groupId ?? null,
 		color: project?.color ?? PRESET_COLORS[0],
+		commitTemplate: project?.commitTemplate ?? '',
+		branchTemplates: [...(project?.branchTemplates ?? [])],
 	};
 }
 
@@ -416,6 +444,8 @@ function handleSave(): void {
 		token: form.token || undefined,
 		groupId: form.groupId ?? undefined,
 		color: form.color,
+		commitTemplate: form.commitTemplate || undefined,
+		branchTemplates: normalizeTemplates(form.branchTemplates),
 	};
 
 	if (isEdit.value && props.project) {

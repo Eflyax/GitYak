@@ -1,292 +1,304 @@
 <template>
-	<div class="staging-panel">
-		<!-- Header -->
-		<div class="staging-panel__header">
-			<NButton
-				test-id="discard-all-btn"
-				size="tiny"
-				type="error"
-				ghost
+	<NSpin
+		class="staging-panel-spin"
+		:show="isStaging"
+		:delay="150"
+		test-id="staging-spinner"
+	>
+		<div class="staging-panel">
+			<!-- Header -->
+			<div class="staging-panel__header">
+				<NButton
+					test-id="discard-all-btn"
+					size="tiny"
+					type="error"
+					ghost
+					title="Discard all changes"
+					@click="showDiscardConfirm = true"
+				>
+					<template #icon>
+						<Icon name="mdi-trash-can" />
+					</template>
+				</NButton>
+				<span class="staging-panel__branch-info">
+					<span>{{ totalCount }} file changes<template v-if="currentBranch"> on <strong>{{ currentBranch.name }}</strong></template></span>
+				</span>
+			</div>
+
+			<!-- File sections (scrollable) -->
+			<div class="staging-panel__files">
+				<!-- Unstaged files -->
+				<div class="staging-panel__section">
+					<div
+						class="staging-panel__section-header"
+					>
+						<div
+							test-id="unstaged-section-header"
+							@click="unstagedExpanded = !unstagedExpanded"
+						>
+							<svg
+								class="staging-panel__chevron"
+								:class="{'staging-panel__chevron--open': unstagedExpanded}"
+								width="12"
+								height="12"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+							>
+								<path d="M7 10l5 5 5-5z" />
+							</svg>
+							<span>{{ conflictDetected ? 'Conflicted Files' : 'Unstaged Files' }} ({{ unstagedFiles.length }})</span>
+						</div>
+						<NButton
+							v-if="unstagedFiles.length"
+							test-id="stage-all-btn"
+							class="staging-panel__stage-all"
+							size="tiny"
+							:type="conflictDetected ? 'warning' : 'success'"
+							secondary
+							@click="handleStageAll"
+						>
+							{{ conflictDetected ? 'Mark all resolved' : 'Stage all changes' }}
+						</NButton>
+					</div>
+
+					<n-virtual-list
+						v-if="unstagedExpanded"
+						ref="unstagedListRef"
+						class="staging-panel__file-list"
+						:items="unstagedFiles"
+						:item-size="FILE_ROW_HEIGHT"
+						key-field="path"
+					>
+						<template #default="{item: file}">
+							<div
+								:key="file.path"
+								test-id="unstaged-file"
+								class="staging-panel__file"
+								:class="{'staging-panel__file--active': activePath === file.path}"
+								@click="handleFileClick(file)"
+								@contextmenu.prevent="contextMenuFile($event, file.path)"
+							>
+								<div class="staging-panel__file-info">
+									<FileStatus :status="conflictDetected ? EFileStatus.Conflicted : file.status" />
+
+									<span class="staging-panel__file-path">
+										<span class="staging-panel__file-dir">{{ splitPath(file.path).dir }}</span>
+										<span class="staging-panel__file-name">{{ splitPath(file.path).name }}</span>
+									</span>
+								</div>
+
+								<NButton
+									test-id="stage-file-btn"
+									size="tiny"
+									class="staging-panel__stage-action"
+									:type="conflictDetected ? 'warning' : 'success'"
+									secondary
+									@click.stop="handleStageFile(file)"
+								>
+									{{ conflictDetected ? 'Mark resolved' : 'Stage file' }}
+								</NButton>
+							</div>
+						</template>
+					</n-virtual-list>
+				</div>
+
+				<!-- Staged files -->
+				<div class="staging-panel__section">
+					<div
+						class="staging-panel__section-header"
+					>
+						<div
+							test-id="staged-section-header"
+							@click="stagedExpanded = !stagedExpanded"
+						>
+							<svg
+								class="staging-panel__chevron"
+								:class="{'staging-panel__chevron--open': stagedExpanded}"
+								width="12"
+								height="12"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+							>
+								<path d="M7 10l5 5 5-5z" />
+							</svg>
+							<span>{{ conflictDetected ? 'Resolved Files' : 'Staged Files' }} ({{ stagedFiles.length }})</span>
+						</div>
+						<NButton
+							v-if="stagedFiles.length"
+							test-id="unstage-all-btn"
+							size="tiny"
+							secondary
+							type="error"
+							class="staging-panel__stage-all"
+							@click="unstageAll()"
+						>
+							Unstage all changes
+						</NButton>
+					</div>
+
+					<n-virtual-list
+						v-if="stagedExpanded"
+						ref="stagedListRef"
+						class="staging-panel__file-list"
+						:items="stagedFiles"
+						:item-size="FILE_ROW_HEIGHT"
+						key-field="path"
+					>
+						<template #default="{item: file}">
+							<div
+								:key="file.path"
+								test-id="staged-file"
+								class="staging-panel__file"
+								:class="{'staging-panel__file--active': activePath === file.path}"
+								@click="handleFileClick(file)"
+							>
+								<div class="staging-panel__file-info">
+									<FileStatus :status="file.status" />
+
+									<span class="staging-panel__file-path">
+										<span class="staging-panel__file-dir">{{ splitPath(file.path).dir }}</span>
+										<span class="staging-panel__file-name">{{ splitPath(file.path).name }}</span>
+									</span>
+								</div>
+
+								<NButton
+									test-id="unstage-file-btn"
+									size="tiny"
+									class="staging-panel__stage-action"
+									type="error"
+									secondary
+									@click.stop="unstageFile(file.path)"
+								>
+									Unstage file
+								</NButton>
+							</div>
+						</template>
+					</n-virtual-list>
+				</div>
+			</div>
+
+			<ConfirmDialog
+				v-model:show="showDiscardConfirm"
 				title="Discard all changes"
-				@click="showDiscardConfirm = true"
-			>
-				<template #icon>
-					<Icon name="mdi-trash-can" />
-				</template>
-			</NButton>
-			<span class="staging-panel__branch-info">
-				<span>{{ totalCount }} file changes<template v-if="currentBranch"> on <strong>{{ currentBranch.name }}</strong></template></span>
-			</span>
-		</div>
-
-		<!-- File sections (scrollable) -->
-		<div class="staging-panel__files">
-			<!-- Unstaged files -->
-			<div class="staging-panel__section">
-				<div
-					class="staging-panel__section-header"
-				>
-					<div
-						test-id="unstaged-section-header"
-						@click="unstagedExpanded = !unstagedExpanded"
-					>
-						<svg
-							class="staging-panel__chevron"
-							:class="{'staging-panel__chevron--open': unstagedExpanded}"
-							width="12"
-							height="12"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-						>
-							<path d="M7 10l5 5 5-5z" />
-						</svg>
-						<span>{{ conflictDetected ? 'Conflicted Files' : 'Unstaged Files' }} ({{ unstagedFiles.length }})</span>
-					</div>
-					<NButton
-						v-if="unstagedFiles.length"
-						test-id="stage-all-btn"
-						class="staging-panel__stage-all"
-						size="tiny"
-						:type="conflictDetected ? 'warning' : 'success'"
-						secondary
-						@click="handleStageAll"
-					>
-						{{ conflictDetected ? 'Mark all resolved' : 'Stage all changes' }}
-					</NButton>
-				</div>
-
-				<n-virtual-list
-					v-if="unstagedExpanded"
-					ref="unstagedListRef"
-					class="staging-panel__file-list"
-					:style="fileListStyle(unstagedFiles.length)"
-					:items="unstagedFiles"
-					:item-size="FILE_ROW_HEIGHT"
-					key-field="path"
-				>
-					<template #default="{item: file}">
-						<div
-							:key="file.path"
-							test-id="unstaged-file"
-							class="staging-panel__file"
-							:class="{'staging-panel__file--active': activePath === file.path}"
-							@click="handleFileClick(file)"
-							@contextmenu.prevent="contextMenuFile($event, file.path)"
-						>
-							<div>
-								<FileStatus :status="conflictDetected ? EFileStatus.Conflicted : file.status" />
-
-								<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
-							</div>
-
-							<NButton
-								test-id="stage-file-btn"
-								size="tiny"
-								class="staging-panel__stage-action"
-								:type="conflictDetected ? 'warning' : 'success'"
-								secondary
-								@click.stop="handleStageFile(file)"
-							>
-								{{ conflictDetected ? 'Mark resolved' : 'Stage file' }}
-							</NButton>
-						</div>
-					</template>
-				</n-virtual-list>
-			</div>
-
-			<!-- Staged files -->
-			<div class="staging-panel__section">
-				<div
-					class="staging-panel__section-header"
-				>
-					<div
-						test-id="staged-section-header"
-						@click="stagedExpanded = !stagedExpanded"
-					>
-						<svg
-							class="staging-panel__chevron"
-							:class="{'staging-panel__chevron--open': stagedExpanded}"
-							width="12"
-							height="12"
-							viewBox="0 0 24 24"
-							fill="currentColor"
-						>
-							<path d="M7 10l5 5 5-5z" />
-						</svg>
-						<span>{{ conflictDetected ? 'Resolved Files' : 'Staged Files' }} ({{ stagedFiles.length }})</span>
-					</div>
-					<NButton
-						v-if="stagedFiles.length"
-						test-id="unstage-all-btn"
-						size="tiny"
-						secondary
-						type="error"
-						class="staging-panel__stage-all"
-						@click="unstageAll"
-					>
-						Unstage all changes
-					</NButton>
-				</div>
-
-				<n-virtual-list
-					v-if="stagedExpanded"
-					ref="stagedListRef"
-					class="staging-panel__file-list"
-					:style="fileListStyle(stagedFiles.length)"
-					:items="stagedFiles"
-					:item-size="FILE_ROW_HEIGHT"
-					key-field="path"
-				>
-					<template #default="{item: file}">
-						<div
-							:key="file.path"
-							test-id="staged-file"
-							class="staging-panel__file"
-							:class="{'staging-panel__file--active': activePath === file.path}"
-							@click="handleFileClick(file)"
-						>
-							<div>
-								<FileStatus :status="file.status" />
-
-								<span class="staging-panel__file-name">{{ fileName(file.path) }}</span>
-							</div>
-
-							<NButton
-								test-id="unstage-file-btn"
-								size="tiny"
-								class="staging-panel__stage-action"
-								type="error"
-								secondary
-								@click.stop="unstageFile(file.path)"
-							>
-								Unstage file
-							</NButton>
-						</div>
-					</template>
-				</n-virtual-list>
-			</div>
-		</div>
-
-		<ConfirmDialog
-			v-model:show="showDiscardConfirm"
-			title="Discard all changes"
-			message="This will run permanently discard all uncommitted changes. Are you sure?"
-			@confirm="discardAllChanges"
-		/>
-
-		<!-- Commit form -->
-		<div class="staging-panel__commit-form">
-			<div class="staging-panel__commit-header">
-				<span class="staging-panel__commit-label">Commit</span>
-				<label class="staging-panel__amend-label">
-					<input
-						test-id="amend-checkbox"
-						type="checkbox"
-						:checked="amendMode"
-						:disabled="amendDisabled"
-						@change="handleAmendToggle(($event.target as HTMLInputElement).checked)"
-					>
-					<span>Amend previous commit</span>
-				</label>
-				<label
-					class="staging-panel__amend-label"
-					title="Bypass pre-commit and commit-msg hooks (--no-verify)"
-				>
-					<input
-						v-model="noVerify"
-						test-id="no-verify-checkbox"
-						type="checkbox"
-					>
-					<span>No verify</span>
-				</label>
-			</div>
-
-			<n-input
-				ref="commitSummaryInput"
-				v-model:value="commitSummary"
-				test-id="commit-summary-input"
-				placeholder="Commit summary"
-				size="small"
-				class="staging-panel__summary-input"
+				message="This will run permanently discard all uncommitted changes. Are you sure?"
+				@confirm="discardAllChanges"
 			/>
 
-			<n-input
-				v-model:value="commitDescription"
-				test-id="commit-description-input"
-				type="textarea"
-				placeholder="Description"
-				size="small"
-				:rows="3"
-				class="staging-panel__description-input"
-			/>
-			<div class="staging-panel__commit-actions">
-				<template v-if="operationKind === 'rebase'">
-					<NButton
-						test-id="rebase-continue-btn"
-						class="staging-panel__commit-btn"
-						type="success"
-						size="large"
-						secondary
-						:loading="rebaseBusy"
-						:disabled="!allConflictsResolved || rebaseBusy"
-						@click="handleRebaseContinue"
+			<!-- Commit form -->
+			<div class="staging-panel__commit-form">
+				<div class="staging-panel__commit-header">
+					<span class="staging-panel__commit-label">Commit</span>
+					<label class="staging-panel__amend-label">
+						<input
+							test-id="amend-checkbox"
+							type="checkbox"
+							:checked="amendMode"
+							:disabled="amendDisabled"
+							@change="handleAmendToggle(($event.target as HTMLInputElement).checked)"
+						>
+						<span>Amend previous commit</span>
+					</label>
+					<label
+						class="staging-panel__amend-label"
+						title="Bypass pre-commit and commit-msg hooks (--no-verify)"
 					>
-						Continue rebase
-					</NButton>
-					<NButton
-						test-id="rebase-skip-btn"
-						size="large"
-						secondary
-						:disabled="rebaseBusy"
-						@click="handleRebaseSkip"
-					>
-						Skip
-					</NButton>
-					<NButton
-						test-id="rebase-abort-btn"
-						class="staging-panel__abort-btn"
-						type="error"
-						size="large"
-						secondary
-						@click="handleAbort"
-					>
-						Abort rebase
-					</NButton>
-				</template>
-				<template v-else>
-					<NButton
-						test-id="commit-btn"
-						class="staging-panel__commit-btn"
-						type="success"
-						size="large"
-						secondary
-						:loading="isCommitting"
-						:disabled="commitDisabled || isCommitting"
-						@click="runCommit"
-					>
-						{{ commitButtonLabel }}
-					</NButton>
-					<NButton
-						v-if="conflictDetected"
-						test-id="abort-merge-btn"
-						class="staging-panel__abort-btn"
-						type="error"
-						size="large"
-						secondary
-						@click="handleAbort"
-					>
-						{{ abortLabel }}
-					</NButton>
-				</template>
+						<input
+							v-model="noVerify"
+							test-id="no-verify-checkbox"
+							type="checkbox"
+						>
+						<span>No verify</span>
+					</label>
+				</div>
+
+				<n-input
+					ref="commitSummaryInput"
+					v-model:value="commitSummary"
+					test-id="commit-summary-input"
+					placeholder="Commit summary"
+					size="small"
+					class="staging-panel__summary-input"
+				/>
+
+				<n-input
+					v-model:value="commitDescription"
+					test-id="commit-description-input"
+					type="textarea"
+					placeholder="Description"
+					size="small"
+					:rows="3"
+					class="staging-panel__description-input"
+				/>
+				<div class="staging-panel__commit-actions">
+					<template v-if="operationKind === 'rebase'">
+						<NButton
+							test-id="rebase-continue-btn"
+							class="staging-panel__commit-btn"
+							type="success"
+							size="large"
+							secondary
+							:loading="rebaseBusy"
+							:disabled="!allConflictsResolved || rebaseBusy"
+							@click="handleRebaseContinue"
+						>
+							Continue rebase
+						</NButton>
+						<NButton
+							test-id="rebase-skip-btn"
+							size="large"
+							secondary
+							:disabled="rebaseBusy"
+							@click="handleRebaseSkip"
+						>
+							Skip
+						</NButton>
+						<NButton
+							test-id="rebase-abort-btn"
+							class="staging-panel__abort-btn"
+							type="error"
+							size="large"
+							secondary
+							@click="handleAbort"
+						>
+							Abort rebase
+						</NButton>
+					</template>
+					<template v-else>
+						<NButton
+							test-id="commit-btn"
+							class="staging-panel__commit-btn"
+							type="success"
+							size="large"
+							secondary
+							:loading="isCommitting"
+							:disabled="commitDisabled || isCommitting"
+							@click="runCommit"
+						>
+							{{ commitButtonLabel }}
+						</NButton>
+						<NButton
+							v-if="conflictDetected"
+							test-id="abort-merge-btn"
+							class="staging-panel__abort-btn"
+							type="error"
+							size="large"
+							secondary
+							@click="handleAbort"
+						>
+							{{ abortLabel }}
+						</NButton>
+					</template>
+				</div>
 			</div>
 		</div>
-	</div>
+	</NSpin>
 </template>
 
 <script setup lang="ts">
 import {ref, computed, useTemplateRef, onMounted, onUnmounted, nextTick} from 'vue';
-import {NButton, NInput, NVirtualList} from 'naive-ui';
+import {NButton, NInput, NSpin, NVirtualList} from 'naive-ui';
 import {useWorkingTree} from '@/composables/useWorkingTree';
+import {useStagingActions} from '@/composables/useStagingActions';
 import {useBranches} from '@/composables/useBranches';
 import {useCommits} from '@/composables/useCommits';
 import {useGit} from '@/composables/useGit';
@@ -306,13 +318,14 @@ const emit = defineEmits<{
 	openDiff: [filePath: string]
 }>();
 
-const {status, loadStatus, stageFile, stageAll, unstageAll, unstageFile, discardAllChanges, conflictDetected, operationKind} = useWorkingTree();
+const {status, loadStatus, discardAllChanges, conflictDetected, operationKind, isStaging} = useWorkingTree();
+const {stageFile, stageAll, unstageAll, unstageFile} = useStagingActions();
 const {currentBranch, loadBranches} = useBranches();
 const {commits, loadCommits} = useCommits();
 const {mergeAbort, activePath, getCommitMessage, callGit, cherryPickAbort, rebaseContinue, rebaseSkip, rebaseAbort} = useGit();
 const {loadDiff} = useFileDiff();
 const {contextMenuFile} = useContextMenu();
-const {commitSummary, commitDescription, amendMode, noVerify, prefill} = useCommitForm();
+const {commitSummary, commitDescription, amendMode, noVerify, isSummaryEmpty, prefill, clearMessage} = useCommitForm();
 const {runCommit, isCommitting} = useCommitAction();
 const {register, unregister, setActive} = useListNav();
 const commitSummaryInput = useTemplateRef<InstanceType<typeof NInput>>('commitSummaryInput');
@@ -321,9 +334,6 @@ const stagedListRef = useTemplateRef<InstanceType<typeof NVirtualList>>('stagedL
 
 // Matches `.staging-panel__file`; the virtual lists position rows by it.
 const FILE_ROW_HEIGHT = 30;
-// The bottom border of a list, so a list at its natural height shows no scrollbar.
-const FILE_LIST_BORDER = 1;
-const FILE_LIST_MIN_HEIGHT = 90;
 const showDiscardConfirm = ref(false);
 const unstagedExpanded = ref(true);
 const stagedExpanded = ref(true);
@@ -340,7 +350,7 @@ const amendDisabled = computed(() => conflictDetected.value || !hasRegularHead.v
 
 const commitDisabled = computed(() => {
 	if (conflictDetected.value && unstagedFiles.value.length > 0) return true;
-	if (!commitSummary.value.trim()) return true;
+	if (isSummaryEmpty.value) return true;
 	if (amendMode.value) return false;
 
 	return !stagedFiles.value.length;
@@ -366,7 +376,7 @@ async function handleAmendToggle(checked: boolean): Promise<void> {
 	}
 	else {
 		amendMode.value = false;
-		prefill('', '');
+		clearMessage();
 	}
 }
 
@@ -378,17 +388,6 @@ const totalCount = computed(() => {
 
 	return paths.size;
 });
-
-// Both lists share the panel height. Each grows to fit its files and no further, so a short
-// list leaves the rest of the space to a long one; two long lists split it evenly.
-function fileListStyle(count: number): Record<string, string> {
-	const natural = count * FILE_ROW_HEIGHT + FILE_LIST_BORDER;
-
-	return {
-		maxHeight: `${natural}px`,
-		minHeight: `${Math.min(natural, FILE_LIST_MIN_HEIGHT)}px`,
-	};
-}
 
 // Only the rows near the viewport exist in the DOM, so keyboard navigation scrolls the list
 // itself instead of relying on the browser to reveal a focused row.
@@ -407,10 +406,13 @@ function revealFile(path: string): void {
 	}
 }
 
-function fileName(path: string): string {
-	const parts = path.split('/');
+// Directory part (with trailing slash) shown dimmed before the file name, as in the commit file list.
+function splitPath(path: string): {dir: string; name: string} {
+	const idx = path.lastIndexOf('/');
 
-	return parts[parts.length - 1] ?? path;
+	return idx >= 0
+		? {dir: path.slice(0, idx + 1), name: path.slice(idx + 1)}
+		: {dir: '', name: path};
 }
 
 async function handleFileClick(file: IFileStatus): Promise<void> {
@@ -426,7 +428,7 @@ async function handleStageFile(file: IFileStatus): Promise<void> {
 	const idx = list.findIndex(f => f.path === file.path);
 	const neighbour = list[idx + 1] ?? list[idx - 1];
 
-	await stageFile(file.path);
+	if (!(await stageFile(file.path))) return;
 
 	const target = neighbour && unstagedFiles.value.find(f => f.path === neighbour.path);
 
@@ -456,8 +458,12 @@ onMounted(() => register('staging', {moveUp: () => moveFile(-1), moveDown: () =>
 onUnmounted(() => unregister('staging'));
 
 async function handleStageAll(): Promise<void> {
-	await stageAll();
-	commitSummaryInput.value?.focus();
+	if (await stageAll()) {
+		commitSummaryInput.value?.focus();
+		// The summary may already hold the commit template; typing continues after it.
+		const input = commitSummaryInput.value?.inputElRef;
+		input?.setSelectionRange(input.value.length, input.value.length);
+	}
 }
 
 const rebaseBusy = ref(false);
@@ -521,6 +527,16 @@ loadStatus();
 </script>
 
 <style scoped lang="scss">
+// NSpin wraps the whole panel so the spinner (and its click-blocking mask) covers every
+// section while a stage/unstage runs.
+.staging-panel-spin {
+	height: 100%;
+
+	:deep(.n-spin-content) {
+		height: 100%;
+	}
+}
+
 .staging-panel {
 	display: flex;
 	flex-direction: column;
@@ -559,10 +575,17 @@ loadStatus();
 		min-height: 0;
 	}
 
-	// The headers and lists of both sections are laid out as one column, so the two
-	// scrollable lists can share the panel height between them.
+	// The two sections always split the panel height in half, collapsed or not, so the staged
+	// header stays at the same place and each list scrolls within its own half.
 	&__section {
-		display: contents;
+		flex: 1 1 0;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+
+		& + & {
+			border-top: 1px solid $border;
+		}
 	}
 
 	&__section-header {
@@ -619,7 +642,7 @@ loadStatus();
 
 	&__file-list {
 		flex: 1 1 0;
-		border-bottom: 1px solid $border;
+		min-height: 0;
 	}
 
 	&__file {
@@ -653,12 +676,39 @@ loadStatus();
 		border: 2px solid red;
 	}
 
-	&__file-name {
-		font-size: 12px;
-		color: $text-default;
+	&__file-info {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		flex: 1;
+		min-width: 0;
+	}
+
+	// A long directory is ellipsised first so the file name itself stays readable.
+	&__file-path {
+		display: flex;
+		flex: 1;
+		min-width: 0;
+		white-space: nowrap;
+	}
+
+	&__file-dir {
+		// Shrinks far faster than the name, so the name only loses space once the dir is gone.
+		flex: 0 1000 auto;
+		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		white-space: nowrap;
+		color: $text-faint;
+		font-size: 11.5px;
+	}
+
+	&__file-name {
+		flex: 0 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 12px;
+		color: $text-default;
 	}
 
 	&__commit-form {

@@ -93,6 +93,33 @@ test('clicking a local branch in the sidebar checks it out', async ({page, repo,
 		.toBe('other');
 });
 
+test('"Rename…" in the sidebar branch menu renames the local branch', async ({page, repo, openRepo}) => {
+	repo.commit('Initial', {'README.md': '# repo\n'});
+	repo.branch('old-name');
+
+	const hash = repo.run('rev-parse old-name').trim();
+
+	await openRepo(page, repo.path);
+	await waitForRepoLoaded(page);
+	await waitForCommitRow(page, 'Initial');
+
+	await sidebarLocalBranch(page, 'old-name').click({button: 'right'});
+	await menuItem(page, 'Rename…').click();
+
+	const input = byTestId(page, 'reference-name-input').locator('input');
+
+	// Prefilled with the current name, so a small edit is enough.
+	await expect(input).toHaveValue('old-name');
+	await input.fill('new-name');
+	await byTestId(page, 'reference-modal-confirm-btn').click();
+
+	await expect.poll(() => repo.run('branch --list new-name').trim(), {timeout: 10_000})
+		.toBe('new-name');
+	expect(repo.run('branch --list old-name').trim()).toBe('');
+	expect(repo.run('rev-parse new-name').trim()).toBe(hash);
+	await expect(sidebarLocalBranch(page, 'new-name')).toBeVisible({timeout: 10_000});
+});
+
 test('double-clicking a remote-only branch badge creates a tracking branch', async ({page, repo, openRepo}) => {
 	const remote = createBareRemote();
 

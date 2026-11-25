@@ -30,6 +30,22 @@ const
 	conflictDetected = ref(false),
 	operationKind = ref<TGitOperation | null>(null);
 
+// Stage/unstage operations in flight. On a big tree (many or large files) `git add` can take
+// a while; the staging panel covers itself with a spinner until the count drops back to 0.
+const stagingOps = ref(0);
+const isStaging = computed(() => stagingOps.value > 0);
+
+async function trackStaging(op: () => Promise<void>): Promise<void> {
+	stagingOps.value++;
+
+	try {
+		await op();
+	}
+	finally {
+		stagingOps.value--;
+	}
+}
+
 // The `git status` output the lists were last parsed from; an identical reload is skipped.
 let lastStatusOutput: string | null = null;
 // Shared by every caller, so loads requested from several components never run side by side.
@@ -175,23 +191,31 @@ export function useWorkingTree() {
 	const loadStatus = loadStatusOnce;
 
 	async function stageFile(filePath: string): Promise<void> {
-		await gitStageFile(filePath);
-		await loadStatus();
+		await trackStaging(async () => {
+			await gitStageFile(filePath);
+			await loadStatus();
+		});
 	}
 
 	async function stageAll(): Promise<void> {
-		await gitStageAll();
-		await loadStatus();
+		await trackStaging(async () => {
+			await gitStageAll();
+			await loadStatus();
+		});
 	}
 
 	async function unstageFile(filePath: string): Promise<void> {
-		await gitUnstageFile(filePath);
-		await loadStatus();
+		await trackStaging(async () => {
+			await gitUnstageFile(filePath);
+			await loadStatus();
+		});
 	}
 
 	async function unstageAll(): Promise<void> {
-		await gitUnstageAll();
-		await loadStatus();
+		await trackStaging(async () => {
+			await gitUnstageAll();
+			await loadStatus();
+		});
 	}
 
 	async function discardFile(filePath: string): Promise<void> {
@@ -212,6 +236,7 @@ export function useWorkingTree() {
 		conflictDetected: readonly(conflictDetected),
 		operationKind: readonly(operationKind),
 		hasUnresolvedConflicts,
+		isStaging,
 		loadStatus,
 		stageFile,
 		stageAll,
