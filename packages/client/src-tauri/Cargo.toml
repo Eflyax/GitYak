@@ -2,6 +2,9 @@
 name = "git-yak"
 version = "2.1.2"
 edition = "2021"
+# authors become the Maintainer and homepage the Homepage of the Linux .deb
+authors = ["Jakub Záruba"]
+homepage = "https://gityak.com"
 
 [lib]
 name = "git_yak_lib"
