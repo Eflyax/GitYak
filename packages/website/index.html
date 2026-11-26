@@ -3,18 +3,17 @@
 <head>
 	<meta charset="UTF-8">
 	<!-- Google Tag Manager -->
-	<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KHQBMV29"></script>
 	<script>
 		window.dataLayer = window.dataLayer || [];
-		function gtag(){dataLayer.push(arguments);}
-		gtag('js', new Date());
+		window.dataLayer.push({'gtm.start': Date.now(), event: 'gtm.js'});
 	</script>
+	<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KHQBMV29"></script>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>GitYak - Git GUI for local and remote repositories</title>
 	<meta name="description" content="GitYak is a free, cross-platform Git client with a visual commit graph that works on repositories on remote servers over SSH, with nothing to install on the server.">
 	<meta property="og:title" content="GitYak - Git GUI for local and remote repositories">
 	<meta property="og:description" content="A visual Git client that works over SSH. macOS, Windows and Linux.">
-	<meta property="og:image" content="https://gityak.com/screenshots/history.png">
+	<meta property="og:image" content="https://gityak.com/screenshots/history-1440.png">
 	<meta name="theme-color" content="#0d0c12">
 	<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
@@ -27,6 +26,7 @@
 			</a>
 			<nav class="nav__links">
 				<a href="#features">Features</a>
+				<a href="#themes">Themes</a>
 				<a href="/changelog.html">Changelog</a>
 				<a href="https://github.com/Eflyax/GitYak" rel="noopener">GitHub</a>
 				<a class="button button--small" href="#download">Download</a>
@@ -51,7 +51,7 @@
 			</div>
 			<div class="container">
 				<figure class="screenshot screenshot--hero">
-					<img src="/screenshots/history.png" alt="GitYak showing the commit graph of a repository" width="1440" height="900">
+					<img src="/screenshots/history-1440.png" srcset="/screenshots/history-1440.png 1440w, /screenshots/history.png 2880w" sizes="(max-width: 1120px) 100vw, 1072px" alt="GitYak showing the commit graph of a repository" width="1440" height="900" fetchpriority="high">
 				</figure>
 			</div>
 		</section>
@@ -122,22 +122,95 @@
 			</div>
 		</section>
 
-		<section class="section section--alt">
-			<div class="container showcase">
-				<div class="showcase__text">
-					<h2 class="section__title">See what changed — even in images</h2>
-					<p>
-						Text changes open in a full side-by-side editor. Images get a preview of both versions with a
-						checkerboard background for transparency; zoom in to compare single pixels.
-					</p>
+		<section class="section section--alt" id="tour">
+			<div class="container">
+				<h2 class="section__title">A closer look</h2>
+				<p class="section__lead">Every picture on this page is a screenshot of GitYak, most of them taken on its own repository.</p>
+
+				<div class="tour">
+					<div class="showcase">
+						<div class="showcase__text">
+							<h3>Stage exactly what you mean to commit</h3>
+							<p>Pick a file, read its side-by-side diff and stage or discard single hunks. Write the message, commit and push from the same screen.</p>
+						</div>
+						<figure class="screenshot">
+							<img src="/screenshots/staging.png" alt="The staging panel with a diff, unstaged and staged files and a commit message" width="857" height="850" loading="lazy">
+						</figure>
+					</div>
+					<div class="showcase showcase--reverse">
+						<div class="showcase__text">
+							<h3>Repositories on your servers</h3>
+							<p>Add a server the way you reach it in a terminal: host, user, key and path. GitYak runs git there through your system SSH, so your keys, agent and <code>~/.ssh/config</code> apply.</p>
+						</div>
+						<figure class="screenshot">
+							<img src="/screenshots/ssh-project.png" alt="The project form of a repository on a remote server over SSH" width="576" height="411" loading="lazy">
+						</figure>
+					</div>
+					<div class="showcase">
+						<div class="showcase__text">
+							<h3>Interactive rebase in a dialog</h3>
+							<p>Reorder, squash, fixup, reword and drop commits in a list instead of a todo file. Drop one branch on another to start a merge or rebase.</p>
+						</div>
+						<figure class="screenshot">
+							<img src="/screenshots/rebase.png" alt="The interactive rebase dialog with fixup and reword chosen for two commits" width="700" height="452" loading="lazy">
+						</figure>
+					</div>
+					<div class="showcase showcase--reverse">
+						<div class="showcase__text">
+							<h3>Resolve conflicts side by side</h3>
+							<p>Take the current or the incoming side of each conflict, then edit the result before you save it and continue the merge or rebase.</p>
+						</div>
+						<figure class="screenshot">
+							<img src="/screenshots/conflict.png" alt="The conflict resolver with the current and incoming versions of a file" width="704" height="454" loading="lazy">
+						</figure>
+					</div>
+					<div class="showcase">
+						<div class="showcase__text">
+							<h3>See what changed — even in images</h3>
+							<p>Text changes open in a full side-by-side editor. Images also get a preview of both versions with a checkerboard background for transparency; zoom in to compare single pixels.</p>
+						</div>
+						<figure class="screenshot">
+							<img src="/screenshots/image-diff.png" alt="A colour change in an SVG logo: the diff of its code and the logo before and after" width="1020" height="850" loading="lazy">
+						</figure>
+					</div>
+					<div class="showcase showcase--reverse">
+						<div class="showcase__text">
+							<h3>All your projects in one list</h3>
+							<p>Local and remote repositories side by side, one click apart, sorted into groups.</p>
+						</div>
+						<figure class="screenshot">
+							<img src="/screenshots/projects.png" alt="The project manager with local and remote repositories" width="706" height="446" loading="lazy">
+						</figure>
+					</div>
 				</div>
-				<figure class="screenshot">
-					<img src="/screenshots/image-diff.png" alt="An SVG change previewed before and after" width="1440" height="900" loading="lazy">
+			</div>
+		</section>
+
+		<section class="section" id="themes">
+			<div class="container">
+				<h2 class="section__title">Ten built-in themes</h2>
+				<p class="section__lead">The same history in every theme that ships with GitYak. Pick one in Settings, or copy one and change its colours in the live theme editor.</p>
+
+				<div class="theme-pick" role="radiogroup" aria-label="Theme">
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="true" data-theme-shot="default" style="--sw-bg: #0d0f11; --sw-ac: #6f9ef8"><i></i>Default</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="1984-theme" style="--sw-bg: #0b0d2c; --sw-ac: #ff16b0"><i></i>1984</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="amber-crt" style="--sw-bg: #140d06; --sw-ac: #ffb000"><i></i>Amber CRT</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="frantic-crimson" style="--sw-bg: #1e1718; --sw-ac: #e36464"><i></i>Frantic Crimson</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="light-color-blind" style="--sw-bg: #ffffff; --sw-ac: #0077bb"><i></i>Light Color Blind</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="matrix-terminal" style="--sw-bg: #000000; --sw-ac: #00ff41"><i></i>Matrix Terminal</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="midnight-grape" style="--sw-bg: #1a132b; --sw-ac: #c084fc"><i></i>Midnight Grape</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="nord-aurora" style="--sw-bg: #2e3440; --sw-ac: #88c0d0"><i></i>Nord Aurora</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="oled-dream" style="--sw-bg: #000000; --sw-ac: #cf90ff"><i></i>Oled Dream</button>
+					<button class="theme-pick__btn" type="button" role="radio" aria-checked="false" data-theme-shot="solarized-deep" style="--sw-bg: #002b36; --sw-ac: #2aa198"><i></i>Solarized Deep</button>
+				</div>
+
+				<figure class="screenshot theme-shot">
+					<img id="theme-shot" src="/screenshots/themes/default.png" alt="GitYak's commit history in the Default theme" width="1440" height="900" loading="lazy">
 				</figure>
 			</div>
 		</section>
 
-		<section class="section" id="download">
+		<section class="section section--alt" id="download">
 			<div class="container">
 				<h2 class="section__title">Download</h2>
 				<p class="section__lead" id="download-lead">Loading the latest release…</p>

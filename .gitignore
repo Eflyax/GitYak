@@ -41,3 +41,4 @@ graphify-out
 
 # Website screenshots are sources (yarn workspace @git-yak/e2e screenshots).
 !packages/website/public/screenshots/*.png
+!packages/website/public/screenshots/themes/*.png

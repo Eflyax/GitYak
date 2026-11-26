@@ -86,4 +86,56 @@ async function init(): Promise<void> {
 	}
 }
 
+
+/**
+ * The theme picker in #themes: each button shows the same history in that theme. The screenshots
+ * (packages/e2e/screenshots) are fetched on hover or focus, so only the ones looked at are loaded.
+ */
+function initThemePicker(): void {
+	const
+		shot = document.getElementById('theme-shot') as HTMLImageElement | null,
+		buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-theme-shot]')),
+		srcOf = (button: HTMLButtonElement): string => `/screenshots/themes/${button.dataset.themeShot}.png`,
+		preload = (button: HTMLButtonElement): void => {
+			new Image().src = srcOf(button);
+		};
+
+	if (!shot) {
+		return;
+	}
+
+	const pick = (button: HTMLButtonElement): void => {
+		for (const other of buttons) {
+			other.setAttribute('aria-checked', String(other === button));
+			other.tabIndex = other === button ? 0 : -1;
+		}
+
+		shot.src = srcOf(button);
+		shot.alt = `GitYak's commit history in the ${button.textContent?.trim() ?? ''} theme`;
+	};
+
+	buttons.forEach((button, index) => {
+		button.tabIndex = button.getAttribute('aria-checked') === 'true' ? 0 : -1;
+		button.addEventListener('pointerenter', () => preload(button), {once: true});
+		button.addEventListener('focus', () => preload(button), {once: true});
+		button.addEventListener('click', () => pick(button));
+		// a radio group: the arrow keys move the choice
+		button.addEventListener('keydown', event => {
+			const step = {ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1}[event.key];
+
+			if (!step) {
+				return;
+			}
+
+			event.preventDefault();
+
+			const next = buttons[(index + step + buttons.length) % buttons.length];
+
+			pick(next);
+			next.focus();
+		});
+	});
+}
+
 init();
+initThemePicker();
