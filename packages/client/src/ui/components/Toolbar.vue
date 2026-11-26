@@ -15,7 +15,7 @@
 					v-if="isReconnecting"
 					test-id="reconnecting-indicator"
 					class="toolbar__reconnecting"
-					title="Connection dropped — reconnecting…"
+					title="Connection dropped - reconnecting…"
 				>
 					<Icon
 						name="mdi-loading"
@@ -139,7 +139,7 @@ interface IRepoLocation {
 	title: string;
 }
 
-// Describes where the open repository physically lives — the project record is the
+// Describes where the open repository physically lives - the project record is the
 // source of truth, so in web mode "local" means the host running the Bun server.
 const location = computed<IRepoLocation>(() => {
 	const project = currentProject.value;

@@ -63,7 +63,7 @@ export class SshTunnelClient implements ITransportClient {
 
 			// createTunnel() only waits a fixed moment after `ssh -L` is spawned, which does not
 			// prove the forward is listening. Returning here before the socket is really open
-			// let the app's first commands race a connection-refused close that rejects them —
+			// let the app's first commands race a connection-refused close that rejects them -
 			// and a rejected `rev-parse` was then read as "this folder is not a git repository".
 			await this.wsClient.waitUntilOpen(TUNNEL_READY_TIMEOUT_MS);
 
@@ -94,7 +94,7 @@ export class SshTunnelClient implements ITransportClient {
 			this.log({type: 'ssh', status: 'info', direction: 'request', message: 'Uploading remote worker binary…'});
 			this.cs.setPhase('uploading');
 
-			// Kill any stale process before overwriting — prevents "Text file busy"
+			// Kill any stale process before overwriting - prevents "Text file busy"
 			await this.killRemoteWorker();
 
 			const localSize = await invoke<number>('get_file_size', {path: binaryPath});
@@ -132,7 +132,7 @@ export class SshTunnelClient implements ITransportClient {
 		this.cs.setPhase('starting');
 		this.log({type: 'ssh', status: 'info', direction: 'request', message: `Starting remote worker on ${this.host}`});
 
-		// Kill any stale instance — needed when version matched and upload was skipped
+		// Kill any stale instance - needed when version matched and upload was skipped
 		await this.killRemoteWorker();
 		await new Promise(r => setTimeout(r, 500));
 
@@ -224,7 +224,7 @@ export class SshTunnelClient implements ITransportClient {
 	}
 
 	private killRemoteWorker(): Promise<void> {
-		// Kill by PID file — reliable, no dependency on process name matching
+		// Kill by PID file - reliable, no dependency on process name matching
 		const cmd = 'pid=$(cat /tmp/gityak.pid 2>/dev/null); [ -n "$pid" ] && kill "$pid" 2>/dev/null; rm -f /tmp/gityak.pid; true';
 		return Command.create('ssh', this.buildSshArgs(cmd))
 			.execute()
@@ -280,7 +280,7 @@ export class SshTunnelClient implements ITransportClient {
 		return r.stdout;
 	}
 
-	/** Like runSsh but without activity log — used for progress polling */
+	/** Like runSsh but without activity log - used for progress polling */
 	private async execSsh(cmd: string): Promise<string> {
 		const r = await Command.create('ssh', this.buildSshArgs(cmd)).execute();
 		if (r.code !== 0) throw new Error(r.stderr?.trim() || `exit ${r.code}`);

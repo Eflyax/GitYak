@@ -11,7 +11,7 @@
 				test-id="commit-search-input"
 				class="commit-history__search-input"
 				type="text"
-				placeholder="Search history — text, author:name, file:path, content:text"
+				placeholder="Search history - text, author:name, file:path, content:text"
 				@keydown.enter="runSearch"
 				@keydown.esc.stop.prevent="clearSearch"
 			>
@@ -280,7 +280,7 @@ async function handleInitRepo(): Promise<void> {
 }
 
 // Create the first commit (README named after the project folder) for a repo
-// that has none yet — whether freshly `git init`ed here or opened from outside.
+// that has none yet - whether freshly `git init`ed here or opened from outside.
 async function bootstrapInitialCommit(): Promise<void> {
 	const path = currentProject.value?.path ?? '';
 	const folderName = path.split('/').filter(Boolean).pop()
@@ -317,7 +317,7 @@ const footerText = computed((): string => {
 	if (isLoadingMore.value) return 'Loading more commits…';
 
 	if (limitReached.value) {
-		return `Showing ${visibleCommits.value.length} commits — the limit can be raised in Settings`;
+		return `Showing ${visibleCommits.value.length} commits - the limit can be raised in Settings`;
 	}
 
 	return '';
@@ -403,7 +403,7 @@ async function refresh(): Promise<void> {
 		}
 	}
 	catch (e: unknown) {
-		// The repository could not be reached — a tunnel still coming up, a dropped socket.
+		// The repository could not be reached - a tunnel still coming up, a dropped socket.
 		// Leave needsInit as it was: claiming "not a git repository" here would latch a
 		// transport problem onto the repo, and nothing later clears it.
 		message.error(e instanceof Error ? e.message : 'Failed to reach the repository');

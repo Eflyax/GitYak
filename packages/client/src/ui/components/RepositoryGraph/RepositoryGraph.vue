@@ -297,7 +297,7 @@ function initSimulation(): void {
 			tick.value++;
 		});
 
-	// A restored layout is already settled — start cool so it barely moves.
+	// A restored layout is already settled - start cool so it barely moves.
 	if (restoredCount > 0) {
 		sim.alpha(0.2);
 	}

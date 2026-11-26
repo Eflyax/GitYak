@@ -20,7 +20,7 @@ const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 /**
  * Splits the output of `git diff` for a SINGLE file into its header and hunks, so that any
  * subset of those hunks can be handed back to `git apply`. Returns null when the diff has
- * no hunks to stage — an empty diff, a binary file, or a rename with no content change.
+ * no hunks to stage - an empty diff, a binary file, or a rename with no content change.
  *
  * The lines are kept verbatim: git owns the details (no-newline markers, CRLF, mode and
  * rename metadata) and a re-emitted hunk has to be byte-identical to the one git produced.

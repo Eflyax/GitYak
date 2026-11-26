@@ -30,7 +30,7 @@ pub fn run(req: &protocol::WsRequest, state: &AppState, tx: &UnboundedSender<Str
 	}
 
 	// Without this an authenticated peer could start a recursive watch of any directory it
-	// names — an entire filesystem included. A repository always has a `.git` entry (a
+	// names - an entire filesystem included. A repository always has a `.git` entry (a
 	// directory, or a file in a worktree or submodule), so requiring one bounds the watch to
 	// something the app has a reason to observe.
 	if !repo_path.join(".git").exists() {
@@ -69,7 +69,7 @@ pub fn run(req: &protocol::WsRequest, state: &AppState, tx: &UnboundedSender<Str
 		Err(e) => return protocol::error(request_id, &format!("Failed to create watcher: {e}")),
 	};
 
-	// The whole repository is watched recursively — notify handles recursion on Linux,
+	// The whole repository is watched recursively - notify handles recursion on Linux,
 	// unlike fs.watch in the Bun server.
 	if let Err(e) = debouncer.watcher().watch(&repo_path, RecursiveMode::Recursive) {
 		return protocol::error(request_id, &format!("Failed to watch repository: {e}"));

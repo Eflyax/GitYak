@@ -5,8 +5,8 @@ import {ENetworkCommand} from '../packages/protocol/src/index';
 import {extractRustCommands, extractTsSwitchCommands, findParityGaps} from './protocolParity';
 import type {IParityGaps} from './protocolParity';
 
-// The Rust worker is reached only through an SSH tunnel, so agent forwarding — a
-// Bun-server concern — has no counterpart there.
+// The Rust worker is reached only through an SSH tunnel, so agent forwarding - a
+// Bun-server concern - has no counterpart there.
 const RUST_EXEMPT = [ENetworkCommand.SshAgentInit];
 
 // Heartbeat is sent only over the SSH tunnel to keep the Rust worker alive
@@ -15,7 +15,7 @@ const BUN_EXEMPT = [ENetworkCommand.Heartbeat];
 
 // TauriLocalClient is the THIRD implementation of ITransportClient: the desktop app talks to
 // Tauri commands rather than to a socket, so a command handled by both socket backends can
-// still be missing here — as gitRebase was. The agent socket and the heartbeat are tunnel
+// still be missing here - as gitRebase was. The agent socket and the heartbeat are tunnel
 // concerns with no counterpart, and repository watching needs a Tauri event channel, which is
 // a separate, deferred decision.
 const TAURI_EXEMPT = [
@@ -56,5 +56,5 @@ const failures = report('the Rust worker', rustGaps)
 	+ report('the Tauri local client', tauriGaps);
 
 console.log(`\nrust commands: ${rustCommands.length}, bun commands: ${bunCommands.length}, tauri commands: ${tauriCommands.length}, protocol commands: ${tsCommands.length}`);
-console.log(failures === 0 ? 'OK — protocol in parity' : `${failures} failure(s)`);
+console.log(failures === 0 ? 'OK - protocol in parity' : `${failures} failure(s)`);
 process.exit(failures === 0 ? 0 : 1);

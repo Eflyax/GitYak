@@ -34,7 +34,7 @@ export function parseBranchRefs(output: string): {branches: Array<IBranch>; curr
 		const name = refname.replace(/^refs\/(heads|remotes)\//, '');
 
 		// `refs/remotes/<remote>/HEAD` is a symbolic pointer at the remote's default branch,
-		// not a branch of its own — showing it would duplicate whatever it points at.
+		// not a branch of its own - showing it would duplicate whatever it points at.
 		if (name === 'HEAD' || name.endsWith('/HEAD')) {
 			continue;
 		}

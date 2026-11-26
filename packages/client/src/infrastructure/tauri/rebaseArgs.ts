@@ -4,7 +4,7 @@
 // pieces, so no client string is ever handed to `git -c` unchecked.
 //
 // It is deliberately free of node's `path`/`fs` (the webview has neither) and of every Tauri
-// import, so it is directly unit-testable. Existence checks — which need the filesystem — are
+// import, so it is directly unit-testable. Existence checks - which need the filesystem - are
 // left to the caller, which is told through `todoPath` what to check.
 
 export interface IRebasePlan {
@@ -53,8 +53,8 @@ export function validateRepoPath(repoPath: unknown): string {
 }
 
 // The todo path becomes part of a `sequence.editor` shell command, so it must be proven to
-// sit inside the repository before it is interpolated. A path that escapes the repo — or
-// contains a quote that could break out of the surrounding single quotes — is refused.
+// sit inside the repository before it is interpolated. A path that escapes the repo - or
+// contains a quote that could break out of the surrounding single quotes - is refused.
 export function validateTodoPath(repoRoot: string, todoPath: unknown): string {
 	if (typeof todoPath !== 'string' || !todoPath) {
 		throw new Error('todo_path must be a non-empty string');

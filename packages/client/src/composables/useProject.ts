@@ -56,7 +56,7 @@ export function useProject() {
 	const
 		{connect, disconnect} = useWebSocket();
 
-	// `counted: false` is for opens the app makes on its own — restoring the last project on
+	// `counted: false` is for opens the app makes on its own - restoring the last project on
 	// startup, or following a group filter to its first project. Counting those would rank a
 	// project by how often the app was launched rather than by how often it was chosen.
 	async function openProject(project: IProject, {counted = true}: {counted?: boolean} = {}): Promise<void> {
@@ -125,7 +125,7 @@ export function useProject() {
 	}
 
 	// The updated project replaces its entry rather than being mutated in place: the views
-	// reload on a change of `currentProject`, which an in-place edit leaves untouched — an
+	// reload on a change of `currentProject`, which an in-place edit leaves untouched - an
 	// edited path would then be saved but never opened.
 	function updateProject(id: string, updates: Partial<Omit<IProject, 'id'>>): IProject | null {
 		const index = projects.value.findIndex(p => p.id === id);

@@ -11,7 +11,7 @@ export interface IParityGaps {
 const MATCH_ARM = /("[^"]+"(?:\s*\|\s*"[^"]+")*)\s*=>/g;
 const EXTRACT_LITERAL = /"([^"]+)"/g;
 
-// Matches a `case ENetworkCommand.Member:` arm of a TypeScript dispatch switch — the Bun
+// Matches a `case ENetworkCommand.Member:` arm of a TypeScript dispatch switch - the Bun
 // server's, and the desktop app's TauriLocalClient, which is the third transport. Both
 // switch on enum members rather than string literals, so the member name is resolved back
 // to its wire value through the enum itself.

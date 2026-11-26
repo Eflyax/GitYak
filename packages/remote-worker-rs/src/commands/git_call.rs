@@ -62,7 +62,7 @@ pub async fn run(req: &WsRequest) -> String {
 async fn run_git(cwd: &std::path::Path, args: &[String]) -> Result<String, String> {
 	// Read-only commands like `git status` otherwise refresh the index in place, taking
 	// .git/index.lock to do it. The repo watcher sees that write, the client refreshes with
-	// another `git status`, and the loop never ends — while the stray lock makes a concurrent
+	// another `git status`, and the loop never ends - while the stray lock makes a concurrent
 	// rebase or commit fail with "index.lock: File exists".
 	let output = tokio::process::Command::new("git")
 		.args(args)

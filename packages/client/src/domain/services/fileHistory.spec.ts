@@ -4,8 +4,8 @@ import {FILE_HISTORY_FORMAT, parseFileHistory} from './fileHistory';
 const SEP = '\x06';
 
 // Verified against `git log --follow --name-status -z`: the formatted header ends with a
-// newline followed by the status word, and every field after that — each path, then an
-// empty field closing the record — is NUL terminated.
+// newline followed by the status word, and every field after that - each path, then an
+// empty field closing the record - is NUL terminated.
 function record(hash: string, author: string, date: string, subject: string, status: string, ...paths: Array<string>): string {
 	return [hash, author, date, subject].join(SEP) + '\n' + status + '\0' + paths.map(p => p + '\0').join('') + '\0';
 }

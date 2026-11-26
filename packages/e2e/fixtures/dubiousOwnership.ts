@@ -6,7 +6,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 
 /**
  * A second backend runs on this port with `GIT_TEST_ASSUME_DIFFERENT_OWNER=1`, which makes
- * git treat every repository as owned by another user — the refusal this exercises. Only
+ * git treat every repository as owned by another user - the refusal this exercises. Only
  * tests that deliberately point a project at this port are affected.
  */
 export const DUBIOUS_OWNERSHIP_PORT = 3001;

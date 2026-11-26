@@ -11,7 +11,7 @@ import {
 // git answers with the real "detected dubious ownership" refusal.
 //
 // git names the resolved directory in that refusal, and the exception has to be recorded for
-// exactly that path — on macOS the fixture's /var/folders/… is a symlink into /private/var.
+// exactly that path - on macOS the fixture's /var/folders/… is a symlink into /private/var.
 test.beforeEach(() => resetDubiousOwnershipConfig());
 
 test('a repository git refuses to trust offers to add the exception', async ({page, repo, openRepo}) => {

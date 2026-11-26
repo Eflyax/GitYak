@@ -69,7 +69,7 @@ const emit = defineEmits<{
 
 <style lang="scss" scoped>
 // These rules used to live in ProjectManager, where scoped CSS could not reach past this
-// component's root — which is why the colour dot never showed up.
+// component's root - which is why the colour dot never showed up.
 .project-item {
 	display: flex;
 	align-items: center;

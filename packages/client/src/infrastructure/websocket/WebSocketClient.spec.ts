@@ -22,8 +22,8 @@ class FakeSocket {
 let socket: FakeSocket;
 
 beforeEach(() => {
-	// Each `new WebSocket(...)` call — including the ones a reconnect makes internally via
-	// open() — returns a fresh FakeSocket and reassigns the outer `socket` binding to it, so
+	// Each `new WebSocket(...)` call - including the ones a reconnect makes internally via
+	// open() - returns a fresh FakeSocket and reassigns the outer `socket` binding to it, so
 	// a reconnect test can tell a genuine new connection apart from the original by identity.
 	vi.stubGlobal('WebSocket', function (this: unknown) {
 		socket = new FakeSocket();
@@ -163,10 +163,10 @@ describe('WebSocketClient reconnect', () => {
 
 		const first = socket;
 
-		// Unintentional close: not closedByUser, not authFailed — a retry is scheduled.
+		// Unintentional close: not closedByUser, not authFailed - a retry is scheduled.
 		socket.onclose?.();
 
-		// A retry is scheduled but not due yet — close() before it fires must cancel it,
+		// A retry is scheduled but not due yet - close() before it fires must cancel it,
 		// not let it resurrect a socket nobody holds a reference to (Critical 1).
 		client.close();
 

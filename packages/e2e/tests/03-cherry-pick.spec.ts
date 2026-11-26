@@ -20,7 +20,7 @@ test('cherry-pick a feature commit onto master via context menu', async ({page, 
 
 	await page.locator('.mx-context-menu-item:has-text("Cherry pick")').first().click();
 
-	// After cherry-pick, the feature commit's subject should now appear on master too —
+	// After cherry-pick, the feature commit's subject should now appear on master too -
 	// since git deduplicates by subject, we look for the file in the worktree by reload.
 	await page.waitForTimeout(2_000);
 

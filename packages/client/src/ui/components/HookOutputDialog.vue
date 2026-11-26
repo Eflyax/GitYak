@@ -10,7 +10,7 @@
 			class="hook-output__body"
 		>
 			<p class="hook-output__message">
-				{{ success ? 'Commit succeeded. Hook output:' : 'Commit failed — the pre-commit hook reported:' }}
+				{{ success ? 'Commit succeeded. Hook output:' : 'Commit failed - the pre-commit hook reported:' }}
 			</p>
 			<pre
 				test-id="hook-output-text"

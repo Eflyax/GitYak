@@ -10,7 +10,7 @@
 		<div class="rebase">
 			<div class="rebase__intro">
 				Rebasing <strong>{{ source }}</strong> onto <strong>{{ target }}</strong>
-				<span class="rebase__hint">— top row is applied first</span>
+				<span class="rebase__hint">- top row is applied first</span>
 			</div>
 
 			<div class="rebase__list">
@@ -130,7 +130,7 @@ const dragIndex = ref<number | null>(null);
 
 const keptCount = computed(() => steps.value.filter(s => s.action !== 'drop').length);
 
-// Index of the first non-dropped step — it can't meld into a predecessor.
+// Index of the first non-dropped step - it can't meld into a predecessor.
 const firstKeptIndex = computed(() => steps.value.findIndex(s => s.action !== 'drop'));
 
 function isActionDisabled(action: TRebaseAction, index: number): boolean {

@@ -37,7 +37,7 @@ test('multi-select two consecutive commits and squash via context menu', async (
 
 	await selectWorkingTree(page);
 
-	// Commit form is prefilled — fill summary if blank and commit
+	// Commit form is prefilled - fill summary if blank and commit
 	const summaryInput = byTestId(page, 'commit-summary-input').locator('input');
 	const value = await summaryInput.inputValue();
 

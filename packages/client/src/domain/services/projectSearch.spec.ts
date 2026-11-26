@@ -80,7 +80,7 @@ describe('filterProjects', () => {
 	it('ranks an alias substring below an alias prefix and above a path segment', () => {
 		// Order matters here: the sort is stable, so the lower-ranked item is listed FIRST.
 		// With the tier-2 project ahead of the tier-3 one, a regression that collapsed the
-		// two tiers would reverse them in the output — which is what makes this test able to
+		// two tiers would reverse them in the output - which is what makes this test able to
 		// fail. Listing them the other way round proves only 4 > 3.
 		const items = [
 			project('Alpha', '/home/me/tools'),         // last path segment -> 2

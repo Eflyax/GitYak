@@ -68,7 +68,7 @@ test('hard reset moves HEAD and discards the undone change', async ({page, repo,
 
 	await resetTo(page, 'Initial', 'Hard');
 
-	// The app may (should) ask first — accept if it does, so this test covers the
+	// The app may (should) ask first - accept if it does, so this test covers the
 	// reset itself regardless of the confirmation defect below.
 	const yes = byTestId(page, 'confirm-dialog-yes-btn');
 
@@ -82,7 +82,7 @@ test('hard reset moves HEAD and discards the undone change', async ({page, repo,
 });
 
 test('hard reset asks for confirmation before discarding work', async ({page, repo, openRepo}) => {
-	// Known defect: "Hard" runs `git reset --hard` immediately — no confirmation, although it
+	// Known defect: "Hard" runs `git reset --hard` immediately - no confirmation, although it
 	// destroys uncommitted work and drops commits from the branch.
 	test.fail();
 

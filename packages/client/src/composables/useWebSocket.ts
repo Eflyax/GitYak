@@ -25,7 +25,7 @@ export function useWebSocket() {
 	async function connect(project: IProject): Promise<void> {
 		useConnectionStatus().reset();
 
-		// Whatever was open before is closed once its replacement is installed — including an
+		// Whatever was open before is closed once its replacement is installed - including an
 		// SSH tunnel, which used to be left behind. An abandoned client still has
 		// closedByUser === false, so it would reconnect on a backoff loop forever, hold a
 		// server-side watch session, and light the reconnecting indicator for a project that

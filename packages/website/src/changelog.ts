@@ -1,8 +1,13 @@
 import './styles/main.scss';
 import {RELEASE_PLATFORMS} from '@git-yak/protocol';
 import type {IRelease} from '@git-yak/protocol';
+import {initConsent} from './consent';
+import {markDownload, trackDownloads} from './downloads';
 import {renderMarkdown} from './markdown';
+import {detectOs, suggestedPlatforms} from './platform';
 import {el, fetchReleaseIndex, formatDate} from './releases';
+
+const suggested = new Set(suggestedPlatforms(detectOs(navigator.userAgent)));
 
 function renderRelease(release: IRelease): HTMLElement {
 	const notes = el('div', {class: 'release__notes'});
@@ -13,7 +18,10 @@ function renderRelease(release: IRelease): HTMLElement {
 	const downloads = release.assets.length
 		? el('p', {class: 'release__downloads'}, 'Download: ', ...release.assets.flatMap((asset, index) => [
 			...(index ? [' · '] : []),
-			el('a', {href: asset.url, download: ''}, RELEASE_PLATFORMS.find(p => p.platform === asset.platform)?.label ?? asset.platform),
+			markDownload(
+				el('a', {href: asset.url, download: ''}, RELEASE_PLATFORMS.find(p => p.platform === asset.platform)?.label ?? asset.platform),
+				asset, release.version, 'changelog', suggested.has(asset.platform),
+			),
 		]))
 		: el('p', {class: 'release__downloads muted'}, 'Installers of this version are no longer hosted.');
 
@@ -48,4 +56,6 @@ async function init(): Promise<void> {
 	}
 }
 
+initConsent();
+trackDownloads();
 init();

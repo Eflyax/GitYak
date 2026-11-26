@@ -15,7 +15,7 @@ export function useStashMenu() {
 				await callGit('stash', action, stashId);
 			}
 			catch {
-				// Conflict / error — keep going, the working tree state will
+				// Conflict / error - keep going, the working tree state will
 				// surface in the staging panel after refresh.
 			}
 			finally {

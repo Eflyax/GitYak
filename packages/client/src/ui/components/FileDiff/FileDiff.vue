@@ -365,7 +365,7 @@ function clearHunkWidgets(): void {
 
 /**
  * Hunk actions rewrite the file on disk, so an unsaved edit in the editor would be silently
- * lost — or make the patch no longer apply. Refuse while the buffer differs from what we
+ * lost - or make the patch no longer apply. Refuse while the buffer differs from what we
  * loaded.
  */
 function hasUnsavedEdits(): boolean {
@@ -477,7 +477,7 @@ function handleEditorMount(editorInstance: editor.IStandaloneDiffEditor, monacoI
 			editedSvg.value = modifiedEditor.getValue();
 		}
 	});
-	// The editor mounts asynchronously — later than the first click, in practice. Whatever
+	// The editor mounts asynchronously - later than the first click, in practice. Whatever
 	// was requested while it was still loading is applied here, or it would never appear.
 	renderHunkWidgets();
 
@@ -908,7 +908,7 @@ const editorOptions = {
 	}
 
 	// Hunk widgets are created imperatively for Monaco, so they never carry the scope
-	// attribute — reach them through the editor subtree instead.
+	// attribute - reach them through the editor subtree instead.
 	&__editor :deep(.file-diff__hunk-actions) {
 		display: flex;
 		gap: 4px;

@@ -5,7 +5,7 @@ import {TauriLocalClient} from './TauriLocalClient';
 // TauriLocalClient is the third implementation of ITransportClient, alongside the Bun server
 // and the Rust worker, and the only one the e2e suite (which runs in web mode) cannot reach.
 // A command added to the protocol and to "both backends" but not here fails in the shipped
-// desktop app only — so its coverage is pinned by a test instead.
+// desktop app only - so its coverage is pinned by a test instead.
 const HANDLED = [
 	ENetworkCommand.GitCall,
 	ENetworkCommand.GitRebase,
@@ -36,7 +36,7 @@ async function messageOf(command: ENetworkCommand, payload: Record<string, unkno
 
 describe('TauriLocalClient command coverage', () => {
 	it.each(HANDLED)('handles %s', async command => {
-		// Outside Tauri the underlying invoke/shell call fails — what matters is that the
+		// Outside Tauri the underlying invoke/shell call fails - what matters is that the
 		// switch recognised the command instead of falling through to its default arm.
 		expect(await messageOf(command)).not.toMatch(/^Unknown command:/);
 	});

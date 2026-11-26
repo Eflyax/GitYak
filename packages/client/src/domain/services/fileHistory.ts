@@ -8,7 +8,7 @@ export interface IFileHistoryEntry {
 	author: string
 	date: string
 	subject: string
-	/** git's name-status letter: A, M, D, R… — empty when the commit reported none. */
+	/** git's name-status letter: A, M, D, R… - empty when the commit reported none. */
 	status: string
 	/** The path the file had AT this commit, which a rename changes. */
 	path: string
@@ -19,7 +19,7 @@ export interface IFileHistoryEntry {
 /**
  * Parses `git log --follow --name-status -z` for a single file.
  *
- * With `-z` every field is NUL terminated, paths included — so a record reads as
+ * With `-z` every field is NUL terminated, paths included - so a record reads as
  * `<header>\n<status>` NUL `<path>` [NUL `<newPath>`] NUL NUL, where the empty field closes
  * the record. Splitting the whole output on NUL therefore yields a flat token stream in
  * which a token carrying the field separator starts a new commit and the tokens after it are

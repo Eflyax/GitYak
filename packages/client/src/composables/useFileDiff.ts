@@ -172,7 +172,7 @@ export function useFileDiff() {
 
 	/**
 	 * Applies one hunk and reloads the diff, so the editor and the remaining hunks reflect
-	 * the new state. Returns false when the file has no changes left in its area — the
+	 * the new state. Returns false when the file has no changes left in its area - the
 	 * caller closes the viewer in that case, matching what staging a whole file does.
 	 */
 	async function applyHunk(hunk: IHunk, mode: 'stage' | 'unstage' | 'discard'): Promise<boolean> {

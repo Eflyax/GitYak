@@ -5,7 +5,7 @@ import {byTestId, waitForRepoLoaded, waitForCommitRow} from '../fixtures/ui';
 
 // feature carries three commits touching separate files (so any reorder/drop applies
 // cleanly); master moves on with one of its own so the rebase really replays them.
-// Leaves master checked out — the rebase itself has to switch to feature.
+// Leaves master checked out - the rebase itself has to switch to feature.
 function seedFeatureBranch(repo: ITempRepo): void {
 	repo.commit('Initial', {'README.md': '# repo\n'});
 
@@ -194,7 +194,7 @@ test('a conflicting rebase can be resolved and continued to completion', async (
 	await page.locator('[test-id="unstaged-file"]', {hasText: 'file.txt'}).first().click();
 	await expect(byTestId(page, 'conflict-counter')).toHaveText(/1 conflict remaining/);
 
-	// During a rebase "incoming" is the commit being replayed — feature's version.
+	// During a rebase "incoming" is the commit being replayed - feature's version.
 	await byTestId(page, 'accept-theirs-btn').first().click();
 	await byTestId(page, 'conflict-save-btn').click();
 

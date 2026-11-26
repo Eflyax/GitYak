@@ -43,7 +43,7 @@ describe('availableUpdate', () => {
 		expect(update).toEqual({
 			version: '2.1.0',
 			notes: '- Image preview',
-			downloadUrl: 'https://gityak.com/releases/v2.1.0/GitYak-2.1.0-macos-arm64.dmg',
+			downloadUrl: 'https://gityak.com/releases/v2.1.0/GitYak-2.1.0-macos-arm64.dmg?src=app&from=2.0.0',
 			releaseNotesUrl: 'https://gityak.com/changelog.html#v2.1.0',
 		});
 	});

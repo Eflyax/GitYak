@@ -26,7 +26,7 @@
 			test-id="branch-no-upstream"
 			class="branch-item__track branch-item__track--none"
 			title="No upstream branch set"
-		>—</span>
+		>-</span>
 		<span
 			v-if="isActive"
 			class="branch-item__badge"
@@ -57,7 +57,7 @@ const emit = defineEmits<{
 const {dragSource, startDrag, endDrag} = useDragRef();
 const {contextMenuRefDrop} = useContextMenu();
 
-// "↑2 ↓1" — how far the branch has drifted from its upstream. A branch that is level with
+// "↑2 ↓1" - how far the branch has drifted from its upstream. A branch that is level with
 // its upstream shows nothing; one without an upstream shows a dash instead.
 const trackLabel = computed(() => {
 	const
@@ -77,7 +77,7 @@ const trackTitle = computed(() => {
 	if (props.ahead) parts.push(`${props.ahead} commit(s) to push`);
 	if (props.behind) parts.push(`${props.behind} commit(s) to pull`);
 
-	return parts.join(' — ');
+	return parts.join(' - ');
 });
 
 const displayName = computed(() => {

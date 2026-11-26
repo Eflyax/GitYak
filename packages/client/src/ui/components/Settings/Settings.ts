@@ -152,7 +152,7 @@ export default defineComponent({
 		// Each option shows a sample, so the choice does not need a separate preview.
 		dateFormatOptions(): Array<SelectOption> {
 			return DATE_FORMATS.map(f => ({
-				label: `${f.label} — ${formatGitDate(DATE_FORMAT_SAMPLE, f.value)}`,
+				label: `${f.label} - ${formatGitDate(DATE_FORMAT_SAMPLE, f.value)}`,
 				value: f.value,
 			}));
 		},

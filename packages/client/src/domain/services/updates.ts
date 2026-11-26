@@ -66,7 +66,8 @@ export function availableUpdate(
 	return {
 		version: release.version,
 		notes: release.notes,
-		downloadUrl: asset?.url ?? DOWNLOAD_PAGE_URL,
+		// src and from tell the server's download log an update from a web download
+		downloadUrl: asset ? `${asset.url}?src=app&from=${encodeURIComponent(currentVersion)}` : DOWNLOAD_PAGE_URL,
 		releaseNotesUrl: releaseNotesUrl(release.version),
 	};
 }

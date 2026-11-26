@@ -20,7 +20,7 @@
 			>{{ path }}</pre>
 			<p class="safe-directory__message">
 				Adding the exception records the directory as trusted in your global git config
-				(<code>safe.directory</code>). Do this only for repositories you trust — on a
+				(<code>safe.directory</code>). Do this only for repositories you trust - on a
 				shared machine, anyone who can write there can make git run their code.
 			</p>
 		</div>
@@ -79,7 +79,7 @@ async function addException(): Promise<void> {
 		await addSafeDirectory(directory);
 		dismiss();
 		notify.success('Repository added to the git safe directories');
-		// The commands that were refused are not replayed — one of them may have been a
+		// The commands that were refused are not replayed - one of them may have been a
 		// mutation. The repository is simply loaded again now that git will open it.
 		emit('added');
 	}

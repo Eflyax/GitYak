@@ -224,7 +224,7 @@ textarea {
 // ── Notifications coloured by type ──────────────────────────────────────────
 // The tint has to be mixed into an opaque colour, not laid over the page as a translucent
 // wash: a toast covers whatever is underneath and has to stay readable. `rgba($token, …)`
-// cannot do that here — the theme tokens are CSS custom properties, and `rgba(var(--x), .1)`
+// cannot do that here - the theme tokens are CSS custom properties, and `rgba(var(--x), .1)`
 // is invalid CSS that the browser drops, which left the card fully transparent.
 @mixin notification-tint($color) {
 	// Plain opaque fallback first, for engines without color-mix().

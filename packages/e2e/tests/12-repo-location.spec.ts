@@ -17,7 +17,7 @@ test('toolbar marks a localhost project as local', async ({page, repo, openRepo}
 test('toolbar marks a project on another host as remote', async ({page, repo}) => {
 	repo.commit('Initial', {'README.md': '# repo\n'});
 
-	// Seed a non-localhost project directly — the repo fixture only produces localhost ones.
+	// Seed a non-localhost project directly - the repo fixture only produces localhost ones.
 	// SSH projects cannot be covered here: their tunnel runs through the Tauri shell.
 	await page.addInitScript((path: string) => {
 		const id = 'test-project-remote';

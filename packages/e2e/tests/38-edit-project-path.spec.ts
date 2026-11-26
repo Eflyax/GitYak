@@ -40,7 +40,7 @@ test('the path of a local project can be typed in when editing', async ({page}) 
 	await seedProjectWithMissingPath(page, gonePath);
 	await openEditForm(page);
 
-	// Browse is useless here — the directory it would open no longer exists — so the field
+	// Browse is useless here - the directory it would open no longer exists - so the field
 	// itself has to accept a new path.
 	await expect(byTestId(page, 'path-input').locator('input')).toBeEnabled();
 });

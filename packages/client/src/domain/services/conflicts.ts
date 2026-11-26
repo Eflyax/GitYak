@@ -9,7 +9,7 @@ export interface IConflictBlock {
 	theirs: ReadonlyArray<string>
 	oursLabel: string
 	theirsLabel: string
-	/** The whole marker block, verbatim — what an unresolved conflict looks like in the file. */
+	/** The whole marker block, verbatim - what an unresolved conflict looks like in the file. */
 	raw: ReadonlyArray<string>
 }
 

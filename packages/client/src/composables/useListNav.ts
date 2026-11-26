@@ -6,7 +6,7 @@ interface IListNavHandlers {
 	moveDown: () => void;
 }
 
-// Which list ArrowUp/ArrowDown drive — set to the list the user last interacted
+// Which list ArrowUp/ArrowDown drive - set to the list the user last interacted
 // with. A single document-level listener routes the keys to that list's handlers.
 const activeList = ref<string | null>(null);
 const registry = new Map<string, IListNavHandlers>();

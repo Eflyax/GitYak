@@ -59,7 +59,7 @@ describe('useRebase.open', () => {
 	});
 
 	// A branch whose tip *is* the merge base has nothing to replay, so there is no
-	// plan to edit — but the rebase is still meaningful: it fast-forwards the branch
+	// plan to edit - but the rebase is still meaningful: it fast-forwards the branch
 	// onto the target. Before this the call silently did nothing at all.
 	it('fast-forwards instead of opening an empty editor when the source has no commits', async () => {
 		logRange.mockResolvedValue([]);

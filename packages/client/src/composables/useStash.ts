@@ -24,7 +24,7 @@ function parseStashes(output: string): IStash[] {
 export function useStash() {
 	const {callGit, stashSave: gitStashSave, stashPop: gitStashPop, stashDrop: gitStashDrop} = useGit();
 
-	// `%gs` is the reflog subject — what `git stash list` itself prints, and the only
+	// `%gs` is the reflog subject - what `git stash list` itself prints, and the only
 	// part a rename can change. The stash commit's own subject (`%s`) is frozen at
 	// creation time, so reading that would keep showing the pre-rename name.
 	async function loadStashes(): Promise<void> {

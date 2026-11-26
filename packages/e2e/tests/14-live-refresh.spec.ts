@@ -8,7 +8,7 @@ test('an external commit appears without reloading the page', async ({page, repo
 	await waitForRepoLoaded(page);
 	await waitForCommitRow(page, 'Initial');
 
-	// Commit from outside the application entirely. No page.reload() below — that is the
+	// Commit from outside the application entirely. No page.reload() below - that is the
 	// whole point of this test.
 	repo.commit('Made outside the app', {'outside.txt': 'hello\n'});
 
@@ -35,7 +35,7 @@ test('an idle repository raises no change events of its own', async ({page, repo
 
 	// Let the initial load settle, then watch a quiet window. The app's own refresh must not
 	// look like a change: `git status` refreshing the index used to take .git/index.lock, the
-	// watcher reported it, and the resulting refresh ran `git status` again — a loop that
+	// watcher reported it, and the resulting refresh ran `git status` again - a loop that
 	// never ended and collided with rebases and commits.
 	await page.waitForTimeout(1_500);
 

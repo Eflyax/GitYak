@@ -37,7 +37,7 @@ export function useRepoWatch() {
 		// fire again. The slot is a single idempotent overwrite, so re-registering is free.
 		onEvent(scheduleRefresh);
 
-		// Re-issue the watch once the transport reconnects — the server-side watcher
+		// Re-issue the watch once the transport reconnects - the server-side watcher
 		// state is gone with the old socket, so a fresh watchRepo call is needed or
 		// live refresh silently stops working after a drop.
 		onReconnect(() => {

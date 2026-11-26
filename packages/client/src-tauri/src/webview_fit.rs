@@ -1,8 +1,8 @@
 //! Keeps the WKWebView filling its window on macOS.
 //!
 //! The webview of a `WebviewWindow` follows the window only through AppKit autoresizing,
-//! and on macOS Sequoia that occasionally misses a resize — typically the jump into
-//! fullscreen — leaving the UI drawn at the old, smaller size until the page is reloaded
+//! and on macOS Sequoia that occasionally misses a resize - typically the jump into
+//! fullscreen - leaving the UI drawn at the old, smaller size until the page is reloaded
 //! (tauri-apps/tauri#14843). Tauri's own `set_bounds` is a no-op for such a webview, so
 //! the frame is corrected natively after every resize.
 

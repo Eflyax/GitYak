@@ -54,7 +54,7 @@ export function useRepoMaintenance() {
 		}
 		catch {
 			// Purely an optimisation: the failure is in the activity log, and a git too old for
-			// --split is not retried on every open — the stamp below defers it like a success.
+			// --split is not retried on every open - the stamp below defers it like a success.
 		}
 		finally {
 			writeStamp(key, Date.now());

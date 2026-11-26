@@ -553,8 +553,67 @@ pre {
 		gap: 20px;
 	}
 
-	a {
+	a,
+	.footer__link {
 		color: $text-muted;
+	}
+
+	// "Cookie settings" opens the consent bar again; a button, styled as the links beside it
+	.footer__link {
+		padding: 0;
+		border: 0;
+		background: none;
+		font: inherit;
+		cursor: pointer;
+
+		&:hover {
+			color: $accent;
+			text-decoration: underline;
+		}
+	}
+}
+
+// ── Cookie consent ───────────────────────────────────────────────────────────
+
+.consent {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	z-index: 20;
+	padding: 16px 0;
+	border-top: 1px solid $border-strong;
+	background: rgba($bg-raised, 0.97);
+	box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.4);
+	backdrop-filter: blur(12px);
+
+	&[hidden] {
+		display: none;
+	}
+
+	&__inner {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px 32px;
+	}
+
+	&__text {
+		flex: 1 1 480px;
+		margin: 0;
+		color: $text-secondary;
+		font-size: 14px;
+	}
+
+	// both choices look the same: declining is as easy as allowing
+	&__actions {
+		display: flex;
+		gap: 8px;
+
+		.button {
+			min-width: 96px;
+		}
 	}
 }
 

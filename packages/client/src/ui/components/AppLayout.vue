@@ -168,7 +168,7 @@ const {loadStatus, status, conflictDetected} = useWorkingTree();
 const {loadBranches} = useBranches();
 const {loadTags, loadRemoteTags} = useTags();
 
-// After a repository becomes readable again — the git safe.directory prompt is the case —
+// After a repository becomes readable again - the git safe.directory prompt is the case -
 // the commands that were refused are not replayed; the view is simply loaded afresh.
 async function reloadRepository(): Promise<void> {
 	await Promise.all([loadCommits(), loadBranches(), loadStatus()]);

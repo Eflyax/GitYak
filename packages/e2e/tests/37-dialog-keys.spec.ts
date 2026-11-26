@@ -79,7 +79,7 @@ test('a dialog key is not swallowed from a text field elsewhere in the app', asy
 	await waitForRepoLoaded(page);
 	await waitForCommitRow(page, 'Initial');
 
-	// No dialog is open, so typing into the branch filter must behave normally — the letters
+	// No dialog is open, so typing into the branch filter must behave normally - the letters
 	// of any dialog key included.
 	const filter = byTestId(page, 'filter-branches-input').locator('input');
 

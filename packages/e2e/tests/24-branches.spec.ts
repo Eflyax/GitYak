@@ -249,7 +249,7 @@ test('the filter input narrows the branch list', async ({page, repo, openRepo}) 
 
 test('deleting a branch asks for confirmation first', async ({page, repo, openRepo}) => {
 	test.fail();
-	// Known defect: the Delete menu item runs `git branch -D` immediately — no confirmation,
+	// Known defect: the Delete menu item runs `git branch -D` immediately - no confirmation,
 	// even though -D throws away unmerged commits (useBranchMenu.ts, deleteChildren).
 
 	repo.commit('Initial', {'README.md': '# repo\n'});
@@ -271,7 +271,7 @@ test('deleting a branch asks for confirmation first', async ({page, repo, openRe
 test('a failing context-menu action tells the user', async ({page, repo, openRepo}) => {
 	test.fail();
 	// Known defect: context-menu onClick handlers have no try/catch, so a failing git command
-	// only rejects a promise nobody awaits — the user sees nothing.
+	// only rejects a promise nobody awaits - the user sees nothing.
 
 	repo.commit('Initial', {'README.md': '# repo\n'});
 	repo.branch('feature');

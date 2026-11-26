@@ -7,7 +7,7 @@ const
 	path = ref<string | null>(null);
 
 /**
- * Holds the prompt asking whether to trust a repository git refused to open — see
+ * Holds the prompt asking whether to trust a repository git refused to open - see
  * `SafeDirectoryDialog`. Only the state lives here; adding the exception needs a git call and
  * belongs to the component that can make one.
  */

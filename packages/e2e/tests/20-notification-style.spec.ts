@@ -19,7 +19,7 @@ function alphaOf(color: string): number {
 
 // A toast has to be readable over whatever it covers. It used to be fully transparent
 // because its background was written as rgba(var(--color, #hex), .1), which is not valid
-// CSS — the browser dropped the declaration and left the card see-through.
+// CSS - the browser dropped the declaration and left the card see-through.
 test('a notification is drawn on an opaque background', async ({page, repo, openRepo}) => {
 	const remote = createBareRemote();
 

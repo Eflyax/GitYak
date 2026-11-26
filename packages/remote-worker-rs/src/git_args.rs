@@ -1,4 +1,4 @@
-// git's global options — the ones that can redirect git at another repository, run a
+// git's global options - the ones that can redirect git at another repository, run a
 // different binary, or execute arbitrary shell through configuration. A global option may
 // appear only BEFORE the subcommand, so this list is checked only in the leading run of
 // option-looking tokens. `git rev-parse --git-dir` is legitimate: there `--git-dir` belongs
@@ -6,14 +6,14 @@
 const FORBIDDEN_GLOBAL: [&str; 6] = ["-c", "-C", "--exec-path", "--git-dir", "--work-tree", "--namespace"];
 
 // Options that make git execute a command of the caller's choosing (a hook, a remote
-// helper, an arbitrary shell command) regardless of which subcommand they're attached to —
+// helper, an arbitrary shell command) regardless of which subcommand they're attached to -
 // `fetch --upload-pack=...`, `push --receive-pack=...`, `rebase --exec=...` / `-x`. These
 // have no legitimate use through this generic route, so they are refused ANYWHERE in the
 // argument vector, not just in the leading run.
 const FORBIDDEN_ANYWHERE: [&str; 4] = ["--upload-pack", "--receive-pack", "--exec", "-x"];
 
 /// Returns the first forbidden git option, if any. `FORBIDDEN_GLOBAL` is checked only before
-/// the subcommand (global options may appear only there — `git rev-parse --git-dir` is
+/// the subcommand (global options may appear only there - `git rev-parse --git-dir` is
 /// legitimate because `--git-dir` there belongs to rev-parse). `FORBIDDEN_ANYWHERE` is checked
 /// regardless of position, because those options let git execute a command of the caller's
 /// choosing no matter which subcommand they're attached to.
@@ -41,7 +41,7 @@ pub fn find_forbidden_git_option(args: &[String]) -> Option<&str> {
 }
 
 /// The two lists are refused for different reasons, so the refusal must say which applied:
-/// reporting `--exec` as "a git global option" is simply false — it is a subcommand option.
+/// reporting `--exec` as "a git global option" is simply false - it is a subcommand option.
 /// The lists do not overlap, so the option name alone determines the reason.
 pub fn describe_forbidden_git_option(option: &str) -> String {
 	let name = option.split('=').next().unwrap_or(option);

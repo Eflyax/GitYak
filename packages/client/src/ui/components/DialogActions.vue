@@ -23,7 +23,7 @@ import type {IDialogAction} from '@/composables/useDialogKeys';
 
 const props = defineProps<{
 	actions: Array<IDialogAction>;
-	/** Whether the dialog these actions belong to is open — only then do the keys listen. */
+	/** Whether the dialog these actions belong to is open - only then do the keys listen. */
 	active: boolean;
 }>();
 

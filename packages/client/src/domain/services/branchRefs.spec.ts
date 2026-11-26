@@ -74,7 +74,7 @@ describe('parseBranchRefs', () => {
 		expect(branches[0]).toMatchObject({upstream: 'origin/master', ahead: 0, behind: 0});
 	});
 
-	// `[gone]` means the upstream ref was deleted on the remote — the branch still has one
+	// `[gone]` means the upstream ref was deleted on the remote - the branch still has one
 	// configured, but there is nothing to compare against.
 	it('keeps the upstream name but no counts when the upstream is gone', () => {
 		const {branches} = parseBranchRefs(

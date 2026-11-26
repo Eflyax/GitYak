@@ -116,7 +116,7 @@
 				<div class="conflict-resolver__pane conflict-resolver__pane--result">
 					<div class="conflict-resolver__pane-head">
 						<span class="conflict-resolver__pane-label">Result</span>
-						<span class="conflict-resolver__pane-sub">editable — saved as the resolved file</span>
+						<span class="conflict-resolver__pane-sub">editable - saved as the resolved file</span>
 					</div>
 					<div
 						test-id="conflict-result-editor"
@@ -393,7 +393,7 @@ function handleTheirsMount(instance: editor.IStandaloneCodeEditor, monacoInstanc
 let resultEditor: editor.IStandaloneCodeEditor | null = null;
 
 // One tracked range per conflict. A range covers the conflict's lines INCLUDING the newline
-// that ends the last one — (L,1) to (L+N,1) — so an empty resolution is an empty range and
+// that ends the last one - (L,1) to (L+N,1) - so an empty resolution is an empty range and
 // a one-empty-line resolution is not, and the two can be told apart later. Only a conflict
 // that ends the file without a trailing newline has to stop at the end of its last line.
 let regionIds: Array<string> = [];
@@ -566,7 +566,7 @@ const positionLabel = computed(() => {
 });
 
 // Read from the result text rather than from what was picked, so a conflict edited by hand
-// counts as resolved and markers typed back in count as unresolved — the same measure the
+// counts as resolved and markers typed back in count as unresolved - the same measure the
 // counter in the bar shows.
 function isUnresolved(index: number): boolean {
 	const model = resultEditor?.getModel();
@@ -607,7 +607,7 @@ function focusConflict(index: number): void {
 	}
 
 	// The two side panes are kept at one scroll position, so revealing in one carries the
-	// other with it — and their regions are aligned to each other, not to the result.
+	// other with it - and their regions are aligned to each other, not to the result.
 	const pane = panes.ours;
 	const region = oursSide.value.regions[index];
 	const lineCount = pane?.editor.getModel()?.getLineCount() ?? 0;

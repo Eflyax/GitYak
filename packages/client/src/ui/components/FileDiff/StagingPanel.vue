@@ -500,7 +500,7 @@ async function handleRebaseContinue(): Promise<void> {
 		await refreshAfterOp();
 	}
 	catch {
-		// A later commit may conflict again — status keeps the panel in rebase mode.
+		// A later commit may conflict again - status keeps the panel in rebase mode.
 		await loadStatus();
 	}
 	finally {

@@ -247,7 +247,7 @@ export function useGit() {
 
 	/**
 	 * The diff of one file against the index (or the index against HEAD for a staged file),
-	 * as raw patch text. Returns '' when there is nothing to diff — an untracked file has no
+	 * as raw patch text. Returns '' when there is nothing to diff - an untracked file has no
 	 * index entry, so git prints nothing rather than failing.
 	 */
 	async function getFilePatch(file: IFileStatus): Promise<string> {
@@ -271,7 +271,7 @@ export function useGit() {
 
 	/**
 	 * Applies a patch built from a subset of a file's hunks. `gitCall` is argv-only on every
-	 * backend, so the patch reaches git through a scratch file inside .git — the same route
+	 * backend, so the patch reaches git through a scratch file inside .git - the same route
 	 * the interactive rebase uses for its todo list.
 	 */
 	async function applyPatch(patchText: string, mode: 'stage' | 'unstage' | 'discard'): Promise<void> {
@@ -440,7 +440,7 @@ export function useGit() {
 	}
 
 	// Plain, non-interactive rebase onto `upstream`. Used when there is no todo list to
-	// compose — a branch whose tip is the merge base just fast-forwards. `--autostash`
+	// compose - a branch whose tip is the merge base just fast-forwards. `--autostash`
 	// keeps it working on a dirty tree, same as the interactive route.
 	async function rebaseOnto(upstream: string): Promise<void> {
 		await callGit('rebase', '--autostash', upstream);
@@ -479,7 +479,7 @@ export function useGit() {
 
 	/**
 	 * Answers whether the project path is a git repository. A transport failure is NOT an
-	 * answer — it is rethrown, so the caller reports a connection problem instead of
+	 * answer - it is rethrown, so the caller reports a connection problem instead of
 	 * latching "this folder is not a git repository" onto a repo it simply could not reach.
 	 */
 	async function isGitRepo(): Promise<boolean> {
@@ -497,7 +497,7 @@ export function useGit() {
 	}
 
 	/**
-	 * Records a directory as trusted in the user's global git config — the remedy git itself
+	 * Records a directory as trusted in the user's global git config - the remedy git itself
 	 * prints when it refuses a repository for dubious ownership.
 	 */
 	async function addSafeDirectory(directory: string): Promise<void> {

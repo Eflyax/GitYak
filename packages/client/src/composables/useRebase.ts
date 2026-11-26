@@ -31,7 +31,7 @@ export function useRebase() {
 	const {loadStashes} = useStash();
 
 	// A source branch whose tip is already the merge base has nothing to replay, so
-	// there is no plan to edit — but the rebase still moves the branch: it fast-forwards
+	// there is no plan to edit - but the rebase still moves the branch: it fast-forwards
 	// it onto the target. Run it straight away instead of opening an empty editor.
 	async function fastForward(src: string, tgt: string): Promise<void> {
 		running.value = true;
@@ -116,7 +116,7 @@ export function useRebase() {
 		for (const step of steps.value) {
 			if (step.action === 'drop') continue;
 
-			// The first kept commit must create a commit — it cannot meld into a
+			// The first kept commit must create a commit - it cannot meld into a
 			// predecessor, so coerce a leading fixup/squash into a pick.
 			let action = step.action;
 
@@ -176,7 +176,7 @@ export function useRebase() {
 				await rebaseInteractive(target.value, TODO_PATH);
 			}
 			catch (err) {
-				// A conflict pauses the rebase and exits non-zero — that's expected;
+				// A conflict pauses the rebase and exits non-zero - that's expected;
 				// hand off to the staging panel. Re-throw anything that isn't a pause.
 				await loadStatus();
 

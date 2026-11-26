@@ -2,12 +2,7 @@
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<!-- Google Tag Manager -->
-	<script>
-		window.dataLayer = window.dataLayer || [];
-		window.dataLayer.push({'gtm.start': Date.now(), event: 'gtm.js'});
-	</script>
-	<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KHQBMV29"></script>
+	<!-- Google Tag Manager is loaded by src/consent.ts once the visitor allows analytics. -->
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>GitYak - Git GUI for local and remote repositories</title>
 	<meta name="description" content="GitYak is a free, cross-platform Git client with a visual commit graph that works on repositories on remote servers over SSH, with nothing to install on the server.">
@@ -41,7 +36,7 @@
 				<h1 class="hero__title">The Git GUI that<br><span class="accent">goes where your code lives</span></h1>
 				<p class="hero__lead">
 					A visual Git client for repositories on your machine <em>and</em> on remote servers over SSH.
-					No agent to install, no copying code around — just your SSH access.
+					No agent to install, no copying code around - just your SSH access.
 				</p>
 				<div class="hero__actions" id="hero-download">
 					<a class="button button--primary" href="#download">Download</a>
@@ -166,7 +161,7 @@
 					</div>
 					<div class="showcase">
 						<div class="showcase__text">
-							<h3>See what changed — even in images</h3>
+							<h3>See what changed - even in images</h3>
 							<p>Text changes open in a full side-by-side editor. Images also get a preview of both versions with a checkerboard background for transparency; zoom in to compare single pixels.</p>
 						</div>
 						<figure class="screenshot">
@@ -263,6 +258,7 @@
 				<a href="/changelog.html">Changelog</a>
 				<a href="https://github.com/Eflyax/GitYak" rel="noopener">Source code</a>
 				<a href="https://github.com/Eflyax/GitYak/issues" rel="noopener">Report a bug</a>
+				<button class="footer__link" type="button" data-consent-open>Cookie settings</button>
 			</nav>
 		</div>
 	</footer>

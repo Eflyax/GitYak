@@ -70,7 +70,7 @@ test('resolving a merge conflict with "incoming" and committing creates a merge 
 	await expect(byTestId(page, 'conflict-counter')).toHaveText(/resolved/i);
 	await byTestId(page, 'conflict-save-btn').click();
 
-	// Saving writes the chosen side and stages it — git no longer reports it unmerged.
+	// Saving writes the chosen side and stages it - git no longer reports it unmerged.
 	await expect.poll(() => repo.run('status --porcelain'), {timeout: 10_000}).toBe('M  file.txt\n');
 	expect(repo.run('rev-parse -q --verify MERGE_HEAD').trim()).not.toBe('');
 
@@ -91,7 +91,7 @@ test('resolving a merge conflict with "incoming" and committing creates a merge 
 
 test('a merge resolved to the current side can still be committed', async ({page, repo, openRepo}) => {
 	// Known defect: when the resolution equals HEAD (e.g. "Current" everywhere) nothing ends up
-	// staged, and the commit button requires staged files — "Commit & Merge" stays disabled, so
+	// staged, and the commit button requires staged files - "Commit & Merge" stays disabled, so
 	// the merge can only be finished or aborted outside the app. git itself allows this commit.
 	test.fail();
 

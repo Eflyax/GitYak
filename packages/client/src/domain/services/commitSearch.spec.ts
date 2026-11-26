@@ -46,7 +46,7 @@ describe('buildSearchArgs', () => {
 	});
 
 	// The value is glued to its flag, so a leading dash can never be read as a flag of its
-	// own — but a bare `-x` as free text would be, and git's arg allowlist refuses it.
+	// own - but a bare `-x` as free text would be, and git's arg allowlist refuses it.
 	it('never emits a value as a separate argument that git could read as a flag', () => {
 		for (const arg of buildSearchArgs('-x --exec=touch /tmp/x')) {
 			expect(['--regexp-ignore-case', '--'].includes(arg) || arg.startsWith('--grep=')).toBe(true);

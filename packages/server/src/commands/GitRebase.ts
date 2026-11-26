@@ -18,8 +18,8 @@ function validateRepoPath(repoPath: unknown): string {
 }
 
 // The todo path becomes part of a `sequence.editor` shell command, so it must be proven to
-// sit inside the repository before it is interpolated. A path that escapes the repo — or
-// contains a quote that could break out of the surrounding single quotes — is refused.
+// sit inside the repository before it is interpolated. A path that escapes the repo - or
+// contains a quote that could break out of the surrounding single quotes - is refused.
 function validateTodoPath(repoRoot: string, todoPath: unknown): string {
 	if (typeof todoPath !== 'string' || !todoPath) {
 		throw new Error('todo_path must be a non-empty string');

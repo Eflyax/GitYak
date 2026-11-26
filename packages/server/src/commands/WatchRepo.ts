@@ -65,7 +65,7 @@ export function run(ws: {send: (msg: string) => void}, data: IWsRequest): void {
 	const gitDir = join(root, '.git');
 
 	// Without this an authenticated peer could start a recursive watch of any directory it
-	// names — an entire filesystem included. A repository always has a `.git` entry (a
+	// names - an entire filesystem included. A repository always has a `.git` entry (a
 	// directory, or a file in a worktree or submodule), so requiring one bounds the watch to
 	// something the app has a reason to observe.
 	if (!existsSync(gitDir)) {

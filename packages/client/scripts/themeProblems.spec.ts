@@ -51,7 +51,7 @@ describe('findThemeProblems', () => {
 			meta: {name: 'Inherit', scheme: 'dark'},
 			themeValues: {
 				// root's own key resolves to an unevaluated expression, which must be reported
-				// exactly once — for root — and not again for every scope that inherits it
+				// exactly once - for root - and not again for every scope that inherits it
 				// without redeclaring it.
 				root: {background: 'lighten(#808080)'},
 				panel: {foreground: '#eeeeee'},

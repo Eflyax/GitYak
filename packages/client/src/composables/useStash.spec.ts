@@ -74,7 +74,7 @@ describe('useStash.loadStashes', () => {
 
 describe('useStash.renameStash', () => {
 	// git has no `stash rename`: the entry is dropped and re-stored under the new
-	// reflog message. Order matters — storing first would leave two entries for the
+	// reflog message. Order matters - storing first would leave two entries for the
 	// same commit, and the drop would then remove the wrong one.
 	it('drops the entry and re-stores the same commit under the new message', async () => {
 		const {renameStash} = useStash();

@@ -1,0 +1,15 @@
+# /etc/logrotate.d/gityak - the gityak.com download log (deploy/nginx-gityak.com.conf). It is the
+# only record of download counts, so the monthly files are kept for good (a few kB each).
+/var/log/gityak/*.log {
+	monthly
+	rotate 100000
+	missingok
+	notifempty
+	compress
+	delaycompress
+	create 0640 root adm
+	sharedscripts
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1
+	endscript
+}

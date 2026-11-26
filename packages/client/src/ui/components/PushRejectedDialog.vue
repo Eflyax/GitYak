@@ -14,9 +14,9 @@
 				The remote branch has changes that you don't have locally. Choose how to proceed:
 			</p>
 			<ul class="push-rejected__list">
-				<li><strong>Force push</strong> — overwrite the remote branch (uses <code>--force-with-lease</code>).</li>
-				<li><strong>Pull</strong> — fast-forward only; aborts if a merge would be needed.</li>
-				<li><strong>Cancel</strong> — do nothing.</li>
+				<li><strong>Force push</strong> - overwrite the remote branch (uses <code>--force-with-lease</code>).</li>
+				<li><strong>Pull</strong> - fast-forward only; aborts if a merge would be needed.</li>
+				<li><strong>Cancel</strong> - do nothing.</li>
 			</ul>
 			<pre
 				v-if="errorMessage"

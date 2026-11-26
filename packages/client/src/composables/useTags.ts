@@ -48,7 +48,7 @@ export function useTags() {
 	}
 
 	// Tag mutations reload the tag list themselves, the way the branch ones do: the sidebar
-	// is the only place a tag can be pushed from, and it renders `tags` — a tag missing there
+	// is the only place a tag can be pushed from, and it renders `tags` - a tag missing there
 	// cannot be acted on at all.
 	async function createTag(name: string, ref?: string, message?: string): Promise<void> {
 		await gitCreateTag(name, ref, message);

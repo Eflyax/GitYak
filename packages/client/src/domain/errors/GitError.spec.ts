@@ -33,7 +33,7 @@ describe('parseGitError', () => {
 	});
 
 	it('recognises "Merge conflict in" on its own, without the word CONFLICT', () => {
-		// This fixture must not contain the literal "CONFLICT" — otherwise it would be caught by
+		// This fixture must not contain the literal "CONFLICT" - otherwise it would be caught by
 		// the first half of the `||` chain and prove nothing about the second half.
 		expect(parseGitError('Auto-merging a.txt\nMerge conflict in a.txt', 1).code)
 			.toBe(EGitErrorCode.MergeConflict);
@@ -46,7 +46,7 @@ describe('parseGitError', () => {
 			'error: failed to push some refs',
 			'hint: (fetch first)',
 			'error: cannot lock ref: stale info',
-			// Must not contain "[rejected]" or any of the other four phrases above — otherwise
+			// Must not contain "[rejected]" or any of the other four phrases above - otherwise
 			// it would be caught by an earlier sub-condition and prove nothing about this one.
 			'to origin: (non-fast-forward)',
 		]) {
@@ -130,7 +130,7 @@ describe('isNotARepository', () => {
 	});
 });
 
-// Exactly what git 2.39 writes when a repository is owned by another user — the case that
+// Exactly what git 2.39 writes when a repository is owned by another user - the case that
 // shows up on a remote host where the working copy belongs to www-data.
 const DUBIOUS = `fatal: detected dubious ownership in repository at '/var/www/html/foo'
 To add an exception for this directory, call:

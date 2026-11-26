@@ -15,7 +15,7 @@ const uploadTotal = ref(0);
 const errorMessage = ref<string | null>(null);
 const connectingTo = ref('');
 // A transport is retrying after an unintentional drop. This is deliberately separate from
-// `phase` — the SSH provisioning steps take over the whole screen, but a WebSocket reconnect
+// `phase` - the SSH provisioning steps take over the whole screen, but a WebSocket reconnect
 // should surface only as a small indicator next to the toolbar's location badge.
 const reconnecting = ref(false);
 

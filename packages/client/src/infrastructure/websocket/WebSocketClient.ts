@@ -57,7 +57,7 @@ export class WebSocketClient implements ITransportClient {
 		this.ws = new WebSocket(this.url);
 
 		this.ws.onopen = () => {
-			// An empty token means this peer has no auth gate — the Rust remote worker,
+			// An empty token means this peer has no auth gate - the Rust remote worker,
 			// which is reachable only through the SSH tunnel and deliberately has none.
 			// Sending an auth frame there would wait forever for an ack that never comes.
 			if (!this.token) {
@@ -156,12 +156,12 @@ export class WebSocketClient implements ITransportClient {
 			this.pending.clear();
 
 			// Anything still queued (calls waiting on the auth handshake) belongs to a
-			// promise that was just rejected above — sending it on the next socket would
+			// promise that was just rejected above - sending it on the next socket would
 			// execute the command with nobody left to receive the response.
 			this.queue.length = 0;
 
 			if (this.closedByUser) {
-				// The indicator belongs to the retry loop that is not going to run — leaving
+				// The indicator belongs to the retry loop that is not going to run - leaving
 				// it lit would keep "Reconnecting…" on screen between closeProject() and the
 				// next connect().
 				this.cs.setReconnecting(false);
@@ -205,7 +205,7 @@ export class WebSocketClient implements ITransportClient {
 	}
 
 	/**
-	 * Resolves once the socket is open and — when there is an auth gate — authenticated, so a
+	 * Resolves once the socket is open and - when there is an auth gate - authenticated, so a
 	 * caller can hold off issuing commands until they will actually be delivered. A refused
 	 * connection does NOT reject: the client retries on its own, and an SSH tunnel that is
 	 * still coming up refuses the first attempts. Only the timeout, a rejected token or a

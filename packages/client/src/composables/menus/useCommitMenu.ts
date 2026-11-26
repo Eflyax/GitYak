@@ -153,7 +153,7 @@ export function useCommitMenu(deps: IMenuDeps) {
 				: 'Cherry pick';
 
 			const squashEnabled = selectionSquashable(selected);
-			// A revert commits on top of HEAD, so it needs a clean tree — and there is nothing
+			// A revert commits on top of HEAD, so it needs a clean tree - and there is nothing
 			// to revert on the working-tree row.
 			const revertEnabled = !deps.isWorkingTreeDirty() && commit.hash !== 'WORKING_TREE';
 			const pushEnabled = commit.hash !== 'WORKING_TREE' && !!currentBranch.value;

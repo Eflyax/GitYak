@@ -29,7 +29,7 @@ for (const file of files) {
 		theme = parseJsonc(raw) as IThemeFile;
 	}
 	catch (e: unknown) {
-		fail(`${file}: does not parse — ${e instanceof Error ? e.message : String(e)}`);
+		fail(`${file}: does not parse - ${e instanceof Error ? e.message : String(e)}`);
 		continue;
 	}
 
@@ -47,5 +47,5 @@ for (const [file, theme] of parsed) {
 }
 
 console.log(`\nthemes checked: ${parsed.size}`);
-console.log(failures === 0 ? 'OK — all checks passed' : `${failures} failure(s)`);
+console.log(failures === 0 ? 'OK - all checks passed' : `${failures} failure(s)`);
 process.exit(failures === 0 ? 0 : 1);

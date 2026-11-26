@@ -188,7 +188,7 @@ async function loadInitialDirectory(): Promise<void> {
 			await loadDirectory(path);
 
 			if (index > 0) {
-				message.warning(`${requested} is not available — opened ${path} instead`);
+				message.warning(`${requested} is not available - opened ${path} instead`);
 			}
 
 			return;

@@ -14,7 +14,7 @@ export function useBranchMenu(deps: IMenuDeps) {
 		notify = useNotify();
 
 	// A context-menu action has no button to show a spinner on, and the menu swallows a
-	// rejected handler silently — so every action reports its outcome itself, success or failure.
+	// rejected handler silently - so every action reports its outcome itself, success or failure.
 	async function runAction(successMessage: string, action: () => Promise<void>): Promise<void> {
 		try {
 			await action();
@@ -52,7 +52,7 @@ export function useBranchMenu(deps: IMenuDeps) {
 			branches.value.some(b => !b.isRemote && b.name === name);
 		const sourceIsCurrent = currentBranch.value?.name === source;
 
-		// Merge checks out `target`, rebase checks out `source` — each must be a
+		// Merge checks out `target`, rebase checks out `source` - each must be a
 		// local branch. A dirty tree is fine for rebase when no checkout is
 		// needed: `--autostash` covers the rebase itself.
 		const mergeEnabled = !sameRef && isLocalBranch(target) && !dirty;

@@ -1,6 +1,8 @@
 import './styles/main.scss';
 import {RELEASE_PLATFORMS} from '@git-yak/protocol';
 import type {IRelease, IReleaseAsset} from '@git-yak/protocol';
+import {initConsent} from './consent';
+import {markDownload, trackDownloads} from './downloads';
 import {detectOs, suggestedPlatforms} from './platform';
 import {el, fetchLatestRelease, formatDate, formatSize} from './releases';
 
@@ -8,13 +10,13 @@ function platformInfo(asset: IReleaseAsset) {
 	return RELEASE_PLATFORMS.find(p => p.platform === asset.platform);
 }
 
-function downloadButton(asset: IReleaseAsset, primary: boolean): HTMLAnchorElement {
+function downloadButton(asset: IReleaseAsset, version: string, primary: boolean): HTMLAnchorElement {
 	const info = platformInfo(asset);
 
-	return el('a', {class: `download-card${primary ? ' download-card--primary' : ''}`, href: asset.url, download: ''},
+	return markDownload(el('a', {class: `download-card${primary ? ' download-card--primary' : ''}`, href: asset.url, download: ''},
 		el('span', {class: 'download-card__label'}, `Download for ${info?.label ?? asset.platform}`),
 		el('span', {class: 'download-card__detail'}, `${info?.detail ?? ''} · ${formatSize(asset.size)}${info?.beta ? ' · beta' : ''}`),
-	);
+	), asset, version, 'download_card', true);
 }
 
 function renderSuggested(release: IRelease): void {
@@ -23,7 +25,7 @@ function renderSuggested(release: IRelease): void {
 		.map(platform => release.assets.find(asset => asset.platform === platform))
 		.filter((asset): asset is IReleaseAsset => asset !== undefined);
 
-	container?.replaceChildren(...suggested.map((asset, index) => downloadButton(asset, index === 0)));
+	container?.replaceChildren(...suggested.map((asset, index) => downloadButton(asset, release.version, index === 0)));
 
 	// The hero's Download button goes straight to the best guess.
 	const heroButton = document.querySelector<HTMLAnchorElement>('#hero-download .button--primary');
@@ -32,6 +34,7 @@ function renderSuggested(release: IRelease): void {
 		heroButton.href = suggested[0].url;
 		heroButton.setAttribute('download', '');
 		heroButton.textContent = `Download for ${platformInfo(suggested[0])?.label ?? 'your system'}`;
+		markDownload(heroButton, suggested[0], release.version, 'hero', true);
 	}
 }
 
@@ -42,6 +45,7 @@ function renderTable(release: IRelease): void {
 		return;
 	}
 
+	const suggested = new Set(suggestedPlatforms(detectOs(navigator.userAgent)));
 	const rows = RELEASE_PLATFORMS.flatMap(info => {
 		const asset = release.assets.find(a => a.platform === info.platform);
 
@@ -51,7 +55,7 @@ function renderTable(release: IRelease): void {
 
 		return [el('tr', {},
 			el('td', {}, info.label, ' ', el('span', {class: 'muted'}, info.detail), ...(info.beta ? [' ', el('span', {class: 'badge'}, 'beta')] : [])),
-			el('td', {}, el('a', {href: asset.url, download: ''}, asset.file)),
+			el('td', {}, markDownload(el('a', {href: asset.url, download: ''}, asset.file), asset, release.version, 'download_table', suggested.has(asset.platform))),
 			el('td', {class: 'nowrap'}, formatSize(asset.size)),
 			el('td', {}, el('code', {class: 'hash', title: asset.sha256}, asset.sha256)),
 		)];
@@ -137,5 +141,7 @@ function initThemePicker(): void {
 	});
 }
 
+initConsent();
+trackDownloads();
 init();
 initThemePicker();

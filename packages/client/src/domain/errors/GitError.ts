@@ -22,8 +22,8 @@ export class GitError extends Error {
 }
 
 /**
- * True only when git itself reported that the path is outside a repository. Anything else —
- * a dropped socket, a tunnel that is not up yet, a timeout — is a failure to ask the
+ * True only when git itself reported that the path is outside a repository. Anything else -
+ * a dropped socket, a tunnel that is not up yet, a timeout - is a failure to ask the
  * question, not an answer to it, and must not be mistaken for "there is no repository here".
  */
 export function isNotARepository(error: unknown): boolean {
@@ -46,7 +46,7 @@ export function parseDubiousOwnershipPath(stderr: string): string | null {
 		return quoted[1]!;
 	}
 
-	// The path is the rest of the line, so it may contain spaces — git prints it unquoted.
+	// The path is the rest of the line, so it may contain spaces - git prints it unquoted.
 	const remedy = /--add\s+safe\.directory\s+(.+)/.exec(stderr);
 
 	return remedy ? remedy[1]!.trim() : null;

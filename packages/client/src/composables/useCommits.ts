@@ -322,7 +322,7 @@ export function useCommits() {
 
 		// Reassign only when a selected commit actually vanished: a new array reference re-runs
 		// every `watch(selectedHashes)`, and CommitDetails answers that by clearing and refetching
-		// its file list — on a slow transport (SSH) every background refresh made it blink.
+		// its file list - on a slow transport (SSH) every background refresh made it blink.
 		const surviving = selectedHashes.value.filter(h => commitMap.value.has(h));
 
 		if (surviving.length !== selectedHashes.value.length) {

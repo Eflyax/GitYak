@@ -42,7 +42,7 @@ export const useCommitAction: () => IUseCommitAction = () => {
 		isCommitting.value = true;
 
 		try {
-			// A successful commit never interrupts the user — even if the hook
+			// A successful commit never interrupts the user - even if the hook
 			// printed diagnostics, the commit just gets created.
 			await commit(buildMessage(), {amend: amendMode.value, noVerify: noVerify.value});
 

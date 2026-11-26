@@ -11,7 +11,7 @@ export type TGitOperation = 'merge' | 'rebase' | 'cherry-pick' | 'revert';
 const COLLATOR = new Intl.Collator();
 
 // Probe only markers that git removes once the operation finishes or is aborted.
-// `.git/MERGE_MSG` and `.git/REBASE_HEAD` are NOT such markers — they linger after a
+// `.git/MERGE_MSG` and `.git/REBASE_HEAD` are NOT such markers - they linger after a
 // completed merge/rebase and cause false positives. An in-progress rebase is identified by
 // the rebase-merge/rebase-apply directories (probed via a file that exists for the whole
 // operation). Rebase comes first so a rebase's transient merge state isn't mislabelled as a
