@@ -569,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "remote-worker-rs"
-version = "2.1.1"
+version = "2.1.2"
 dependencies = [
  "axum",
  "futures-util",
