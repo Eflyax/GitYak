@@ -23,7 +23,7 @@ jobs:
       DEPLOY_USER: gityak-deploy
       DEPLOY_ROOT: /var/www/gityak.com
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-node-yarn
         with:
           node-version: '22'
