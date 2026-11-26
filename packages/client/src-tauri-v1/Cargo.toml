@@ -3,7 +3,7 @@
 # shares its commands with the Tauri 2 shell through src-tauri/src/shared_commands.rs.
 [package]
 name = "git-yak"
-version = "2.1.0"
+version = "2.1.1"
 edition = "2021"
 
 [[bin]]
