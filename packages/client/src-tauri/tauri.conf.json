@@ -31,6 +31,9 @@
     "resources": {
       "../../remote-worker/dist/remote-worker-linux-x64": "remote-worker-linux-x64"
     },
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "linux": {
       "deb": {
         "depends": ["git", "openssh-client"]
