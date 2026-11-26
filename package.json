@@ -1,6 +1,6 @@
 {
 	"name": "@eflyax/git-yak",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"description": "Web-based GUI for Git.",
 	"license": "MIT",
 	"type": "module",
