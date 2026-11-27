@@ -393,9 +393,35 @@ pre {
 	margin-bottom: 32px;
 }
 
+// System logos (public/icons, Phosphor Icons, MIT) drawn in the text colour through a mask, so
+// they follow the card, the primary card's white text and hover states.
+.os-icon {
+	display: inline-block;
+	flex: none;
+	width: 1.25em;
+	height: 1.25em;
+	background-color: currentColor;
+	mask: var(--os-icon) center / contain no-repeat;
+	vertical-align: -0.25em;
+
+	&--macos {
+		--os-icon: url('/icons/apple.svg');
+	}
+
+	&--windows {
+		--os-icon: url('/icons/windows.svg');
+	}
+
+	&--linux {
+		--os-icon: url('/icons/linux.svg');
+	}
+}
+
 .download-card {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	column-gap: 14px;
+	align-items: center;
 	min-width: 260px;
 	padding: 16px 22px;
 	border: 1px solid $border-strong;
@@ -420,6 +446,12 @@ pre {
 		&:hover {
 			background: $accent;
 		}
+	}
+
+	.os-icon {
+		grid-row: span 2;
+		width: 32px;
+		height: 32px;
 	}
 
 	&__label {
@@ -452,6 +484,10 @@ pre {
 		font-weight: 600;
 	}
 
+	&__platform .os-icon {
+		margin-right: 8px;
+	}
+
 	.hash {
 		display: inline-block;
 		max-width: 180px;
@@ -476,6 +512,9 @@ pre {
 	}
 
 	h3 {
+		display: flex;
+		gap: 10px;
+		align-items: center;
 		margin: 0 0 8px;
 	}
 

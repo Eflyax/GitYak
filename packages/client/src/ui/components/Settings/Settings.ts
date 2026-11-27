@@ -1,5 +1,5 @@
 import {defineComponent, h, ref} from 'vue';
-import {NAutoComplete, NButton, NDynamicTags, NInput, NInputNumber, NLayout, NLayoutContent, NLayoutSider, NMenu, NSelect, NSwitch} from 'naive-ui';
+import {NAutoComplete, NButton, NDynamicTags, NInput, NInputNumber, NLayout, NLayoutContent, NLayoutSider, NMenu, NProgress, NSelect, NSwitch} from 'naive-ui';
 import type {AutoCompleteOption, MenuOption, SelectOption} from 'naive-ui';
 import Icon from '@/ui/components/Icon.vue';
 import {invoke} from '@tauri-apps/api/core';
@@ -21,7 +21,10 @@ import {DATE_FORMATS, formatGitDate} from '@/domain/services/dateFormat';
 import type {TDateFormat} from '@/domain/services/dateFormat';
 import {APP_VERSION, useUpdateCheck} from '@/composables/useUpdateCheck';
 import type {TUpdateCheckStatus} from '@/composables/useUpdateCheck';
-import {WEBSITE_URL} from '@/domain/services/updates';
+import {useUpdateInstall} from '@/composables/useUpdateInstall';
+import {formatProgress} from '@/domain/services/updateProgress';
+import type {TUpdatePhase} from '@/domain/services/updateProgress';
+import {DOWNLOAD_PAGE_URL, WEBSITE_URL} from '@/domain/services/updates';
 import type {IAvailableUpdate} from '@/domain/services/updates';
 import {openExternal} from '@/infrastructure/openExternal';
 
@@ -35,6 +38,7 @@ const
 	{dateFormat} = useDateFormat(),
 	{globalCommitTemplate, globalBranchTemplates} = useTemplates(),
 	updateCheck = useUpdateCheck(),
+	updateInstall = useUpdateInstall(),
 	isTauri = isTauriRuntime;
 
 const DATE_FORMAT_SAMPLE = '2026-11-03 14:05';
@@ -81,6 +85,7 @@ export default defineComponent({
 		NLayoutContent,
 		NLayoutSider,
 		NMenu,
+		NProgress,
 		NSelect,
 		NSwitch,
 		ThemeSelector,
@@ -187,6 +192,36 @@ export default defineComponent({
 
 		availableUpdate(): Readonly<IAvailableUpdate> | null {
 			return updateCheck.update.value;
+		},
+
+		updatePhase(): TUpdatePhase {
+			return updateInstall.phase.value;
+		},
+
+		/** True when the app can download and install the available update itself. */
+		canSelfUpdate(): boolean {
+			return !!this.availableUpdate && this.availableUpdate.install.kind !== 'none';
+		},
+
+		/** An in-app update is downloading, ready or installing: a re-check would only get in the way. */
+		updateBusy(): boolean {
+			const phase = this.updatePhase.phase;
+
+			return phase === 'downloading' || phase === 'ready' || phase === 'installing';
+		},
+
+		updateProgressPercent(): number {
+			const phase = this.updatePhase;
+
+			return phase.phase === 'downloading' && phase.total
+				? Math.min(100, Math.round(phase.downloaded / phase.total * 100))
+				: 0;
+		},
+
+		updateProgressText(): string {
+			const phase = this.updatePhase;
+
+			return phase.phase === 'downloading' ? formatProgress(phase.downloaded, phase.total) : '';
 		},
 
 		updateError(): string {
@@ -347,9 +382,18 @@ export default defineComponent({
 		},
 
 		async onDownloadUpdateClick(): Promise<void> {
+			// After a failed re-check there is no update object; the download page still helps.
+			await this.openUrl(this.availableUpdate?.downloadUrl ?? DOWNLOAD_PAGE_URL);
+		},
+
+		async onInstallUpdateClick(): Promise<void> {
 			if (this.availableUpdate) {
-				await this.openUrl(this.availableUpdate.downloadUrl);
+				await updateInstall.startUpdate(this.availableUpdate);
 			}
+		},
+
+		async onRestartUpdateClick(): Promise<void> {
+			await updateInstall.restartToUpdate();
 		},
 
 		async onReleaseNotesClick(): Promise<void> {

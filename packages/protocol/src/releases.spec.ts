@@ -7,6 +7,7 @@ import {
 	parseRelease,
 	parseReleaseIndex,
 	releaseFileName,
+	updaterFileName,
 } from './releases';
 
 const ASSET = {
@@ -102,5 +103,38 @@ describe('parseReleaseIndex', () => {
 
 	it('rejects an index without releases', () => {
 		expect(() => parseReleaseIndex({})).toThrow();
+	});
+});
+
+describe('asset signature', () => {
+	const manifest = (asset: unknown) => ({version: '2.3.0', assets: [asset]});
+
+	it('parseRelease keeps an asset\'s signature', () => {
+		expect(parseRelease(manifest({...ASSET, signature: 'sig=='})).assets[0].signature).toBe('sig==');
+	});
+
+	it('parseRelease accepts an asset without signature', () => {
+		const [asset] = parseRelease(manifest(ASSET)).assets;
+
+		expect(asset.file).toBe(ASSET.file);
+		expect(asset.signature).toBeUndefined();
+	});
+
+	it('parseRelease drops a non-string signature but keeps the asset', () => {
+		const [asset] = parseRelease(manifest({...ASSET, signature: 5})).assets;
+
+		expect(asset.file).toBe(ASSET.file);
+		expect(asset).not.toHaveProperty('signature');
+	});
+});
+
+describe('updaterFileName', () => {
+	it('names the macOS updater archive', () => {
+		expect(updaterFileName('2.3.0', 'macos-arm64')).toBe('GitYak-2.3.0-macos-arm64.app.tar.gz');
+		expect(updaterFileName('2.3.0', 'macos-x64')).toBe('GitYak-2.3.0-macos-x64.app.tar.gz');
+	});
+
+	it('uses the installer itself on Windows', () => {
+		expect(updaterFileName('2.3.0', 'windows-x64')).toBe('GitYak-2.3.0-windows-x64-setup.exe');
 	});
 });

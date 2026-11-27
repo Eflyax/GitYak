@@ -38,6 +38,27 @@ describe('parseDownload', () => {
 		}))).toMatchObject({platform: 'windows-x64', source: 'app', fromVersion: '2.1.0'});
 	});
 
+	it('reads the updater downloads as updates', () => {
+		expect(parseDownload(line({uri: '/releases/v2.3.0/GitYak-2.3.0-macos-arm64.app.tar.gz', src: 'update'})))
+			.toMatchObject({platform: 'macos-arm64', source: 'update'});
+		expect(parseDownload(line({uri: '/releases/v2.3.0/GitYak-2.3.0-linux-x64.deb', src: 'update', from: '2.2.0'})))
+			.toMatchObject({platform: 'linux-x64', source: 'update', fromVersion: '2.2.0'});
+
+		const exe = parseDownload(line({uri: '/releases/v2.3.0/GitYak-2.3.0-windows-x64-setup.exe', src: 'update'}));
+
+		expect(exe).toMatchObject({platform: 'windows-x64', source: 'update'});
+		expect(exe).not.toHaveProperty('fromVersion');
+	});
+
+	it('counts an .app.tar.gz as an update even without src', () => {
+		expect(parseDownload(line({uri: '/releases/v2.3.0/GitYak-2.3.0-macos-x64.app.tar.gz'})))
+			.toMatchObject({platform: 'macos-x64', source: 'update'});
+	});
+
+	it('skips the signature files', () => {
+		expect(parseDownload(line({uri: '/releases/v2.3.0/GitYak-2.3.0-macos-arm64.app.tar.gz.sig', src: 'update'}))).toBeNull();
+	});
+
 	it('tells the two Linux packages apart', () => {
 		expect(parseDownload(line({uri: '/releases/v2.1.1/GitYak-2.1.1-linux-x64.deb'}))?.platform).toBe('linux-x64');
 		expect(parseDownload(line({uri: '/releases/v2.1.1/GitYak-2.1.1-linux-x64-focal.deb'}))?.platform).toBe('linux-x64-focal');

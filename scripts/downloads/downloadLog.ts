@@ -1,17 +1,17 @@
 // Reads the installer download log the gityak.com nginx writes (deploy/nginx-gityak.com.conf,
 // log_format gityak_downloads): one tab-separated line per request,
 //   time  method  status  bytes  completion  range  uri  src  from  client  user-agent
-import {RELEASE_PLATFORMS, releaseFileName} from '../../packages/protocol/src/releases';
-import type {TReleasePlatform} from '../../packages/protocol/src/releases';
+import {RELEASE_PLATFORMS, releaseFileName, updaterFileName} from '../../packages/protocol/src/releases';
+import type {TReleasePlatform, TUpdaterPlatform} from '../../packages/protocol/src/releases';
 
 export interface IDownload {
 	/** ISO date and time of the request. */
 	time: string;
 	version: string;
 	platform: TReleasePlatform;
-	/** 'app' for the update notification's Download button, 'web' for everything else. */
-	source: 'app' | 'web';
-	/** The version the app updated from (source 'app' only). */
+	/** 'app' for the update notification's Download button, 'update' for the in-app updater, 'web' for everything else. */
+	source: 'app' | 'web' | 'update';
+	/** The version the app updated from (source 'app' and 'update', when the app sent it). */
 	fromVersion?: string;
 	/** The visitor's network: the address without its last part. */
 	client: string;
@@ -19,7 +19,20 @@ export interface IDownload {
 
 /** The platform of an installer's file name, e.g. `GitYak-2.1.0-macos-arm64.dmg`. */
 function platformOf(version: string, file: string): TReleasePlatform | undefined {
-	return RELEASE_PLATFORMS.find(p => releaseFileName(version, p.platform) === file)?.platform;
+	return RELEASE_PLATFORMS.find(p => releaseFileName(version, p.platform) === file)?.platform
+		?? UPDATER_PLATFORMS.find(platform => updaterFileName(version, platform) === file);
+}
+
+/** The platforms whose updater file differs from the installer: the macOS `.app.tar.gz`. */
+const UPDATER_PLATFORMS: Array<TUpdaterPlatform> = ['macos-arm64', 'macos-x64'];
+
+/** Only the updater downloads an `.app.tar.gz`, so it counts as an update even without `src`. */
+function sourceOf(src: string | undefined, file: string): IDownload['source'] {
+	if (src === 'update' || file.endsWith('.app.tar.gz')) {
+		return 'update';
+	}
+
+	return src === 'app' ? 'app' : 'web';
 }
 
 /**
@@ -49,12 +62,14 @@ export function parseDownload(line: string): IDownload | null {
 		return null;
 	}
 
+	const source = sourceOf(src, file);
+
 	return {
 		time,
 		version,
 		platform,
-		source: src === 'app' ? 'app' : 'web',
-		...(src === 'app' && from ? {fromVersion: from} : {}),
+		source,
+		...(source !== 'web' && from ? {fromVersion: from} : {}),
 		client: client || '-',
 	};
 }

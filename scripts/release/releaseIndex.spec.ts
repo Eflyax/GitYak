@@ -21,6 +21,27 @@ describe('buildRelease', () => {
 	});
 });
 
+describe('buildRelease signatures', () => {
+	const input = (signature?: string) => ({
+		version: '2.3.0',
+		date: '2026-11-25T00:00:00Z',
+		notes: '',
+		assets: [{platform: 'macos-arm64' as const, file: 'GitYak-2.3.0-macos-arm64.dmg', size: 1, sha256: 'x', signature}],
+	});
+
+	it('keeps signature', () => {
+		expect(buildRelease(input('sig==')).assets[0].signature).toBe('sig==');
+	});
+
+	it('leaves it out when there is none', () => {
+		expect(buildRelease(input()).assets[0].signature).toBeUndefined();
+	});
+
+	it('lists installers only, never an updater archive', () => {
+		expect(buildRelease(input('sig==')).assets.some(a => a.file.endsWith('.app.tar.gz'))).toBe(false);
+	});
+});
+
 describe('addRelease', () => {
 	it('keeps releases newest first and points latest at the newest stable one', () => {
 		const first = addRelease({releases: []}, release('2.0.0'));

@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {detectOs, suggestedPlatforms} from './platform';
+import {detectOs, installerOs, suggestedPlatforms} from './platform';
 
 describe('detectOs', () => {
 	it('recognises desktop systems', () => {
@@ -19,5 +19,15 @@ describe('suggestedPlatforms', () => {
 		expect(suggestedPlatforms('macos')).toEqual(['macos-arm64', 'macos-x64']);
 		expect(suggestedPlatforms('linux')).toEqual(['linux-x64', 'linux-x64-focal']);
 		expect(suggestedPlatforms('other')).toEqual([]);
+	});
+});
+
+describe('installerOs', () => {
+	it('maps every installer to its system', () => {
+		expect(installerOs('macos-arm64')).toBe('macos');
+		expect(installerOs('macos-x64')).toBe('macos');
+		expect(installerOs('windows-x64')).toBe('windows');
+		expect(installerOs('linux-x64')).toBe('linux');
+		expect(installerOs('linux-x64-focal')).toBe('linux');
 	});
 });

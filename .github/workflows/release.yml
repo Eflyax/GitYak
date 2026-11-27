@@ -69,18 +69,22 @@ jobs:
           - platform: macos-arm64
             os: macos-15
             target: aarch64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
+            updater: true
             output: target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           - platform: macos-x64
             os: macos-15
             target: x86_64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
+            updater: true
             output: target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
           - platform: windows-x64
             os: windows-latest
             target: x86_64-pc-windows-msvc
             bundles: nsis
+            updater: true
             output: target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          # The .deb has no Tauri updater artifact; it is signed after the build (Sign .deb).
           - platform: linux-x64
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
@@ -92,6 +96,16 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
+      # Every installer job signs update files. Without the key (a fork, a missing secret) the
+      # build would publish nothing the app can verify, so stop before the long build.
+      - name: Updater signing key
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::The TAURI_SIGNING_PRIVATE_KEY secret is not set; update files cannot be signed."
+            exit 1
+          fi
       - name: Linux build dependencies
         if: runner.os == 'Linux'
         run: |
@@ -113,20 +127,72 @@ jobs:
           name: remote-worker
           path: packages/remote-worker/dist
       - run: mv packages/remote-worker/dist/remote-worker-rs packages/remote-worker/dist/remote-worker-linux-x64
+      # Updater artifacts are switched on here only, so local builds keep working without the
+      # key: macOS gets a signed GitYak.app.tar.gz (from the app bundle), Windows a .sig next to
+      # the NSIS installer, which is itself the update.
       - name: Build
-        run: yarn workspace @git-yak/client tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ matrix.updater && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ matrix.updater && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+        run: |
+          flags=()
+          if [ "${{ matrix.updater }}" = "true" ]; then
+            flags+=(--config '{"bundle":{"createUpdaterArtifacts":true}}')
+          fi
+          yarn workspace @git-yak/client tauri build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} "${flags[@]}"
+      # installer/ holds only installers (GitHub release, website); the updater archives and all
+      # signatures go to updater-files/, a separate artifact the publish job puts on the server.
       - name: Rename installer
         run: |
           version=$(node -p "require('./package.json').version")
-          mkdir -p installer
+          mkdir -p installer updater-files/updater updater-files/signatures
           src=$(ls packages/client/src-tauri/${{ matrix.output }} | head -n 1)
           name=$(yarn bun run scripts/release/file-name.ts "$version" "${{ matrix.platform }}")
           cp "$src" "installer/$name"
+          case "${{ matrix.platform }}" in
+            macos-*)
+              bundle="packages/client/src-tauri/target/${{ matrix.target }}/release/bundle/macos"
+              ls -l "$bundle" || true
+              if ! test -f "$bundle/GitYak.app.tar.gz" || ! test -f "$bundle/GitYak.app.tar.gz.sig"; then
+                echo "::error::The build made no signed updater archive ($bundle/GitYak.app.tar.gz + .sig)."
+                exit 1
+              fi
+              updater=$(yarn bun run scripts/release/file-name.ts --updater "$version" "${{ matrix.platform }}")
+              cp "$bundle/GitYak.app.tar.gz" "updater-files/updater/$updater"
+              cp "$bundle/GitYak.app.tar.gz.sig" "updater-files/signatures/$updater.sig"
+              ;;
+            windows-*)
+              ls -l "$(dirname "$src")"
+              if ! test -f "$src.sig"; then
+                echo "::error::The build made no updater signature for $src."
+                exit 1
+              fi
+              cp "$src.sig" "updater-files/signatures/$name.sig"
+              ;;
+          esac
           ls -l installer
+      # yarn workspace runs in packages/client, hence the absolute path.
+      - name: Sign .deb
+        if: runner.os == 'Linux'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          for file in installer/*.deb; do
+            yarn workspace @git-yak/client tauri signer sign "$PWD/$file"
+            test -f "$file.sig"
+            mv "$file.sig" updater-files/signatures/
+          done
+      - run: ls -lR updater-files
       - uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.platform }}
           path: installer/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: updater-${{ matrix.platform }}
+          path: updater-files/
           if-no-files-found: error
 
   linux-focal:
@@ -135,6 +201,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # Every installer job signs update files. Without the key (a fork, a missing secret) the
+      # build would publish nothing the app can verify, so stop before the long build.
+      - name: Updater signing key
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::The TAURI_SIGNING_PRIVATE_KEY secret is not set; update files cannot be signed."
+            exit 1
+          fi
       - uses: ./.github/actions/setup-node-yarn
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -152,10 +228,29 @@ jobs:
           mkdir -p installer
           cp "$(ls dist-linux/*.deb | head -n 1)" "installer/$(yarn bun run scripts/release/file-name.ts "$version" linux-x64-focal)"
           ls -l installer
+      # Signed on the runner, not in the Docker build, so the key never enters the container.
+      # yarn workspace runs in packages/client, hence the absolute path.
+      - name: Sign .deb
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          mkdir -p updater-files/signatures
+          for file in installer/*.deb; do
+            yarn workspace @git-yak/client tauri signer sign "$PWD/$file"
+            test -f "$file.sig"
+            mv "$file.sig" updater-files/signatures/
+          done
+          ls -lR updater-files
       - uses: actions/upload-artifact@v7
         with:
           name: installer-linux-x64-focal
           path: installer/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: updater-linux-x64-focal
+          path: updater-files/
           if-no-files-found: error
 
   publish:
@@ -181,6 +276,22 @@ jobs:
           pattern: installer-*
           path: release/assets
           merge-multiple: true
+      # updater/ (macOS archives) and signatures/ (every installer and archive), kept out of
+      # release/assets so they never reach the GitHub release or the website's asset list.
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: updater-*
+          path: release/updater-files
+          merge-multiple: true
+      # A signing secret holding a valid but different key would sign everything "fine" and every
+      # installed app would reject the update: publish only signatures the committed key accepts.
+      - name: Verify signatures
+        run: |
+          yarn bun run scripts/release/verify-signatures.ts \
+            --pubkey packages/client/src-tauri/updater.pub \
+            --signatures release/updater-files/signatures \
+            --files release/assets \
+            --files release/updater-files/updater
       - name: SSH access
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -198,24 +309,30 @@ jobs:
             --tag "$GITHUB_REF_NAME" \
             --assets release/assets \
             --index release/current-index.json \
+            --signatures release/updater-files/signatures \
+            --updater release/updater-files/updater \
             --out release/out
       - name: Upload to gityak.com
         run: |
           dest="$DEPLOY_USER@$DEPLOY_HOST"
           releases="$DEPLOY_ROOT/releases"
-          rsync -a --chmod=D755,F644 release/assets/ "$dest:$releases/$GITHUB_REF_NAME/"
-          # Installers first, then the manifests that point at them; each manifest is swapped
-          # in with a rename, so readers never see half a file.
-          for manifest in index.json latest.json; do
+          rsync -a --chmod=D755,F644 release/assets/ release/updater-files/updater/ release/updater-files/signatures/ \
+            "$dest:$releases/$GITHUB_REF_NAME/"
+          # Installers, updater files and signatures first, then the manifests that point at
+          # them; each manifest is swapped in with a rename, so readers never see half a file.
+          # updater.json before latest.json: an app told about N+1 by latest.json must find N+1
+          # in updater.json too.
+          for manifest in updater.json index.json latest.json; do
             if [ -f "release/out/$manifest" ]; then
               rsync -a --chmod=F644 "release/out/$manifest" "$dest:$releases/.$manifest.tmp"
               ssh "$dest" "mv $releases/.$manifest.tmp $releases/$manifest"
             fi
           done
-          # Installers of old releases (their notes stay in index.json).
+          # Installers of old releases (their notes stay in index.json). ssh -n: without it ssh
+          # reads the rest of pruned.txt as its stdin and only the first tag is pruned.
           while read -r tag; do
             if [[ "$tag" =~ ^v[0-9][0-9A-Za-z.+-]*$ ]]; then
-              ssh "$dest" "rm -rf -- $releases/$tag"
+              ssh -n "$dest" "rm -rf -- $releases/$tag"
             fi
           done < release/out/pruned.txt
       - name: GitHub release

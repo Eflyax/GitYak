@@ -48,7 +48,8 @@ docker run --rm --platform linux/amd64 \
 		rm -rf /build && mkdir -p /build/client/src-tauri/src /build/remote-worker/dist
 		cp -r /work/packages/client/src-tauri-v1 /work/packages/client/dist-tauri-v1 /build/client/
 		cp -r /work/packages/client/src-tauri/icons /build/client/src-tauri/
-		cp /work/packages/client/src-tauri/src/shared_commands.rs /build/client/src-tauri/src/
+		cp /work/packages/client/src-tauri/src/shared_commands.rs /work/packages/client/src-tauri/src/deb_update.rs /build/client/src-tauri/src/
+		cp /work/packages/client/src-tauri/updater.pub /build/client/src-tauri/
 		cp /work/packages/remote-worker/dist/remote-worker-linux-x64 /build/remote-worker/dist/
 
 		cd /build/client/src-tauri-v1

@@ -25,3 +25,11 @@ export function suggestedPlatforms(os: TVisitorOs): Array<TReleasePlatform> {
 		default: return [];
 	}
 }
+
+/** The operating system an installer is for, which picks its icon (public/icons/<os>.svg). */
+export function installerOs(platform: TReleasePlatform): Exclude<TVisitorOs, 'other'> {
+	if (platform.startsWith('macos')) return 'macos';
+	if (platform.startsWith('windows')) return 'windows';
+
+	return 'linux';
+}

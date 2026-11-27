@@ -1,5 +1,5 @@
 import {findAsset, isNewerVersion, isPrerelease} from '@git-yak/protocol';
-import type {IRelease, TReleasePlatform} from '@git-yak/protocol';
+import type {IRelease, IReleaseAsset, TReleasePlatform} from '@git-yak/protocol';
 
 export const WEBSITE_URL = 'https://gityak.com';
 export const DOWNLOAD_PAGE_URL = `${WEBSITE_URL}/#download`;
@@ -14,12 +14,22 @@ export interface IHostPlatform {
 	arch: string;
 }
 
+/**
+ * How the app installs an update itself: through the Tauri updater plugin (macOS, Windows), by
+ * downloading and verifying the signed .deb (Linux), or not at all (the user downloads it).
+ */
+export type TUpdateInstall =
+	| {kind: 'plugin'}
+	| {kind: 'deb'; url: string; signature: string}
+	| {kind: 'none'};
+
 export interface IAvailableUpdate {
 	version: string;
 	notes: string;
 	/** The installer for this machine, or the download page when the release has none. */
 	downloadUrl: string;
 	releaseNotesUrl: string;
+	install: TUpdateInstall;
 }
 
 /** The installer platform this app was built for; null when no installer fits it. */
@@ -41,6 +51,29 @@ export function releasePlatform(host: IHostPlatform, flavor: TAppFlavor): TRelea
 
 export function releaseNotesUrl(version: string): string {
 	return `${WEBSITE_URL}/changelog.html#v${version}`;
+}
+
+function updateInstall(
+	platform: TReleasePlatform | null,
+	asset: IReleaseAsset | undefined,
+	currentVersion: string,
+): TUpdateInstall {
+	if (platform?.startsWith('macos-') || platform === 'windows-x64') {
+		// The plugin reads its own manifest (updater.json) and checks the signature itself.
+		return {kind: 'plugin'};
+	}
+
+	// Only a signed .deb may be installed: releases from before in-app updates carry no signature.
+	if ((platform === 'linux-x64' || platform === 'linux-x64-focal') && asset?.signature) {
+		return {
+			kind: 'deb',
+			// src=update tells the server's download log an in-app update from a web download
+			url: `${asset.url}?src=update&from=${encodeURIComponent(currentVersion)}`,
+			signature: asset.signature,
+		};
+	}
+
+	return {kind: 'none'};
 }
 
 /**
@@ -69,5 +102,6 @@ export function availableUpdate(
 		// src and from tell the server's download log an update from a web download
 		downloadUrl: asset ? `${asset.url}?src=app&from=${encodeURIComponent(currentVersion)}` : DOWNLOAD_PAGE_URL,
 		releaseNotesUrl: releaseNotesUrl(release.version),
+		install: updateInstall(platform, asset, currentVersion),
 	};
 }

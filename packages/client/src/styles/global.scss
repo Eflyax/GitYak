@@ -266,6 +266,16 @@ textarea {
 	white-space: pre-wrap;
 }
 
+.gy-update-notice__status {
+	margin-top: 6px;
+	color: $text-secondary;
+	font-size: 12px;
+}
+
+.gy-update-notice__status--error {
+	color: $color-danger;
+}
+
 .gy-update-notice__actions {
 	display: flex;
 	flex-wrap: wrap;

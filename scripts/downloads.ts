@@ -34,11 +34,14 @@ const
 		}
 	},
 	times = downloads.map(d => d.time).sort(),
-	updates = downloads.filter(d => d.source === 'app');
+	notified = downloads.filter(d => d.source === 'app'),
+	installed = downloads.filter(d => d.source === 'update'),
+	updates = downloads.filter(d => d.source !== 'web');
 
 console.log(`${downloads.length} downloads from ${times[0].slice(0, 10)} to ${times.at(-1)?.slice(0, 10)}`);
 console.log(`  from the website and direct links: ${downloads.length - updates.length}`);
-console.log(`  from the app's update notification: ${updates.length}`);
+console.log(`  from the app's update notification: ${notified.length}`);
+console.log(`  installed from the app (update): ${installed.length}`);
 console.log(`  networks (addresses without their last part): ${new Set(downloads.map(d => d.client)).size}`);
 
 table('By platform', countBy(downloads, d => label(d.platform)));

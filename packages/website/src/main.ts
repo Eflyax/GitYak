@@ -3,17 +3,23 @@ import {RELEASE_PLATFORMS} from '@git-yak/protocol';
 import type {IRelease, IReleaseAsset} from '@git-yak/protocol';
 import {initConsent} from './consent';
 import {markDownload, trackDownloads} from './downloads';
-import {detectOs, suggestedPlatforms} from './platform';
+import {detectOs, installerOs, suggestedPlatforms} from './platform';
 import {el, fetchLatestRelease, formatDate, formatSize} from './releases';
 
 function platformInfo(asset: IReleaseAsset) {
 	return RELEASE_PLATFORMS.find(p => p.platform === asset.platform);
 }
 
+/** The installer's system logo; decorative, the label next to it names the system. */
+function osIcon(asset: IReleaseAsset): HTMLSpanElement {
+	return el('span', {class: `os-icon os-icon--${installerOs(asset.platform)}`, 'aria-hidden': 'true'});
+}
+
 function downloadButton(asset: IReleaseAsset, version: string, primary: boolean): HTMLAnchorElement {
 	const info = platformInfo(asset);
 
 	return markDownload(el('a', {class: `download-card${primary ? ' download-card--primary' : ''}`, href: asset.url, download: ''},
+		osIcon(asset),
 		el('span', {class: 'download-card__label'}, `Download for ${info?.label ?? asset.platform}`),
 		el('span', {class: 'download-card__detail'}, `${info?.detail ?? ''} · ${formatSize(asset.size)}${info?.beta ? ' · beta' : ''}`),
 	), asset, version, 'download_card', true);
@@ -54,7 +60,7 @@ function renderTable(release: IRelease): void {
 		}
 
 		return [el('tr', {},
-			el('td', {}, info.label, ' ', el('span', {class: 'muted'}, info.detail), ...(info.beta ? [' ', el('span', {class: 'badge'}, 'beta')] : [])),
+			el('td', {class: 'downloads__platform'}, osIcon(asset), info.label, ' ', el('span', {class: 'muted'}, info.detail), ...(info.beta ? [' ', el('span', {class: 'badge'}, 'beta')] : [])),
 			el('td', {}, markDownload(el('a', {href: asset.url, download: ''}, asset.file), asset, release.version, 'download_table', suggested.has(asset.platform))),
 			el('td', {class: 'nowrap'}, formatSize(asset.size)),
 			el('td', {}, el('code', {class: 'hash', title: asset.sha256}, asset.sha256)),

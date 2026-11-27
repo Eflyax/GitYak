@@ -9,6 +9,7 @@ export interface IBuiltAsset {
 	file: string;
 	size: number;
 	sha256: string;
+	signature?: string;
 }
 
 export function buildRelease(input: {version: string; date: string; notes: string; assets: Array<IBuiltAsset>}): IRelease {

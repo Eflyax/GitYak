@@ -5,6 +5,8 @@
 export const RELEASES_BASE_URL = 'https://gityak.com/releases';
 export const LATEST_MANIFEST_URL = `${RELEASES_BASE_URL}/latest.json`;
 export const RELEASE_INDEX_URL = `${RELEASES_BASE_URL}/index.json`;
+/** Tauri updater manifest; the desktop app's in-app updater polls it. */
+export const UPDATER_MANIFEST_URL = `${RELEASES_BASE_URL}/updater.json`;
 
 /** One installer, keyed by the platform it runs on. */
 export type TReleasePlatform = 'macos-arm64' | 'macos-x64' | 'windows-x64' | 'linux-x64' | 'linux-x64-focal';
@@ -35,6 +37,8 @@ export interface IReleaseAsset {
 	/** Bytes. */
 	size: number;
 	sha256: string;
+	/** Tauri updater signature (base64) of the installer; absent on releases built before in-app updates. */
+	signature?: string;
 }
 
 export interface IRelease {
@@ -62,6 +66,32 @@ export function releaseFileName(version: string, platform: TReleasePlatform): st
 	}
 
 	return `GitYak-${version}-${info.fileSuffix}`;
+}
+
+/** Platforms the Tauri updater can install on its own. */
+export type TUpdaterPlatform = 'macos-arm64' | 'macos-x64' | 'windows-x64';
+
+/**
+ * The file the updater downloads: the `.app.tar.gz` on macOS (the dmg cannot be applied in
+ * place), the installer itself on Windows.
+ */
+export function updaterFileName(version: string, platform: TUpdaterPlatform): string {
+	if (platform === 'windows-x64') {
+		return releaseFileName(version, platform);
+	}
+
+	return `GitYak-${version}-${platform}.app.tar.gz`;
+}
+
+export type TUpdaterTarget = 'darwin-aarch64' | 'darwin-x86_64' | 'windows-x86_64';
+
+/** `updater.json` in the static format of the Tauri updater plugin. */
+export interface IUpdaterManifest {
+	version: string;
+	notes: string;
+	/** RFC 3339. */
+	pub_date: string;
+	platforms: Partial<Record<TUpdaterTarget, {url: string; signature: string}>>;
 }
 
 // ── Versions ─────────────────────────────────────────────────────────────────
@@ -152,7 +182,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isAsset(value: unknown): value is IReleaseAsset {
+function isAsset(value: unknown): value is Omit<IReleaseAsset, 'signature'> & {signature?: unknown} {
 	return isRecord(value)
 		&& RELEASE_PLATFORMS.some(p => p.platform === value['platform'])
 		&& typeof value['file'] === 'string'
@@ -185,7 +215,9 @@ export function parseRelease(value: unknown): IRelease {
 		tag: typeof tag === 'string' ? tag : `v${version}`,
 		date: typeof date === 'string' ? date : '',
 		notes: typeof notes === 'string' ? notes : '',
-		assets: assets.filter(isAsset),
+		assets: assets.filter(isAsset).map(({signature, ...asset}): IReleaseAsset => (
+			typeof signature === 'string' ? {...asset, signature} : asset
+		)),
 	};
 }
 

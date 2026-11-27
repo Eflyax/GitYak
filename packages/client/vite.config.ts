@@ -41,9 +41,12 @@ function tauriV1Aliases(): Array<{find: RegExp; replacement: string}> {
 	return [
 		{find: /^@tauri-apps\/api\/core$/, replacement: join(shims, 'core.ts')},
 		{find: /^@tauri-apps\/api\/window$/, replacement: join(shims, 'window.ts')},
+		{find: /^@tauri-apps\/api\/event$/, replacement: join(shims, 'event.ts')},
 		{find: /^@tauri-apps\/api\/path$/, replacement: '@tauri-apps/api-v1/path'},
 		{find: /^@tauri-apps\/plugin-shell$/, replacement: join(shims, 'shell.ts')},
 		{find: /^@tauri-apps\/plugin-deep-link$/, replacement: join(shims, 'deepLink.ts')},
+		{find: /^@tauri-apps\/plugin-updater$/, replacement: join(shims, 'updater.ts')},
+		{find: /^@tauri-apps\/plugin-process$/, replacement: join(shims, 'process.ts')},
 	];
 }
 

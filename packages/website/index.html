@@ -221,7 +221,7 @@
 
 				<div class="install-notes">
 					<article>
-						<h3>macOS</h3>
+						<h3><span class="os-icon os-icon--macos" aria-hidden="true"></span>macOS</h3>
 						<p>
 							GitYak is not signed with an Apple Developer ID yet, so macOS blocks the first start. Open the
 							<code>.dmg</code>, drag GitYak to Applications and run this in Terminal:
@@ -232,13 +232,13 @@
 						</p>
 					</article>
 					<article>
-						<h3>Ubuntu / Debian</h3>
+						<h3><span class="os-icon os-icon--linux" aria-hidden="true"></span>Ubuntu / Debian</h3>
 						<p>Install the package with apt, which also installs git and the SSH client when they are missing:</p>
 						<pre><code>sudo apt install ./GitYak-*-linux-x64.deb</code></pre>
 						<p>On Ubuntu 20.04 use the <strong>Ubuntu 20.04</strong> package; it is built for its older system libraries.</p>
 					</article>
 					<article>
-						<h3>Windows <span class="badge">beta</span></h3>
+						<h3><span class="os-icon os-icon--windows" aria-hidden="true"></span>Windows <span class="badge">beta</span></h3>
 						<p>
 							Windows SmartScreen may warn about an unknown publisher: choose <strong>More info → Run anyway</strong>.
 							GitYak needs <a href="https://git-scm.com/download/win" rel="noopener">Git for Windows</a>.
@@ -246,7 +246,7 @@
 						</p>
 					</article>
 				</div>
-				<p class="download__updates">GitYak checks for new versions on startup and tells you when one is available (you can turn this off in Settings).</p>
+				<p class="download__updates">GitYak checks for new versions on startup. From version 2.3 it installs them itself: choose Update, then Restart, and it opens in the new version - the macOS and Windows warnings above are needed only for the first install.</p>
 			</div>
 		</section>
 	</main>

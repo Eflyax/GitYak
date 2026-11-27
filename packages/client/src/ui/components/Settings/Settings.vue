@@ -367,12 +367,59 @@
 								test-id="settings-check-updates-btn"
 								size="small"
 								:loading="updateStatus === 'checking'"
+								:disabled="updateBusy"
 								@click="onCheckUpdatesClick"
 							>
 								Check now
 							</n-button>
-							<template v-if="updateStatus === 'available' && availableUpdate">
+							<!-- The install state is keyed on the phase, not the check status: a re-check must not hide it. -->
+							<n-button
+								v-if="updatePhase.phase === 'ready'"
+								test-id="settings-restart-update-btn"
+								size="small"
+								type="primary"
+								@click="onRestartUpdateClick"
+							>
+								Restart to update
+							</n-button>
+							<n-button
+								v-else-if="updatePhase.phase === 'installing'"
+								size="small"
+								type="primary"
+								disabled
+							>
+								Installing…
+							</n-button>
+							<template v-else-if="updatePhase.phase === 'failed'">
 								<n-button
+									test-id="settings-download-update-btn"
+									size="small"
+									@click="onDownloadUpdateClick"
+								>
+									Download{{ availableUpdate ? ` ${availableUpdate.version}` : '' }}
+								</n-button>
+								<n-button
+									v-if="availableUpdate && canSelfUpdate"
+									test-id="settings-retry-update-btn"
+									size="small"
+									type="primary"
+									@click="onInstallUpdateClick"
+								>
+									Retry
+								</n-button>
+							</template>
+							<template v-else-if="updatePhase.phase === 'idle' && updateStatus === 'available' && availableUpdate">
+								<n-button
+									v-if="canSelfUpdate"
+									test-id="settings-install-update-btn"
+									size="small"
+									type="primary"
+									@click="onInstallUpdateClick"
+								>
+									Update to {{ availableUpdate.version }}
+								</n-button>
+								<n-button
+									v-else
 									test-id="settings-download-update-btn"
 									size="small"
 									type="primary"
@@ -380,15 +427,33 @@
 								>
 									Download {{ availableUpdate.version }}
 								</n-button>
-								<n-button
-									size="small"
-									quaternary
-									@click="onReleaseNotesClick"
-								>
-									Release notes
-								</n-button>
 							</template>
+							<n-button
+								v-if="availableUpdate && updatePhase.phase !== 'installing'"
+								size="small"
+								quaternary
+								@click="onReleaseNotesClick"
+							>
+								Release notes
+							</n-button>
 						</div>
+						<template v-if="updatePhase.phase === 'downloading'">
+							<n-progress
+								test-id="settings-update-progress"
+								type="line"
+								:percentage="updateProgressPercent"
+								:processing="updatePhase.total === null"
+								:show-indicator="false"
+							/>
+							<p class="settings__hint">{{ updateProgressText }}</p>
+						</template>
+						<p
+							v-else-if="updatePhase.phase === 'failed'"
+							test-id="settings-update-error"
+							class="settings__hint settings__hint--error"
+						>
+							{{ updatePhase.message }}
+						</p>
 						<p
 							v-if="updateStatus === 'upToDate'"
 							test-id="settings-update-status"
