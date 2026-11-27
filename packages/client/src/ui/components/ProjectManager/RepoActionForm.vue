@@ -561,6 +561,12 @@ async function submit(): Promise<void> {
 		connecting.value = true;
 		transport = await createTransport(c);
 		connecting.value = false;
+
+		// The form was left while the server was still connecting (an SSH provisioning can take
+		// a while). Nothing has happened yet, so nothing happens at all: no clone running unseen,
+		// no leave guard left behind by a form that is gone.
+		if (unmounted) return;
+
 		project = await RUN[props.mode](transport, c);
 	}
 	catch (err: unknown) {
