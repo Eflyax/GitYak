@@ -18,7 +18,7 @@
 		"@guolao/vue-monaco-editor": "^1.5.1",
 		"@imengyu/vue3-context-menu": "^1.5.4",
 		"@mdi/js": "^7.4.47",
-		"@tauri-apps/api": "^2.0.0",
+		"@tauri-apps/api": "^2.12.0",
 		"@tauri-apps/api-v1": "npm:@tauri-apps/api@^1.6.0",
 		"@tauri-apps/plugin-deep-link": "^2",
 		"@tauri-apps/plugin-process": "^2",
@@ -33,7 +33,7 @@
 		"vuedraggable": "^4.1.0"
 	},
 	"devDependencies": {
-		"@tauri-apps/cli": "^2.0.0",
+		"@tauri-apps/cli": "^2.12.0",
 		"@types/chroma-js": "^3.1.2",
 		"@vitejs/plugin-vue": "^6.0.3",
 		"@vue/tsconfig": "^0.7.0",
