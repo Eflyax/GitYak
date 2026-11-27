@@ -1,11 +1,11 @@
 import {invoke} from '@tauri-apps/api/core';
-import type {IProject} from '@/domain';
+import type {TProjectConnection} from '@/domain/models/Project';
 import {isTauri} from '@/infrastructure/tauri/isTauri';
 
 // Where the token comes from depends on what can reach the user's home directory:
 // Tauri reads the file directly; the Vite dev server injects it at build time; anything
 // else must be told the token explicitly on the project record.
-export async function getServerToken(project: IProject): Promise<string> {
+export async function getServerToken(project: TProjectConnection): Promise<string> {
 	if (project.token) {
 		return project.token;
 	}

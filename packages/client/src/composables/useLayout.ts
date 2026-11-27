@@ -6,8 +6,9 @@ const activePanelWidth = ref(320);
 const sidebarCollapsed = ref(false);
 const showActivityLog = ref(false);
 const showSettings = ref(false);
-const showGraph = ref(false);
 const tooltipsPinned = ref(false);
+// The project manager over the repository view; with no project open it is shown regardless.
+const showProjectManager = ref(false);
 
 export function useLayout() {
 	function setLoading(value: boolean): void {
@@ -40,10 +41,6 @@ export function useLayout() {
 		showSettings.value = !showSettings.value;
 	}
 
-	function toggleGraph(): void {
-		showGraph.value = !showGraph.value;
-	}
-
 	function toggleTooltips(): void {
 		tooltipsPinned.value = !tooltipsPinned.value;
 	}
@@ -55,8 +52,8 @@ export function useLayout() {
 		activePanelWidth,
 		showActivityLog,
 		showSettings,
-		showGraph,
 		tooltipsPinned: readonly(tooltipsPinned),
+		showProjectManager,
 		setLoading,
 		openFileDiff,
 		closeFileDiff,
@@ -64,7 +61,6 @@ export function useLayout() {
 		expandSidebar,
 		toggleActivityLog,
 		toggleSettings,
-		toggleGraph,
 		toggleTooltips,
 	};
 }

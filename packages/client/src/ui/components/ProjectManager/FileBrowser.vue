@@ -88,12 +88,14 @@
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted} from 'vue';
 import {NButton, useMessage} from 'naive-ui';
-import {invoke} from '@tauri-apps/api/core';
-import {WebSocketClient} from '@/infrastructure/websocket/WebSocketClient';
 import {ENetworkCommand} from '@/domain';
+import type {TProjectConnection} from '@/domain/models/Project';
+import {connectionKey} from '@/domain/services/projectManager';
 import {ancestorPaths, parentPath as parentOf} from '@/domain/services/directoryPaths';
 import Icon from '@/ui/components/Icon.vue';
-import {isTauri} from '@/infrastructure/tauri/isTauri';
+import {createTransport, releaseTransport} from '@/infrastructure/transport';
+import type {ITransportClient} from '@/infrastructure/ITransportClient';
+import {useBrowseHistory} from '@/composables/useBrowseHistory';
 
 interface IDirEntry {
 	name: string;
@@ -105,14 +107,8 @@ interface IBrowseResult {
 	entries: IDirEntry[];
 }
 
-interface ITauriDirEntry {
-	name: string;
-	is_directory: boolean;
-}
-
 const props = defineProps<{
-	server: string;
-	port: number;
+	connection: TProjectConnection;
 	initialPath?: string;
 }>();
 
@@ -121,12 +117,14 @@ const emit = defineEmits<{
 }>();
 
 const message = useMessage();
-const initializing = ref(!isTauri);
+const {start, remember} = useBrowseHistory();
+const initializing = ref(true);
 const errorMsg = ref('');
 const loading = ref(false);
-const currentPath = ref(props.initialPath ?? '/');
+const currentPath = ref('/');
 const entries = ref<IDirEntry[]>([]);
-let client: WebSocketClient | null = null;
+let client: ITransportClient | null = null;
+let unmounted = false;
 
 const pathSegments = computed(() => {
 	if (currentPath.value === '/') return ['/'];
@@ -146,20 +144,15 @@ function joinPath(base: string, name: string): string {
 }
 
 async function loadDirectory(path: string): Promise<void> {
+	if (!client) throw new Error('Not connected');
+
 	loading.value = true;
 
 	try {
-		if (isTauri) {
-			const result = await invoke<Array<ITauriDirEntry>>('browse_directory', {path});
-			entries.value = result.map(e => ({name: e.name, isDirectory: e.is_directory}));
-			currentPath.value = path;
-		}
-		else {
-			if (!client) return;
-			const result = await client.call(ENetworkCommand.BrowseFiles, {path}) as IBrowseResult;
-			entries.value = result.entries;
-			currentPath.value = result.path;
-		}
+		const result = await client.call(ENetworkCommand.BrowseFiles, {path}) as IBrowseResult;
+		entries.value = result.entries;
+		currentPath.value = result.path;
+		remember(connectionKey(props.connection), result.path);
 	}
 	finally {
 		loading.value = false;
@@ -176,11 +169,11 @@ function navigateUp(): void {
 	navigateTo(parentPath.value);
 }
 
-// A project whose directory was deleted still carries that path. Opening the nearest
-// ancestor that does exist keeps the browser usable, where failing outright would leave the
-// project with no way to be pointed somewhere else.
+// A project whose directory was deleted still carries that path (and so may the remembered
+// folder). Opening the nearest ancestor that does exist keeps the browser usable, where
+// failing outright would leave the project with no way to be pointed somewhere else.
 async function loadInitialDirectory(): Promise<void> {
-	const requested = currentPath.value;
+	const requested = start(connectionKey(props.connection), props.initialPath);
 	const candidates = ancestorPaths(requested);
 
 	for (const [index, path] of candidates.entries()) {
@@ -201,18 +194,15 @@ async function loadInitialDirectory(): Promise<void> {
 }
 
 onMounted(async () => {
-	if (isTauri) {
-		try {
-			await loadInitialDirectory();
-		}
-		catch (e: unknown) {
-			errorMsg.value = e instanceof Error ? e.message : 'Failed to load directory';
-		}
-		return;
-	}
-
 	try {
-		client = new WebSocketClient(`ws://${props.server}:${props.port}`);
+		client = await createTransport(props.connection);
+
+		if (unmounted) {
+			releaseTransport(client);
+			client = null;
+			return;
+		}
+
 		await loadInitialDirectory();
 	}
 	catch (e: unknown) {
@@ -224,8 +214,12 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-	client?.close();
-	client = null;
+	unmounted = true;
+
+	if (client) {
+		releaseTransport(client);
+		client = null;
+	}
 });
 </script>
 

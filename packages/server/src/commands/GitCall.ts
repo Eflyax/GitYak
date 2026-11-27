@@ -58,7 +58,10 @@ export async function run(ws: {send: (msg: string) => void}, data: IWsRequest): 
 			// .git/index.lock to do it. The repo watcher sees that write, the client refreshes
 			// with another `git status`, and the loop never ends - while the stray lock makes a
 			// concurrent rebase or commit fail with "index.lock: File exists".
-			env: {...getAgentEnv(ws), GIT_OPTIONAL_LOCKS: '0'},
+			// GIT_TERMINAL_PROMPT=0: a server started from a terminal hands git its tty, so an
+			// HTTPS clone without credentials would wait there for a username nobody types - the
+			// client sees "Cloning…" forever. With it, git fails with its error instead.
+			env: {...getAgentEnv(ws), GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0'},
 			stdout: 'pipe',
 			// Bun defaults stderr to "inherit" - capture it so git errors
 			// (push rejections, conflicts, etc.) reach the client.

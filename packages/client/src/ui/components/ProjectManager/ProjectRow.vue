@@ -1,164 +1,154 @@
 <template>
-	<div class="project-item">
-		<div class="project-info">
-			<span
-				class="project-color-dot"
-				:style="{background: project.color ?? '#6f9ef8'}"
-			/>
-			<div class="project-text">
-				<div class="project-alias">
-					{{ project.alias }}
-				</div>
-				<div class="project-path">
-					{{ project.path }}
-				</div>
+	<div
+		test-id="project-row"
+		class="project-row"
+		:class="{'project-row--selected': selected}"
+		role="button"
+		tabindex="0"
+		:aria-pressed="selected"
+		:title="`${project.alias} - double-click to open`"
+		@click="emit('select', project)"
+		@dblclick="emit('open', project)"
+		@keydown.enter.prevent="emit('open', project)"
+		@keydown.space.prevent="emit('select', project)"
+	>
+		<span
+			class="project-row__dot"
+			:style="{background: project.color ?? DEFAULT_COLOR}"
+		/>
+		<div class="project-row__text">
+			<div class="project-row__alias">
+				{{ project.alias }}
+			</div>
+			<div class="project-row__path">
+				{{ project.path }}
 			</div>
 		</div>
-		<div class="project-actions">
-			<button
-				test-id="project-open-btn"
-				class="project-action project-action--open"
-				title="Open"
-				@click="emit('open', project)"
-			>
-				<Icon name="mdi-play" />
-			</button>
-			<button
-				test-id="project-edit-btn"
-				class="project-action project-action--edit"
-				title="Edit"
-				@click="emit('edit', project)"
-			>
-				<Icon name="mdi-pencil" />
-			</button>
-			<button
-				test-id="project-duplicate-btn"
-				class="project-action project-action--duplicate"
-				title="Duplicate"
-				@click="emit('duplicate', project)"
-			>
-				<Icon name="mdi-content-copy" />
-			</button>
-			<button
-				test-id="project-delete-btn"
-				class="project-action project-action--delete"
-				title="Delete"
-				@click="emit('delete', project)"
-			>
-				<Icon name="mdi-trash-can" />
-			</button>
-		</div>
+		<span
+			test-id="project-location-badge"
+			class="project-row__badge"
+			:class="local ? 'project-row__badge--local' : 'project-row__badge--remote'"
+		>
+			<Icon :name="local ? 'mdi-laptop' : 'mdi-server'" />
+			<span class="project-row__badge-label">{{ connectionLabel(project) }}</span>
+		</span>
 	</div>
 </template>
 
 <script lang="ts" setup>
+import {computed} from 'vue';
 import type {IProject} from '@/domain';
+import {connectionLabel, isLocal} from '@/domain/services/projectManager';
 import Icon from '@/ui/components/Icon.vue';
 
-defineProps<{
+const DEFAULT_COLOR = '#6f9ef8';
+
+const props = defineProps<{
 	project: IProject;
+	selected: boolean;
 }>();
 
 const emit = defineEmits<{
+	select: [project: IProject];
 	open: [project: IProject];
-	edit: [project: IProject];
-	duplicate: [project: IProject];
-	delete: [project: IProject];
 }>();
+
+const local = computed(() => isLocal(props.project));
 </script>
 
 <style lang="scss" scoped>
-// These rules used to live in ProjectManager, where scoped CSS could not reach past this
-// component's root - which is why the colour dot never showed up.
-.project-item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	padding: 8px 10px;
-	border-radius: 6px;
-	background: $bg-section;
-	border: 1px solid transparent;
-	transition: border-color 0.15s;
-
-	&:hover { border-color: $border-strong; }
-}
-
-.project-info {
+.project-row {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	min-width: 0;
-}
-
-.project-color-dot {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	flex-shrink: 0;
-}
-
-.project-text {
-	min-width: 0;
-}
-
-.project-alias {
-	font-size: 13px;
-	font-weight: 600;
-	color: $text-primary;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.project-path {
-	font-size: 11px;
-	color: $text-dim;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	max-width: 340px;
-}
-
-.project-actions {
-	display: flex;
-	gap: 2px;
-	flex-shrink: 0;
-}
-
-// Quiet in rest, like the toolbar and sidebar icons: the action's colour appears only
-// under the pointer, where it says what the button would do.
-.project-action {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 28px;
-	height: 28px;
-	padding: 0;
-	border: none;
-	border-radius: 4px;
-	background: transparent;
-	color: $text-muted;
+	padding: 7px 10px;
+	border-radius: 6px;
+	border: 1px solid transparent;
 	cursor: pointer;
-	transition: background-color 0.15s, color 0.15s;
-
-	// The global `svg { fill: $text-primary }` would otherwise ignore the button's colour.
-	:deep(svg) {
-		fill: currentColor;
-	}
+	user-select: none;
+	transition: background-color 0.12s, border-color 0.12s;
 
 	&:hover {
-		background-color: $bg-hover;
+		background: $bg-section;
 	}
 
 	&:focus-visible {
-		outline: 1px solid $color-accent;
-		outline-offset: -1px;
+		outline: none;
+		border-color: $border-strong;
 	}
 
-	&--open:hover { color: $color-success; }
-	&--edit:hover { color: $color-accent; }
-	&--duplicate:hover { color: $text-primary; }
-	&--delete:hover { color: $color-danger; }
+	&--selected {
+		background: $bg-section;
+		border-color: $color-accent;
+
+		&:focus-visible {
+			border-color: $color-accent;
+		}
+	}
+
+	&__dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	&__text {
+		flex: 1;
+		min-width: 0;
+	}
+
+	&__alias {
+		font-size: 13px;
+		font-weight: 600;
+		color: $text-primary;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	&__path {
+		font-size: 11px;
+		color: $text-dim;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	&__badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		flex-shrink: 1;
+		min-width: 0;
+		max-width: 45%;
+		padding: 2px 7px;
+		border-radius: 4px;
+		font-size: 11px;
+
+		svg {
+			width: 12px;
+			height: 12px;
+			flex-shrink: 0;
+			fill: currentColor;
+		}
+
+		&-label {
+			min-width: 0;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		&--local {
+			color: $color-success;
+			background: color-mix(in srgb, #{$color-success} 14%, transparent);
+		}
+
+		&--remote {
+			color: $color-accent;
+			background: color-mix(in srgb, #{$color-accent} 14%, transparent);
+		}
+	}
 }
 </style>

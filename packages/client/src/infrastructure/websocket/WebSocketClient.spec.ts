@@ -279,3 +279,43 @@ describe('WebSocketClient readiness gate', () => {
 		await expect(ready).rejects.toThrow('Invalid token');
 	});
 });
+
+describe('WebSocketClient without status reporting', () => {
+	it('retries without lighting the indicator - and its close does not clear one that is lit', () => {
+		vi.useFakeTimers();
+		const cs = useConnectionStatus();
+		cs.reset();
+		new WebSocketClient('ws://x', 'secret', {reportStatus: false});
+
+		socket.onopen?.();
+		accept();
+		socket.onclose?.();
+		expect(cs.isReconnecting.value).toBe(false);
+
+		cs.setReconnecting(true);
+		const silent = new WebSocketClient('ws://y', 'secret', {reportStatus: false});
+		silent.close();
+		socket.onclose?.();
+		expect(cs.isReconnecting.value).toBe(true);
+
+		cs.reset();
+		vi.useRealTimers();
+	});
+
+	it('reports once switched on (a pooled connection the open project now uses)', () => {
+		vi.useFakeTimers();
+		const cs = useConnectionStatus();
+		cs.reset();
+		const client = new WebSocketClient('ws://x', 'secret', {reportStatus: false});
+
+		client.setReportStatus(true);
+		socket.onopen?.();
+		accept();
+		socket.onclose?.();
+		expect(cs.isReconnecting.value).toBe(true);
+
+		client.close();
+		cs.reset();
+		vi.useRealTimers();
+	});
+});

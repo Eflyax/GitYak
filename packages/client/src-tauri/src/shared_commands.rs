@@ -164,3 +164,39 @@ pub fn list_theme_files(dir: String) -> Result<Vec<String>, String> {
 
     Ok(paths)
 }
+
+/// Asks a child process of this app to stop with SIGTERM. The shell plugin's `Child.kill()` is
+/// SIGKILL, which gives git no chance to clean up: a cancelled clone left its half-made folder
+/// behind, and cloning into the same place again failed with "already exists". Only a direct
+/// child of the app may be signalled, so the webview cannot reach any other process.
+#[cfg(unix)]
+#[tauri::command]
+pub fn terminate_process(pid: u32) -> Result<(), String> {
+    let ppid = std::process::Command::new("ps")
+        .args(["-o", "ppid=", "-p", &pid.to_string()])
+        .output()
+        .map_err(|e| e.to_string())?;
+    let parent = String::from_utf8_lossy(&ppid.stdout).trim().parse::<u32>().ok();
+
+    if parent != Some(std::process::id()) {
+        return Err(format!("process {pid} is not a child of this app"));
+    }
+
+    let status = std::process::Command::new("kill")
+        .args(["-TERM", &pid.to_string()])
+        .status()
+        .map_err(|e| e.to_string())?;
+
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("kill -TERM {pid} failed ({status})"))
+    }
+}
+
+/// Windows has no SIGTERM; the caller falls back to `Child.kill()`.
+#[cfg(windows)]
+#[tauri::command]
+pub fn terminate_process(pid: u32) -> Result<(), String> {
+    Err(format!("cannot terminate process {pid} gently on Windows"))
+}

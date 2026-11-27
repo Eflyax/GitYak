@@ -2,7 +2,8 @@ import type {ENetworkCommand, IWsEvent} from '@git-yak/protocol';
 import {isErrorResponse, isSuccessResponse, isRepoChangedEvent} from '@git-yak/protocol';
 import type {ITransportClient} from '../ITransportClient';
 import {nextBackoffDelay} from '../backoff';
-import {useConnectionStatus} from '@/composables/useConnectionStatus';
+import {connectionStatusSink} from '@/composables/useConnectionStatus';
+import type {IConnectionStatusSink} from '@/composables/useConnectionStatus';
 
 type PendingRequest = {
 	resolve: (value: unknown) => void
@@ -37,14 +38,25 @@ export class WebSocketClient implements ITransportClient {
 	private closedByUser = false;
 	private reconnectTimer?: ReturnType<typeof setTimeout>;
 	private readonly url: string;
-	private readonly cs = useConnectionStatus();
+	// Whether retries light the global reconnecting indicator (see `connectionStatusSink`).
+	private reportStatus: boolean;
 	// Callers waiting for the socket to be usable. Kept as a list because the readiness of a
 	// single connection can be awaited from more than one place.
 	private readonly readyWaiters: Array<PendingRequest> = [];
 
-	constructor(url: string, private readonly token = '') {
+	constructor(url: string, private readonly token = '', {reportStatus = true}: {reportStatus?: boolean} = {}) {
 		this.url = url;
+		this.reportStatus = reportStatus;
 		this.open();
+	}
+
+	private get cs(): IConnectionStatusSink {
+		return connectionStatusSink(this.reportStatus);
+	}
+
+	/** A pooled connection first made silently starts reporting once the open project uses it. */
+	setReportStatus(report: boolean): void {
+		this.reportStatus = report;
 	}
 
 	private open(): void {

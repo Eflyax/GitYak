@@ -1,6 +1,8 @@
 import {Command} from '@tauri-apps/plugin-shell';
+import type {Child} from '@tauri-apps/plugin-shell';
 import {invoke} from '@tauri-apps/api/core';
-import type {ITransportClient} from '../ITransportClient';
+import type {IGitProcess, ITransportClient} from '../ITransportClient';
+import {runSpawnedGit, streamEncoding} from '../spawnedGit';
 import {getShellPath} from './shellPath';
 import {buildRebasePlan, validateRepoPath} from './rebaseArgs';
 import {ENetworkCommand} from '@/domain';
@@ -12,16 +14,38 @@ interface IDirEntry {
 	is_directory: boolean;
 }
 
+/**
+ * The environment every git runs with. The user's login-shell PATH lets git hooks find node
+ * tooling (npx/node) even when the app was launched from Finder. GIT_TERMINAL_PROMPT=0: the app
+ * never answers a prompt, so git fails at once (an HTTPS clone without credentials) instead of
+ * waiting for a username on a terminal nobody sees.
+ */
+async function gitEnv(extra: Record<string, string> = {}): Promise<Record<string, string>> {
+	return {PATH: await getShellPath(), GIT_TERMINAL_PROMPT: '0', ...extra};
+}
+
+/** SIGTERM, so git can clean up after itself - Child.kill() is SIGKILL. */
+async function terminateGently(child: Child): Promise<void> {
+	await invoke('terminate_process', {pid: child.pid});
+}
+
 export class TauriLocalClient implements ITransportClient {
+	// Cancelling a clone must not leave its half-made folder behind, which a later clone into
+	// the same place would refuse; git removes it itself when it is terminated, not killed.
+	spawnGit(repoPath: string, args: Array<string>, onOutput: (line: string) => void): IGitProcess {
+		return runSpawnedGit(
+			async () => Command.create('git', ['-C', repoPath, ...args], {encoding: streamEncoding(), env: await gitEnv()}),
+			onOutput,
+			terminateGently,
+		);
+	}
+
 	async call(command: ENetworkCommand, payload: Record<string, unknown>): Promise<unknown> {
 		switch (command) {
 			case ENetworkCommand.GitCall: {
 				const repoPath = payload['repo_path'] as string;
 				const args = payload['args'] as Array<string>;
-				// Pass the user's login-shell PATH so git hooks can find node tooling
-				// (npx/node) even when the app was launched from Finder.
-				const path = await getShellPath();
-				const result = await Command.create('git', ['-C', repoPath, ...args], {env: {PATH: path}}).execute();
+				const result = await Command.create('git', ['-C', repoPath, ...args], {env: await gitEnv()}).execute();
 
 				if (result.code !== 0) {
 					throw new Error(result.stderr || result.stdout || 'Git command failed');
@@ -52,8 +76,7 @@ export class TauriLocalClient implements ITransportClient {
 					}
 				}
 
-				const path = await getShellPath();
-				const result = await Command.create('git', plan.args, {env: {PATH: path}}).execute();
+				const result = await Command.create('git', plan.args, {env: await gitEnv()}).execute();
 
 				if (result.code !== 0) {
 					throw new Error(result.stderr.trim() || result.stdout.trim() || `git rebase exited ${result.code}`);
@@ -95,7 +118,7 @@ export class TauriLocalClient implements ITransportClient {
 				const result = await Command.create(
 					'git',
 					['-C', repoPath, 'cat-file', 'blob', blobObjectName(revision, filePath)],
-					{encoding: 'raw', env: {PATH: await getShellPath(), GIT_OPTIONAL_LOCKS: '0'}},
+					{encoding: 'raw', env: await gitEnv({GIT_OPTIONAL_LOCKS: '0'})},
 				).execute();
 
 				if (result.code !== 0) {

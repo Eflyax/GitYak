@@ -4,11 +4,9 @@
 		<div class="app-layout">
 			<ProjectsSidebar />
 			<div class="repository">
-				<Toolbar :hide-actions="isVisible" />
+				<Toolbar :hide-actions="isVisible || managerVisible" />
 
-				<ProjectManager
-					v-if="!currentProject"
-				/>
+				<ProjectManager v-if="managerVisible" />
 
 				<ConnectionStatus v-else-if="isVisible" />
 
@@ -91,11 +89,6 @@
 
 	<SafeDirectoryDialog @added="reloadRepository" />
 
-	<RepositoryGraph
-		v-if="showGraph"
-		@close="showGraph = false"
-	/>
-
 	<HookOutputDialog
 		v-model:show="showHookOutput"
 		:success="hookOutputSuccess"
@@ -131,7 +124,6 @@ import Settings from './Settings/Settings.vue';
 import CommandPalette from './CommandPalette/CommandPalette.vue';
 import RebaseModal from './RebaseModal.vue';
 import SafeDirectoryDialog from './SafeDirectoryDialog.vue';
-import RepositoryGraph from './RepositoryGraph/RepositoryGraph.vue';
 import HookOutputDialog from './HookOutputDialog.vue';
 import ThemeEditorBar from './ThemeEditor/ThemeEditorBar.vue';
 import {useCommitAction} from '@/composables/useCommitAction';
@@ -139,6 +131,7 @@ import {useProject} from '@/composables/useProject';
 import {useRepoWatch} from '@/composables/useRepoWatch';
 import {useCommits} from '@/composables/useCommits';
 import {useLayout} from '@/composables/useLayout';
+import {useProjectManager} from '@/composables/useProjectManager';
 import {useGit} from '@/composables/useGit';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
 import {useUpdateNotifier} from '@/composables/useUpdateNotifier';
@@ -146,7 +139,7 @@ import {useUpdateNotifier} from '@/composables/useUpdateNotifier';
 const keyboard = useKeyboard();
 const {registerCommand, unregisterCommand} = useCommands();
 
-const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSettings, showGraph, toggleGraph, toggleTooltips} = useLayout();
+const {openFileDiff, closeFileDiff, sidebarCollapsed, showActivityLog, showSettings, showProjectManager, toggleTooltips} = useLayout();
 const {isVisible} = useConnectionStatus();
 const {activePath} = useGit();
 const {runCommit, showHookOutput, hookOutput, hookOutputSuccess} = useCommitAction();
@@ -160,6 +153,14 @@ function handleClose(): void {
 const {currentProject, openLastOpenProject, openProject, projects, addProject} = useProject();
 const {selectedHashes, loadCommits} = useCommits();
 const {isSummaryEmpty} = useCommitForm();
+
+const {managerVisible, confirmLeave} = useProjectManager();
+
+// Switching to another project - from the manager, the rail or the palette - leaves the
+// manager. Saving the open project replaces its object too, so the id is what is watched.
+watch(() => currentProject.value?.id, () => {
+	showProjectManager.value = false;
+});
 
 const isWorkingTreeSelected = computed(() => selectedHashes.value[0] === 'WORKING_TREE' || !selectedHashes.value.length);
 
@@ -288,14 +289,6 @@ onMounted(() => {
 	});
 
 	registerCommand({
-		id: 'open-graph',
-		label: 'Repository graph',
-		shortcut: '⌥G',
-		keybinding: {key: 'g', code: 'KeyG', alt: true},
-		action: toggleGraph,
-	});
-
-	registerCommand({
 		id: 'open-repo',
 		label: 'Open repo',
 		getItems: (query: string) => {
@@ -313,7 +306,8 @@ onMounted(() => {
 					color: p.color,
 					meter: openFrequency(p.openCount, maxOpenCount),
 					meterTitle: `Opened ${p.openCount ?? 0}×`,
-					action: () => { void openProject(p); },
+					// Leaves the manager: a clone running there asks first.
+					action: () => { void confirmLeave().then(ok => ok ? openProject(p) : undefined); },
 				}));
 		},
 	});
@@ -326,7 +320,6 @@ onUnmounted(() => {
 	unregisterCommand('commit');
 	unregisterCommand('open-repo');
 	unregisterCommand('toggle-tooltips');
-	unregisterCommand('open-graph');
 });
 
 watch(currentProject, project => {
@@ -399,9 +392,5 @@ watch(
 	background-color: $bg-panel;
 	border-left: 1px solid $border;
 	overflow: hidden;
-}
-
-.project-manager {
-	margin: 20px auto;
 }
 </style>

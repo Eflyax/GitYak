@@ -27,7 +27,7 @@ async function seedProjectWithMissingPath(page: Page, missingPath: string): Prom
 
 async function openEditForm(page: Page): Promise<void> {
 	await byTestId(page, 'open-repo-manager-btn').click();
-	await byTestId(page, 'project-edit-btn').first().click();
+	await byTestId(page, 'project-row').first().click();
 	await expect(byTestId(page, 'path-input').locator('input')).toBeVisible();
 }
 
@@ -62,7 +62,7 @@ test('a project pointed at a deleted directory can be repaired by editing its pa
 		await byTestId(page, 'path-input').locator('input').fill(replacement.path);
 		await byTestId(page, 'project-form-save-btn').click();
 
-		await byTestId(page, 'project-open-btn').first().click();
+		await byTestId(page, 'project-form-open-btn').click();
 
 		await waitForRepoLoaded(page);
 		await waitForCommitRow(page, 'Commit in the replacement');
@@ -97,11 +97,34 @@ test('repairing the path of the open project reloads it without reopening', asyn
 		await byTestId(page, 'path-input').locator('input').fill(replacement.path);
 		await byTestId(page, 'project-form-save-btn').click();
 
-		// No reopening: saving the new path is what the view has to follow.
+		// No reopening: saving the new path is what the view has to follow, once the manager
+		// is left for the project.
+		await byTestId(page, 'close-project-manager-btn').click();
 		await waitForCommitRow(page, 'Commit in the replacement');
 		await expect(page.locator('.branch-item__name', {hasText: 'repaired-branch'})).toBeVisible();
 	}
 	finally {
 		rmSync(replacement.path, {recursive: true, force: true});
 	}
+});
+
+test('Browse waits for a server to browse', async ({page}) => {
+	const gone = createTempRepo();
+	const gonePath = gone.path;
+
+	gone.cleanup();
+
+	await seedProjectWithMissingPath(page, gonePath);
+	await openEditForm(page);
+
+	const browse = byTestId(page, 'browse-folder-btn');
+
+	await expect(browse).toBeEnabled();
+
+	await byTestId(page, 'location-remote-server-radio').click();
+	await byTestId(page, 'server-input').locator('input').fill('');
+	await expect(browse).toBeDisabled();
+
+	await byTestId(page, 'server-input').locator('input').fill('localhost');
+	await expect(browse).toBeEnabled();
 });

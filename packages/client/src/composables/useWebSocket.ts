@@ -1,14 +1,11 @@
 import {ref, readonly} from 'vue';
 import type {IWsEvent} from '@git-yak/protocol';
-import {WebSocketClient} from '@/infrastructure/websocket/WebSocketClient';
-import {getServerToken} from '@/infrastructure/serverToken';
-import {TauriLocalClient} from '@/infrastructure/tauri/TauriLocalClient';
+import {createTransport} from '@/infrastructure/transport';
 import {sshConnectionPool} from '@/infrastructure/ssh/SshConnectionPool';
 import type {ITransportClient} from '@/infrastructure/ITransportClient';
-import {EConnectionStatus, ENetworkCommand, EServerType} from '@/domain';
+import {EConnectionStatus, ENetworkCommand} from '@/domain';
 import type {IProject} from '@/domain';
 import {useConnectionStatus} from '@/composables/useConnectionStatus';
-import {isTauri} from '@/infrastructure/tauri/isTauri';
 
 const client = ref<ITransportClient | null>(null);
 const status = ref<EConnectionStatus>(EConnectionStatus.Idle);
@@ -35,28 +32,7 @@ export function useWebSocket() {
 		status.value = EConnectionStatus.Connecting;
 
 		try {
-			let newClient: ITransportClient;
-
-			if (isTauri && project.server === 'localhost') {
-				newClient = new TauriLocalClient();
-			}
-			else if (project.serverType === EServerType.SSH) {
-				const pooled = await sshConnectionPool.getOrCreate(
-					project.server,
-					project.port,
-					project.sshUser ?? '',
-					project.sshKeyPath,
-				);
-				client.value = pooled;
-				closePrevious(previous);
-				status.value = EConnectionStatus.Connected;
-				return;
-			}
-			else {
-				const token = await getServerToken(project);
-
-				newClient = new WebSocketClient(`ws://${project.server}:${project.port}`, token);
-			}
+			const newClient = await createTransport(project, {reportStatus: true});
 
 			client.value = newClient;
 			closePrevious(previous);

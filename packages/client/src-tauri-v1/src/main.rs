@@ -97,6 +97,7 @@ fn main() {
             read_file_bytes,
             write_file_at,
             list_theme_files,
+            terminate_process,
             get_launch_urls,
             run_git_raw
         ])

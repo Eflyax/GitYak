@@ -8,6 +8,8 @@ import ThemeSelector from '@/ui/components/ThemeSelector/ThemeSelector.vue';
 import {useTheme} from '@/composables/useTheme';
 import {useSshProxyJump} from '@/composables/useSshProxyJump';
 import {useNotify} from '@/composables/useNotify';
+import {useProjectSettings} from '@/composables/useProjectSettings';
+import {clampRecentCount} from '@/domain/services/projectManager';
 import {useHistorySettings, clampPageSize, clampMaxCommits, PAGE_SIZE_MIN, PAGE_SIZE_MAX} from '@/composables/useHistorySettings';
 import type {ISshProxyJumpConfig, TSshProxyJumpTextField} from '@/domain/models/SshProxyJump';
 import {useDateFormat} from '@/composables/useDateFormat';
@@ -29,6 +31,7 @@ const
 	{showSettings} = useLayout(),
 	sshProxyJump = useSshProxyJump(),
 	historySettings = useHistorySettings(),
+	projectSettings = useProjectSettings(),
 	{dateFormat} = useDateFormat(),
 	{globalCommitTemplate, globalBranchTemplates} = useTemplates(),
 	updateCheck = useUpdateCheck(),
@@ -36,7 +39,7 @@ const
 
 const DATE_FORMAT_SAMPLE = '2026-11-03 14:05';
 
-type TSettingsSection = 'appearance' | 'dates' | 'history' | 'templates' | 'proxyJump' | 'about';
+type TSettingsSection = 'appearance' | 'dates' | 'history' | 'projects' | 'templates' | 'proxyJump' | 'about';
 
 interface ISettingsSection {
 	key: TSettingsSection
@@ -50,6 +53,7 @@ const SECTIONS: ReadonlyArray<ISettingsSection> = [
 	{key: 'appearance', label: 'Appearance', icon: 'mdi-palette-outline'},
 	{key: 'dates', label: 'Date & Time', icon: 'mdi-calendar-clock-outline'},
 	{key: 'history', label: 'History', icon: 'mdi-history'},
+	{key: 'projects', label: 'Projects', icon: 'mdi-source-repository'},
 	{key: 'templates', label: 'Templates', icon: 'mdi-text-box-edit-outline'},
 	{key: 'proxyJump', label: 'SSH ProxyJump', icon: 'mdi-server-network', tauriOnly: true},
 	{key: 'about', label: 'About & Updates', icon: 'mdi-information-outline'},
@@ -131,6 +135,10 @@ export default defineComponent({
 
 		historyPageSize(): number {
 			return historySettings.pageSize.value;
+		},
+
+		recentCount(): number {
+			return projectSettings.recentCount.value;
 		},
 
 		commitTemplate(): string {
@@ -252,6 +260,10 @@ export default defineComponent({
 
 		onPageSizeInput(value: number | null): void {
 			historySettings.pageSize.value = clampPageSize(value ?? undefined);
+		},
+
+		onRecentCountInput(value: number | null): void {
+			projectSettings.recentCount.value = clampRecentCount(value ?? undefined);
 		},
 
 		onCommitTemplateInput(value: string): void {

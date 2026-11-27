@@ -188,6 +188,27 @@
 			</section>
 
 			<section
+				v-else-if="activeSection === 'projects'"
+				test-id="settings-projects-section"
+				class="settings__section"
+			>
+				<div class="settings__row">
+					<label class="settings__label">Recent projects shown</label>
+					<n-input-number
+						test-id="settings-recent-count-input"
+						:value="recentCount"
+						:min="1"
+						:max="20"
+						size="small"
+						@update:value="onRecentCountInput"
+					/>
+					<p class="settings__hint">
+						How many recently opened projects the project manager lists.
+					</p>
+				</div>
+			</section>
+
+			<section
 				v-else-if="activeSection === 'templates'"
 				test-id="settings-templates-section"
 				class="settings__section"

@@ -1,261 +1,156 @@
 <template>
-	<n-card
-		:title="isEdit ? 'Edit Project' : 'Add Project'"
-		:bordered="false"
-		size="huge"
-		class="project-form"
-	>
-		<n-form
-			label-placement="left"
-			label-width="120"
-		>
-			<n-form-item label="Alias">
-				<n-input
-					v-model:value="form.alias"
-					test-id="alias-input"
-					placeholder="My project"
-					:maxlength="40"
-				/>
-			</n-form-item>
+	<div class="project-form">
+		<div class="project-form__header">
+			<span
+				class="project-form__dot"
+				:style="{background: form.color}"
+			/>
+			<h2 class="project-form__title">
+				{{ title }}
+			</h2>
+		</div>
 
-			<n-form-item label="Location">
-				<n-radio-group v-model:value="isLocal">
-					<n-radio-button
-						test-id="location-this-pc-radio"
-						:value="true"
-					>
-						<Icon name="mdi-laptop" />
-						This PC
-					</n-radio-button>
-					<n-radio-button
-						test-id="location-remote-server-radio"
-						:value="false"
-					>
-						<Icon name="mdi-server" />
-						Remote server
-					</n-radio-button>
-				</n-radio-group>
-			</n-form-item>
-
-			<template v-if="!isLocal">
-				<n-form-item
-					v-if="isTauri"
-					label="Connection"
-				>
-					<n-radio-group v-model:value="form.serverType">
-						<n-radio-button :value="EServerType.Bun">
-							Bun server
-						</n-radio-button>
-						<n-radio-button :value="EServerType.SSH">
-							SSH
-						</n-radio-button>
-					</n-radio-group>
+		<div class="project-form__body">
+			<n-form
+				label-placement="left"
+				label-width="130"
+			>
+				<n-form-item label="Alias">
+					<n-input
+						v-model:value="form.alias"
+						test-id="alias-input"
+						placeholder="My project"
+						:maxlength="40"
+					/>
 				</n-form-item>
 
-				<template v-if="form.serverType === EServerType.Bun">
-					<n-form-item label="Server">
-						<n-input-group>
-							<n-input
-								v-model:value="form.server"
-								test-id="server-input"
-								placeholder="192.168.1.100"
-								style="flex: 1;"
-							/>
-							<n-input-number
-								v-model:value="form.port"
-								test-id="port-input"
-								placeholder="3000"
-								:min="1"
-								:max="65535"
-								style="width: 120px;"
-							/>
-						</n-input-group>
-					</n-form-item>
+				<ConnectionFields v-model="connection" />
 
-					<n-form-item
-						label="Server token"
-						feedback="Only needed for a server exposed beyond localhost."
-					>
+				<n-form-item label="Path">
+					<n-input-group>
 						<n-input
-							v-model:value="form.token"
-							test-id="token-input"
-							type="password"
-							show-password-on="click"
-							placeholder="Server token"
-							:input-props="{spellcheck: false, autocomplete: 'off'}"
+							v-model:value="form.path"
+							test-id="path-input"
+							placeholder="/path/to/repo"
+							style="flex: 1;"
 						/>
-					</n-form-item>
+						<n-button
+							test-id="browse-folder-btn"
+							type="info"
+							ghost
+							:disabled="!hasServer(connection)"
+							@click="showBrowser = true"
+						>
+							Browse…
+						</n-button>
+					</n-input-group>
+				</n-form-item>
 
-					<n-form-item label="SSH Private Key">
-						<n-input
-							v-model:value="form.sshPrivateKey"
-							test-id="ssh-key-input"
-							type="textarea"
-							placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-							:autosize="{minRows: 3, maxRows: 8}"
-							:input-props="{spellcheck: false, autocomplete: 'off'}"
-						/>
-					</n-form-item>
-				</template>
-
-				<template v-else>
-					<n-form-item label="SSH Host">
-						<n-input-group>
-							<n-input
-								v-model:value="form.server"
-								test-id="server-input"
-								placeholder="192.168.1.100"
-								style="flex: 1;"
-							/>
-							<n-input-number
-								v-model:value="form.port"
-								test-id="port-input"
-								placeholder="22"
-								:min="1"
-								:max="65535"
-								style="width: 120px;"
-							/>
-						</n-input-group>
-					</n-form-item>
-
-					<n-form-item label="SSH User">
-						<n-input
-							v-model:value="form.sshUser"
-							test-id="ssh-user-input"
-							placeholder="root"
-						/>
-					</n-form-item>
-
-					<n-form-item label="SSH Key Path">
-						<n-input-group>
-							<n-input
-								v-model:value="form.sshKeyPath"
-								test-id="ssh-key-path-input"
-								placeholder="~/.ssh/id_ed25519"
-								style="flex: 1;"
-							/>
-							<n-button
-								v-if="detectedKeys.length > 0"
-								ghost
-								@click="showKeySelect = true"
-							>
-								Detected keys
-							</n-button>
-							<n-button
-								ghost
-								:loading="detectingKeys"
-								@click="detectKeys"
-							>
-								Detect
-							</n-button>
-						</n-input-group>
-					</n-form-item>
-
-					<n-modal
-						v-model:show="showKeySelect"
-						title="Select SSH key"
-						preset="card"
-						style="width: 480px;"
-					>
-						<n-list bordered>
-							<n-list-item
-								v-for="key in detectedKeys"
-								:key="key"
-								style="cursor: pointer;"
-								@click="selectKey(key)"
-							>
-								{{ key }}
-							</n-list-item>
-						</n-list>
-					</n-modal>
-				</template>
-			</template>
-
-			<n-form-item label="Path">
-				<n-input-group>
-					<n-input
-						test-id="path-input"
-						:value="form.path"
-						placeholder="/path/to/repo"
-						style="flex: 1;"
-						@update:value="form.path = $event"
+				<n-form-item label="Group">
+					<n-select
+						v-model:value="form.groupId"
+						test-id="group-select"
+						:options="groupOptions"
+						placeholder="No group"
+						clearable
 					/>
-					<n-button
-						v-if="form.serverType !== EServerType.SSH"
-						test-id="browse-folder-btn"
-						type="info"
-						ghost
-						@click="showBrowser = true"
-					>
-						Browse…
-					</n-button>
-				</n-input-group>
-			</n-form-item>
+				</n-form-item>
 
-			<n-form-item label="Group">
-				<n-select
-					v-model:value="form.groupId"
-					test-id="group-select"
-					:options="groupOptions"
-					placeholder="No group"
-					clearable
-				/>
-			</n-form-item>
-
-			<n-form-item
-				label="Commit template"
-				feedback="Replaces the global commit template from Settings. Leave empty to use the global one."
-			>
-				<n-input
-					v-model:value="form.commitTemplate"
-					test-id="project-commit-template-input"
-					:placeholder="globalCommitTemplate ? `Global: ${globalCommitTemplate}` : 'e.g. [IMP] '"
-				/>
-			</n-form-item>
-
-			<n-form-item
-				label="Branch templates"
-				feedback="Offered when naming a branch, before the global templates from Settings."
-			>
-				<n-dynamic-tags
-					v-model:value="form.branchTemplates"
-					test-id="project-branch-templates-input"
-				/>
-			</n-form-item>
-
-			<n-form-item label="Color">
-				<div class="color-picker">
-					<button
-						v-for="color in PRESET_COLORS"
-						:key="color"
-						class="color-dot"
-						:class="{'color-dot--active': form.color === color}"
-						:style="{background: color}"
-						@click="form.color = color"
-					/>
-				</div>
-			</n-form-item>
-		</n-form>
-
-		<template #footer>
-			<div class="form-actions">
-				<n-button
-					test-id="project-form-cancel-btn"
-					@click="emit('cancel')"
+				<n-form-item
+					label="Commit template"
+					feedback="Replaces the global commit template from Settings. Leave empty to use the global one."
 				>
-					Cancel
+					<n-input
+						v-model:value="form.commitTemplate"
+						test-id="project-commit-template-input"
+						:placeholder="globalCommitTemplate ? `Global: ${globalCommitTemplate}` : 'e.g. [IMP] '"
+					/>
+				</n-form-item>
+
+				<n-form-item
+					label="Branch templates"
+					feedback="Offered when naming a branch, before the global templates from Settings."
+				>
+					<n-dynamic-tags
+						v-model:value="form.branchTemplates"
+						test-id="project-branch-templates-input"
+					/>
+				</n-form-item>
+
+				<n-form-item label="Color">
+					<div class="color-picker">
+						<button
+							v-for="color in PRESET_COLORS"
+							:key="color"
+							type="button"
+							class="color-dot"
+							:class="{'color-dot--active': form.color === color}"
+							:style="{background: color}"
+							:title="color"
+							@click="form.color = color"
+						/>
+					</div>
+				</n-form-item>
+			</n-form>
+		</div>
+
+		<div class="project-form__actions">
+			<template v-if="project">
+				<n-button
+					test-id="project-form-remove-btn"
+					type="error"
+					quaternary
+					@click="confirmRemove"
+				>
+					<template #icon>
+						<Icon name="mdi-trash-can-outline" />
+					</template>
+					Remove
+				</n-button>
+				<span class="project-form__spacer" />
+				<n-button
+					test-id="project-form-duplicate-btn"
+					@click="emit('duplicate', project)"
+				>
+					<template #icon>
+						<Icon name="mdi-content-copy" />
+					</template>
+					Duplicate
 				</n-button>
 				<n-button
 					test-id="project-form-save-btn"
-					type="primary"
-					:disabled="!form.alias || !form.path"
+					:disabled="!isValid || !isDirty"
 					@click="handleSave"
 				>
-					{{ isEdit ? 'Save Changes' : 'Add Project' }}
+					Save
 				</n-button>
-			</div>
-		</template>
-	</n-card>
+				<n-button
+					test-id="project-form-open-btn"
+					type="primary"
+					:disabled="!isValid"
+					:loading="opening"
+					@click="handleOpen"
+				>
+					<template #icon>
+						<Icon name="mdi-play" />
+					</template>
+					Open
+				</n-button>
+			</template>
+
+			<template v-else>
+				<span class="project-form__spacer" />
+				<n-button
+					test-id="project-form-save-btn"
+					type="primary"
+					:disabled="!isValid"
+					@click="handleSave"
+				>
+					Add project
+				</n-button>
+			</template>
+		</div>
+	</div>
 
 	<n-modal
 		v-model:show="showBrowser"
@@ -264,9 +159,8 @@
 		style="width: 720px;"
 	>
 		<FileBrowser
-			:server="form.server"
-			:port="form.port"
-			:initial-path="form.path || '/'"
+			:connection="connection"
+			:initial-path="form.path"
 			@select="onPathSelected"
 		/>
 	</n-modal>
@@ -275,44 +169,30 @@
 <script setup lang="ts">
 import {ref, computed, reactive, watch} from 'vue';
 import {
-	NCard,
 	NForm,
 	NFormItem,
 	NInput,
 	NInputGroup,
-	NInputNumber,
 	NButton,
 	NDynamicTags,
 	NModal,
-	NRadioGroup,
-	NRadioButton,
 	NSelect,
-	NList,
-	NListItem,
+	useDialog,
 } from 'naive-ui';
-import {invoke} from '@tauri-apps/api/core';
 import {useProject} from '@/composables/useProject';
 import {useTemplates} from '@/composables/useTemplates';
 import {normalizeTemplates} from '@/domain/services/templates';
+import {hasServer, toStoredConnection} from '@/domain/services/projectManager';
 import type {IProject} from '@/domain';
 import {EServerType} from '@/domain';
+import {LOCAL_SERVER} from '@/domain/models/Project';
+import type {TProjectConnection} from '@/domain/models/Project';
 import Icon from '@/ui/components/Icon.vue';
+import ConnectionFields from './ConnectionFields.vue';
 import FileBrowser from './FileBrowser.vue';
-import {isTauri} from '@/infrastructure/tauri/isTauri';
+import {PRESET_COLORS} from './projectColors';
 
 const DEFAULT_PORT = 3000;
-const DEFAULT_SSH_PORT = 22;
-
-const PRESET_COLORS = [
-	'#6f9ef8',
-	'#f87171',
-	'#4ade80',
-	'#fb923c',
-	'#a78bfa',
-	'#34d399',
-	'#fbbf24',
-	'#f472b6',
-] as const;
 
 interface IFormData {
 	alias: string;
@@ -330,31 +210,27 @@ interface IFormData {
 	branchTemplates: Array<string>;
 }
 
+type TProjectData = Omit<IProject, 'id' | 'order' | 'dateCreated' | 'dateLastOpen'>;
+
 const props = defineProps<{
-	project?: IProject | null;
+	/** The project being edited; null while a copy of `duplicateOf` is being prepared. */
+	project: IProject | null;
+	duplicateOf?: IProject;
+	/** A project opened from the manager is still connecting. */
+	opening?: boolean;
 }>();
 
 const emit = defineEmits<{
-	saved: [];
-	cancel: [];
+	saved: [project: IProject];
+	duplicate: [project: IProject];
+	open: [project: IProject];
+	removed: [];
 }>();
 
-const {groups, addProject, updateProject} = useProject();
+const dialog = useDialog();
+const {groups, addProject, updateProject, removeProject} = useProject();
 const {globalCommitTemplate} = useTemplates();
 const showBrowser = ref(false);
-const showKeySelect = ref(false);
-const detectedKeys = ref<string[]>([]);
-const detectingKeys = ref(false);
-const isEdit = computed(() => !!props.project?.id);
-
-const isLocal = computed({
-	get: () => form.server === 'localhost',
-	set: (value: boolean) => {
-		form.server = value ? 'localhost' : '';
-		form.port = value ? DEFAULT_PORT : DEFAULT_SSH_PORT;
-		form.serverType = EServerType.Bun;
-	},
-});
 
 const groupOptions = computed(() =>
 	groups.value.map(g => ({label: g.name, value: g.id})),
@@ -364,7 +240,7 @@ function makeForm(project?: IProject | null): IFormData {
 	return {
 		alias: project?.alias ?? '',
 		path: project?.path ?? '',
-		server: project?.server ?? 'localhost',
+		server: project?.server ?? LOCAL_SERVER,
 		port: project?.port ?? DEFAULT_PORT,
 		serverType: project?.serverType ?? EServerType.Bun,
 		sshUser: project?.sshUser ?? 'root',
@@ -378,96 +254,182 @@ function makeForm(project?: IProject | null): IFormData {
 	};
 }
 
-const form = reactive<IFormData>(makeForm(props.project));
+function initialForm(): IFormData {
+	if (props.project) {
+		return makeForm(props.project);
+	}
 
-watch(() => form.serverType, (type) => {
-	if (type === EServerType.SSH && form.port === DEFAULT_PORT) {
-		form.port = DEFAULT_SSH_PORT;
+	const form = makeForm(props.duplicateOf);
+
+	if (props.duplicateOf) {
+		form.alias = `${props.duplicateOf.alias} (copy)`.slice(0, 40);
 	}
-	else if (type === EServerType.Bun && form.port === DEFAULT_SSH_PORT) {
-		form.port = DEFAULT_PORT;
-	}
+
+	return form;
+}
+
+function formConnection(f: IFormData): TProjectConnection {
+	return {
+		server: f.server,
+		port: f.port,
+		serverType: f.serverType,
+		sshUser: f.sshUser,
+		sshKeyPath: f.sshKeyPath,
+		sshPrivateKey: f.sshPrivateKey,
+		token: f.token,
+	};
+}
+
+function toProjectData(f: IFormData): TProjectData {
+	return {
+		alias: f.alias,
+		path: f.path,
+		...toStoredConnection(formConnection(f)),
+		groupId: f.groupId ?? undefined,
+		color: f.color,
+		commitTemplate: f.commitTemplate || undefined,
+		branchTemplates: normalizeTemplates(f.branchTemplates),
+	};
+}
+
+const form = reactive<IFormData>(initialForm());
+// What Save would write if nothing were changed; a form equal to it has nothing to save.
+const baseline = ref(JSON.stringify(toProjectData(form)));
+
+watch(() => [props.project, props.duplicateOf], () => {
+	Object.assign(form, initialForm());
+	baseline.value = JSON.stringify(toProjectData(form));
 });
 
-watch(() => props.project, (p) => {
-	Object.assign(form, makeForm(p));
+const connection = computed<TProjectConnection>({
+	get: () => formConnection(form),
+	set: c => {
+		form.server = c.server;
+		form.port = c.port;
+		form.serverType = c.serverType;
+		form.sshUser = c.sshUser ?? '';
+		form.sshKeyPath = c.sshKeyPath ?? '';
+		form.sshPrivateKey = c.sshPrivateKey ?? '';
+		form.token = c.token ?? '';
+	},
 });
+
+const title = computed(() => {
+	if (props.project) {
+		return props.project.alias;
+	}
+
+	return props.duplicateOf ? `Copy of ${props.duplicateOf.alias}` : 'New project';
+});
+
+const isValid = computed(() => !!form.alias && !!form.path && hasServer(connection.value));
+const isDirty = computed(() => JSON.stringify(toProjectData(form)) !== baseline.value);
 
 function onPathSelected(path: string): void {
 	form.path = path;
 	showBrowser.value = false;
 }
 
-async function detectKeys(): Promise<void> {
-	if (!isTauri) return;
+function save(): IProject | null {
+	if (!isValid.value) return null;
 
-	detectingKeys.value = true;
+	const data = toProjectData(form);
 
-	try {
-		const keys = await invoke<string[]>('detect_ssh_keys');
-		detectedKeys.value = keys;
-
-		if (keys.length === 1) {
-			form.sshKeyPath = keys[0];
-		}
-		else if (keys.length > 1) {
-			showKeySelect.value = true;
-		}
+	if (props.project) {
+		return updateProject(props.project.id, data);
 	}
-	catch {
-		// Ignore
-	}
-	finally {
-		detectingKeys.value = false;
-	}
-}
 
-function selectKey(key: string): void {
-	form.sshKeyPath = key;
-	showKeySelect.value = false;
+	return addProject(data);
 }
 
 function handleSave(): void {
-	if (!form.alias || !form.path) return;
+	const saved = save();
 
-	const isSsh = form.serverType === EServerType.SSH;
-
-	const data = {
-		alias: form.alias,
-		path: form.path,
-		server: form.server,
-		port: form.port,
-		serverType: isTauri ? form.serverType : EServerType.Bun,
-		sshUser: isSsh ? (form.sshUser || undefined) : undefined,
-		sshKeyPath: isSsh ? (form.sshKeyPath || undefined) : undefined,
-		sshPrivateKey: !isSsh ? (form.sshPrivateKey || undefined) : undefined,
-		token: form.token || undefined,
-		groupId: form.groupId ?? undefined,
-		color: form.color,
-		commitTemplate: form.commitTemplate || undefined,
-		branchTemplates: normalizeTemplates(form.branchTemplates),
-	};
-
-	if (isEdit.value && props.project) {
-		updateProject(props.project.id, data);
+	if (saved) {
+		emit('saved', saved);
 	}
-	else {
-		addProject(data);
-	}
+}
 
-	emit('saved');
+// Open takes what the form shows: unsaved changes are saved first rather than dropped.
+function handleOpen(): void {
+	if (!props.project || props.opening) return;
+
+	const project = isDirty.value ? save() : props.project;
+
+	if (project) {
+		emit('open', project);
+	}
+}
+
+function confirmRemove(): void {
+	const project = props.project;
+
+	if (!project) return;
+
+	dialog.warning({
+		title: 'Remove Project',
+		content: `Remove "${project.alias}" from the list? The repository will not be deleted from disk.`,
+		positiveText: 'Remove',
+		negativeText: 'Cancel',
+		onPositiveClick: () => {
+			removeProject(project.id);
+			emit('removed');
+		},
+	});
 }
 </script>
 
 <style scoped lang="scss">
+// About as wide as the old dialog: a wider window gives the list more room, not the fields.
 .project-form {
-	min-width: 560px;
-}
-
-.form-actions {
 	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
+	flex-direction: column;
+	height: 100%;
+	min-height: 0;
+	max-width: 600px;
+
+	&__header {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 18px 24px 12px;
+	}
+
+	&__dot {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	&__title {
+		margin: 0;
+		font-size: 16px;
+		font-weight: 600;
+		color: $text-primary;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	&__body {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		padding: 8px 24px;
+	}
+
+	&__actions {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 12px 24px;
+		border-top: 1px solid $border;
+	}
+
+	&__spacer {
+		flex: 1;
+	}
 }
 
 .color-picker {

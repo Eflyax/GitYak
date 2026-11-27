@@ -29,3 +29,7 @@ export interface IProjectGroup {
 	name: string
 	color?: string
 }
+
+export type TProjectConnection = Pick<IProject, 'server' | 'port' | 'serverType' | 'sshUser' | 'sshKeyPath' | 'sshPrivateKey' | 'token'>;
+
+export const LOCAL_SERVER = 'localhost';

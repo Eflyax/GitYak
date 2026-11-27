@@ -64,10 +64,13 @@ async fn run_git(cwd: &std::path::Path, args: &[String]) -> Result<String, Strin
 	// .git/index.lock to do it. The repo watcher sees that write, the client refreshes with
 	// another `git status`, and the loop never ends - while the stray lock makes a concurrent
 	// rebase or commit fail with "index.lock: File exists".
+	// GIT_TERMINAL_PROMPT=0: nobody answers a prompt (an HTTPS clone asking for a username),
+	// so git must fail with its error rather than wait for one.
 	let output = tokio::process::Command::new("git")
 		.args(args)
 		.current_dir(cwd)
 		.env("GIT_OPTIONAL_LOCKS", "0")
+		.env("GIT_TERMINAL_PROMPT", "0")
 		.output()
 		.await
 		.map_err(|e| e.to_string())?;

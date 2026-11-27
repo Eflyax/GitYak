@@ -21,8 +21,8 @@ const CLIPS = {
 	rebase:     {x: 370, y: 240, width: 700, height: 452},    // the interactive rebase dialog on the dimmed history
 	conflict:   {x: 88, y: 90, width: 704, height: 454},      // the conflict bar, the current side and the first conflict
 	imageDiff:  {x: 88, y: 50, width: 1020, height: 850},    // the SVG diff and the logo before and after
-	projects:   {x: 371, y: 288, width: 706, height: 446},    // the repository list
-	sshProject: {x: 432, y: 93, width: 576, height: 411},     // the form of a server project
+	projects:   {x: 0, y: 50, width: 706, height: 446},       // the project rail, Open/Clone/Create and Recent
+	sshProject: {x: 693, y: 50, width: 576, height: 411},     // the form of a server project, down to its path
 };
 
 // GitYak's own history makes a realistic graph. Every scene gets a fresh clone, so it is
@@ -211,12 +211,12 @@ test('project manager', async ({page}) => {
 	await waitForRepoLoaded(page);
 	await page.locator('.commit-row').nth(12).waitFor();
 	await byTestId(page, 'open-repo-manager-btn').click();
-	await byTestId(page, 'project-open-btn').nth(4).waitFor();
+	await page.locator('[test-id="all-projects"] [test-id="project-row"]').nth(4).waitFor();
 	await settle(page);
 	await page.screenshot({path: join(outDir, 'projects.png'), clip: CLIPS.projects});
 
 	// The same list's server project opened for editing: host, user and key, nothing to install.
-	await byTestId(page, 'project-edit-btn').nth(1).click();
+	await byTestId(page, 'project-row').nth(1).click();
 	await byTestId(page, 'ssh-user-input').waitFor();
 	await settle(page);
 	await page.screenshot({path: join(outDir, 'ssh-project.png'), clip: CLIPS.sshProject});

@@ -8,11 +8,11 @@
 			<template #trigger>
 				<n-button
 					title="Manage repositories"
-					:type="!currentProject ? 'info' : 'default'"
+					:type="managerVisible ? 'info' : 'default'"
 					secondary
 					test-id="open-repo-manager-btn"
 					class="open-repo-manager"
-					@click="showManager = true"
+					@click="toggleProjectManager"
 				>
 					<Icon name="mdi-source-repository" />
 				</n-button>
@@ -63,7 +63,7 @@
 						class="project-btn"
 						:class="{'project-btn--active': currentProject?.id === project.id}"
 						:style="{'--project-color': project.color ?? '#6f9ef8'}"
-						@click="openProject(project)"
+						@click="onProjectClick(project)"
 					>
 						{{ initials(project.alias) }}
 					</button>
@@ -74,16 +74,6 @@
 				</span>
 			</n-tooltip>
 		</div>
-
-		<!-- Project Manager modal -->
-		<n-modal
-			v-model:show="showManager"
-			preset="card"
-			title="Repositories"
-			style="width: 720px;"
-		>
-			<ProjectManager @project-opened="showManager = false" />
-		</n-modal>
 
 		<!-- Group filter modal -->
 		<n-modal
@@ -139,13 +129,13 @@ import type {CSSProperties} from 'vue';
 import {NButton, NModal, NTooltip} from 'naive-ui';
 import {useProject} from '@/composables/useProject';
 import {useLayout} from '@/composables/useLayout';
+import {useProjectManager} from '@/composables/useProjectManager';
+import type {IProject} from '@/domain';
 import Icon from './Icon.vue';
-import ProjectManager from './ProjectManager/ProjectManager.vue';
 
 const {projects, groups, currentProject, openProject, selectedGroupFilter} = useProject();
 // Alt+T toggles all project tooltips on at once (state lives in useLayout).
-const {tooltipsPinned} = useLayout();
-const showManager = ref(false);
+const {tooltipsPinned, showProjectManager} = useLayout();
 const showGroupFilter = ref(false);
 
 const PROJECT_FALLBACK_COLOR = '#6f9ef8';
@@ -183,12 +173,34 @@ const filteredProjects = computed(() => {
 	return projects.value.filter(p => p.groupId === filter);
 });
 
-watch(selectedGroupFilter, () => {
+const {managerVisible, openFromRail, leaveManager, confirmLeave} = useProjectManager();
+
+// Switching the group opens its first project, which leaves the manager - a clone running
+// there asks first (declining keeps the filter but not the switch).
+watch(selectedGroupFilter, async () => {
 	const first = filteredProjects.value[0];
-	if (first) {
+	if (first && await confirmLeave()) {
 		openProject(first, {counted: false});
 	}
 });
+
+// Hiding the manager goes the same way as its Back button: a clone running in it asks first,
+// and a connection error left from a failed open is cleared rather than shown over the
+// project that is still open.
+function toggleProjectManager(): void {
+	if (managerVisible.value) {
+		void leaveManager();
+	}
+	else {
+		showProjectManager.value = true;
+	}
+}
+
+// A click on a project always lands in that project, even the one already open behind the
+// manager.
+function onProjectClick(project: IProject): void {
+	void openFromRail(project);
+}
 
 function selectGroup(value: string | null): void {
 	selectedGroupFilter.value = value;

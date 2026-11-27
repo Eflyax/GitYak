@@ -3,10 +3,13 @@ import type {Child} from '@tauri-apps/plugin-shell';
 import {invoke} from '@tauri-apps/api/core';
 import type {IWsEvent} from '@git-yak/protocol';
 import {WebSocketClient} from '../websocket/WebSocketClient';
-import type {ITransportClient} from '../ITransportClient';
+import type {IGitProcess, ITransportClient} from '../ITransportClient';
+import {runSpawnedGit, streamEncoding} from '../spawnedGit';
+import {buildRemoteGitCommand} from './remoteGitCommand';
 import {ENetworkCommand} from '@/domain';
 import {useActivityLog} from '@/composables/useActivityLog';
-import {useConnectionStatus} from '@/composables/useConnectionStatus';
+import {connectionStatusSink} from '@/composables/useConnectionStatus';
+import type {ConnectionPhase, IConnectionStatusSink} from '@/composables/useConnectionStatus';
 
 const REMOTE_BINARY_PATH = '~/.local/bin/gityak';
 const REMOTE_WORKER_VERSION = __REMOTE_WORKER_VERSION__;
@@ -27,24 +30,60 @@ export class SshTunnelClient implements ITransportClient {
 	private reconnectCallback?: () => void;
 	onDead?: () => void;
 	private readonly log = useActivityLog().addLog;
-	private readonly cs = useConnectionStatus();
+	// The provisioning step reached, while connect() runs.
+	private connectPhase: ConnectionPhase | null = null;
 
+	/**
+	 * `reportStatus`: whether the provisioning steps and a failed connect take over the screen
+	 * through the global connection status - only for the open project's connect. A connection
+	 * made for the project manager (browsing, Open/Clone/Create) stays silent and is shown inline.
+	 */
 	constructor(
 		private readonly host: string,
 		private readonly sshPort: number,
 		private readonly user: string,
 		private readonly keyPath?: string,
+		private reportStatus = true,
 	) {}
 
+	private get cs(): IConnectionStatusSink {
+		return connectionStatusSink(this.reportStatus);
+	}
+
+	/**
+	 * A connection first made silently reports from now on - the open project uses it. Joined
+	 * mid-connect, the screen picks the provisioning up at the step it has reached.
+	 */
+	enableStatusReporting(): void {
+		if (this.reportStatus) return;
+
+		this.reportStatus = true;
+		this.wsClient?.setReportStatus(true);
+
+		if (this.connectPhase) {
+			this.cs.setConnectingTo(this.target);
+			this.cs.setPhase(this.connectPhase);
+		}
+	}
+
+	private get target(): string {
+		return `${this.user}@${this.host}:${this.sshPort}`;
+	}
+
+	private setPhase(phase: ConnectionPhase): void {
+		this.connectPhase = phase;
+		this.cs.setPhase(phase);
+	}
+
 	async connect(): Promise<void> {
-		this.cs.setConnectingTo(`${this.user}@${this.host}:${this.sshPort}`);
-		this.cs.setPhase('connecting');
+		this.cs.setConnectingTo(this.target);
+		this.setPhase('connecting');
 		this.log({type: 'ssh', status: 'info', direction: 'request', message: `Connecting to ${this.user}@${this.host}:${this.sshPort}`});
 
 		try {
 			const binaryPath = await invoke<string>('get_server_binary_path');
 
-			this.cs.setPhase('checking');
+			this.setPhase('checking');
 			await this.provision(binaryPath);
 
 			const remotePort = await this.startServer();
@@ -53,7 +92,7 @@ export class SshTunnelClient implements ITransportClient {
 
 			await this.createTunnel(remotePort);
 
-			this.wsClient = new WebSocketClient(`ws://127.0.0.1:${this.localPort}`);
+			this.wsClient = new WebSocketClient(`ws://127.0.0.1:${this.localPort}`, '', {reportStatus: this.reportStatus});
 			if (this.eventCallback) {
 				this.wsClient.onEvent(this.eventCallback);
 			}
@@ -68,9 +107,11 @@ export class SshTunnelClient implements ITransportClient {
 			await this.wsClient.waitUntilOpen(TUNNEL_READY_TIMEOUT_MS);
 
 			this.startHeartbeat();
+			this.connectPhase = null;
 			this.cs.reset();
 		}
 		catch (err: unknown) {
+			this.connectPhase = null;
 			const msg = err instanceof Error ? err.message : String(err);
 			this.log({type: 'ssh', status: 'error', direction: 'response', message: msg});
 			this.cs.setError(msg);
@@ -87,12 +128,12 @@ export class SshTunnelClient implements ITransportClient {
 
 			if (!FORCE_PROVISION && remoteVer.trim() === REMOTE_WORKER_VERSION) {
 				this.log({type: 'ssh', status: 'info', direction: 'response', message: `Remote worker up-to-date (v${REMOTE_WORKER_VERSION})`});
-				this.cs.setPhase('starting');
+				this.setPhase('starting');
 				return;
 			}
 
 			this.log({type: 'ssh', status: 'info', direction: 'request', message: 'Uploading remote worker binary…'});
-			this.cs.setPhase('uploading');
+			this.setPhase('uploading');
 
 			// Kill any stale process before overwriting - prevents "Text file busy"
 			await this.killRemoteWorker();
@@ -129,7 +170,7 @@ export class SshTunnelClient implements ITransportClient {
 	}
 
 	private async startServer(): Promise<number> {
-		this.cs.setPhase('starting');
+		this.setPhase('starting');
 		this.log({type: 'ssh', status: 'info', direction: 'request', message: `Starting remote worker on ${this.host}`});
 
 		// Kill any stale instance - needed when version matched and upload was skipped
@@ -193,7 +234,7 @@ export class SshTunnelClient implements ITransportClient {
 	}
 
 	private createTunnel(remotePort: number): Promise<void> {
-		this.cs.setPhase('tunneling');
+		this.setPhase('tunneling');
 		this.log({type: 'ssh', status: 'info', direction: 'request', message: `Creating SSH tunnel :${this.localPort} → :${remotePort}`});
 
 		return new Promise((resolve, reject) => {
@@ -250,6 +291,13 @@ export class SshTunnelClient implements ITransportClient {
 					}
 				});
 		}, 10_000);
+	}
+
+	// Cancelling kills the local ssh; the remote git then dies on SIGPIPE and cleans up itself.
+	spawnGit(repoPath: string, args: Array<string>, onOutput: (line: string) => void): IGitProcess {
+		const remoteCmd = buildRemoteGitCommand(repoPath, args);
+
+		return runSpawnedGit(async () => Command.create('ssh', this.buildSshArgs(remoteCmd), {encoding: streamEncoding()}), onOutput);
 	}
 
 	private buildSshArgs(remoteCmd: string): string[] {

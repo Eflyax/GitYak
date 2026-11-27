@@ -1,531 +1,340 @@
 <template>
-	<div class="project-manager">
-		<!-- Tabs: Projects / Groups -->
-		<n-tabs
-			v-model:value="activeTab"
-			type="line"
-			animated
-		>
-			<!-- ── Projects tab ─────────────────────────── -->
-			<n-tab-pane
-				name="projects"
-				tab="Projects"
-			>
-				<div class="tab-content">
-					<div class="toolbar">
-						<n-input
-							v-model:value="filterText"
-							test-id="search-projects-input"
-							placeholder="Search projects…"
-							clearable
-						>
-							<template #prefix>
-								<Icon name="mdi-magnify" />
-							</template>
-						</n-input>
-						<n-button
-							test-id="add-project-btn"
-							type="primary"
-							@click="openAdd"
-						>
-							<template #icon>
-								<Icon name="mdi-plus" />
-							</template>
-							Add Project
-						</n-button>
-					</div>
+	<div
+		test-id="project-manager"
+		class="project-manager"
+		:class="{'project-manager--opening': opening}"
+		:aria-busy="opening"
+	>
+		<section class="project-manager__left">
+			<header class="project-manager__header">
+				<h1 class="project-manager__title">
+					Projects
+				</h1>
+				<n-button
+					v-if="currentProject"
+					test-id="close-project-manager-btn"
+					size="small"
+					secondary
+					:title="`Back to ${currentProject.alias} (Esc)`"
+					@click="close"
+				>
+					<template #icon>
+						<Icon name="mdi-arrow-left" />
+					</template>
+					Back to {{ currentProject.alias }}
+				</n-button>
+			</header>
 
-					<n-select
-						v-model:value="selectedGroupFilter"
-						test-id="group-filter-select"
-						:options="groupFilterOptions"
-						clearable
-						placeholder="All groups"
-					/>
-
-					<div class="project-list">
-						<!-- Grouped projects -->
-						<template
-							v-for="group in groups"
-							:key="group.id"
-						>
-							<div
-								v-if="projectsByGroup[group.id]?.length"
-								class="group-section"
-							>
-								<div class="group-header">
-									<span
-										class="group-dot"
-										:style="{background: group.color ?? '#888'}"
-									/>
-									<span class="group-name">{{ group.name }}</span>
-								</div>
-
-								<ProjectRow
-									v-for="project in projectsByGroup[group.id]"
-									:key="project.id"
-									:project="project"
-									@open="handleOpenProject(project)"
-									@edit="openEdit(project)"
-									@duplicate="openDuplicate(project)"
-									@delete="confirmDelete(project)"
-								/>
-							</div>
-						</template>
-
-						<!-- Ungrouped projects -->
-						<div
-							v-if="ungrouped.length"
-							class="group-section"
-						>
-							<div
-								v-if="groups.length"
-								class="group-header"
-							>
-								<span class="group-name group-name--dim">Ungrouped</span>
-							</div>
-
-							<ProjectRow
-								v-for="project in ungrouped"
-								:key="project.id"
-								:project="project"
-								@open="handleOpenProject(project)"
-								@edit="openEdit(project)"
-								@duplicate="openDuplicate(project)"
-								@delete="confirmDelete(project)"
-							/>
-						</div>
-
-						<div
-							v-if="filteredProjects.length === 0"
-							class="empty"
-						>
-							No projects found
-						</div>
-					</div>
-				</div>
-			</n-tab-pane>
-
-			<!-- ── Groups tab ─────────────────────────────── -->
-			<n-tab-pane
-				name="groups"
-				tab="Groups"
-			>
-				<div class="tab-content">
-					<div class="toolbar">
-						<n-button
-							test-id="add-group-btn"
-							type="primary"
-							@click="openAddGroup"
-						>
-							<template #icon>
-								<Icon name="mdi-plus" />
-							</template>
-							Add Group
-						</n-button>
-					</div>
-
-					<div class="group-list">
-						<div
-							v-for="group in groups"
-							:key="group.id"
-							class="group-item"
-						>
-							<span
-								class="group-dot"
-								:style="{background: group.color ?? '#888'}"
-							/>
-							<span class="group-item-name">{{ group.name }}</span>
-
-							<div class="group-actions">
-								<n-button
-									test-id="edit-group-btn"
-									size="small"
-									type="info"
-									@click="openEditGroup(group)"
-								>
-									<template #icon>
-										<Icon name="mdi-pencil" />
-									</template>
-								</n-button>
-								<n-button
-									test-id="delete-group-btn"
-									size="small"
-									type="error"
-									@click="confirmDeleteGroup(group)"
-								>
-									<template #icon>
-										<Icon name="mdi-trash-can" />
-									</template>
-								</n-button>
-							</div>
-						</div>
-
-						<div
-							v-if="!groups.length"
-							class="empty"
-						>
-							No groups yet
-						</div>
-					</div>
-				</div>
-			</n-tab-pane>
-		</n-tabs>
-
-		<!-- ── Project form modal ─────────────────────── -->
-		<n-modal
-			v-model:show="showProjectForm"
-			:mask-closable="false"
-			preset="card"
-			style="width: 620px;"
-		>
-			<ProjectForm
-				:project="editableProject"
-				@saved="onProjectSaved"
-				@cancel="showProjectForm = false"
+			<RepoActionCards
+				:active="panel.kind"
+				@select="setPanel({kind: $event})"
 			/>
-		</n-modal>
 
-		<!-- ── Group form modal ───────────────────────── -->
-		<n-modal
-			v-model:show="showGroupForm"
-			:mask-closable="false"
-			preset="card"
-			:title="editableGroup?.id ? 'Edit Group' : 'Add Group'"
-			style="width: 400px;"
-		>
-			<n-form
-				v-if="editableGroup"
-				label-placement="left"
-				label-width="80"
-			>
-				<n-form-item label="Name">
-					<n-input
-						v-model:value="editableGroup.name"
-						placeholder="Group name"
-					/>
-				</n-form-item>
-				<n-form-item label="Color">
-					<div class="color-picker">
-						<button
-							v-for="color in GROUP_COLORS"
-							:key="color"
-							class="color-dot"
-							:class="{'color-dot--active': editableGroup.color === color}"
-							:style="{background: color}"
-							@click="editableGroup!.color = color"
-						/>
+			<div class="project-manager__lists">
+				<section
+					v-if="recent.length"
+					test-id="recent-projects"
+					class="project-manager__section"
+				>
+					<div class="project-manager__heading">
+						<span>Recent</span>
 					</div>
-				</n-form-item>
-			</n-form>
-			<template #footer>
-				<div class="form-actions">
-					<n-button
-						test-id="group-form-cancel-btn"
-						@click="showGroupForm = false"
+					<ProjectRow
+						v-for="project in recent"
+						:key="project.id"
+						:project="project"
+						:selected="project.id === selectedId"
+						@select="select"
+						@open="open"
+					/>
+				</section>
+
+				<section
+					test-id="all-projects"
+					class="project-manager__section"
+				>
+					<div class="project-manager__heading">
+						<span>All projects</span>
+						<n-button
+							test-id="manage-groups-btn"
+							size="tiny"
+							quaternary
+							@click="showGroups = true"
+						>
+							<template #icon>
+								<Icon name="mdi-folder-multiple-outline" />
+							</template>
+							Groups
+						</n-button>
+					</div>
+					<n-input
+						v-model:value="filterText"
+						test-id="search-projects-input"
+						class="project-manager__search"
+						placeholder="Search projects…"
+						size="small"
+						clearable
 					>
-						Cancel
-					</n-button>
-					<n-button
-						test-id="group-form-save-btn"
-						type="primary"
-						:disabled="!editableGroup?.name"
-						@click="handleSaveGroup"
-					>
-						{{ editableGroup?.id ? 'Save' : 'Add Group' }}
-					</n-button>
-				</div>
-			</template>
-		</n-modal>
+						<template #prefix>
+							<Icon name="mdi-magnify" />
+						</template>
+					</n-input>
+					<ProjectList
+						:projects="filteredProjects"
+						:groups="groups"
+						:selected-id="selectedId"
+						:empty-text="projects.length ? 'No projects match the search' : 'No projects yet'"
+						@select="select"
+						@open="open"
+					/>
+				</section>
+			</div>
+		</section>
+
+		<section class="project-manager__right">
+			<ProjectForm
+				v-if="panel.kind === 'project' && selectedProject"
+				:key="`project:${selectedProject.id}`"
+				:project="selectedProject"
+				:opening="opening"
+				@saved="select"
+				@duplicate="panel = {kind: 'duplicate', source: $event}"
+				@open="open"
+				@removed="panel = {kind: 'empty'}"
+			/>
+
+			<ProjectForm
+				v-else-if="panel.kind === 'duplicate'"
+				:key="`duplicate:${panel.source.id}`"
+				:project="null"
+				:duplicate-of="panel.source"
+				@saved="select"
+			/>
+
+			<RepoActionForm
+				v-else-if="actionKind"
+				:key="`action:${actionKind}`"
+				:mode="actionKind"
+				@done="select"
+				@cancel="panel = {kind: 'empty'}"
+			/>
+
+			<div
+				v-else
+				test-id="project-manager-empty"
+				class="project-manager__placeholder"
+			>
+				<Icon
+					name="mdi-source-repository"
+					class="project-manager__placeholder-icon"
+				/>
+				<p>Select a project, or start with Open, Clone or Create.</p>
+			</div>
+		</section>
+
+		<GroupManagerDialog v-model:show="showGroups" />
 	</div>
 </template>
 
 <script setup lang="ts">
-import {ref, computed} from 'vue';
-import {
-	NTabs,
-	NTabPane,
-	NInput,
-	NButton,
-	NModal,
-	NForm,
-	NFormItem,
-	NSelect,
-	useDialog,
-} from 'naive-ui';
+import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
+import {NButton, NInput} from 'naive-ui';
 import {useProject} from '@/composables/useProject';
-import type {IProject, IProjectGroup} from '@/domain';
+import {useProjectManager} from '@/composables/useProjectManager';
+import {useCommands} from '@/composables/useCommands';
+import {useProjectSettings} from '@/composables/useProjectSettings';
+import {connectionLabel, recentProjects} from '@/domain/services/projectManager';
+import type {IProject} from '@/domain';
 import Icon from '@/ui/components/Icon.vue';
+import GroupManagerDialog from './GroupManagerDialog.vue';
 import ProjectForm from './ProjectForm.vue';
-
-const GROUP_COLORS = [
-	'#6f9ef8',
-	'#f87171',
-	'#4ade80',
-	'#fb923c',
-	'#a78bfa',
-	'#34d399',
-	'#fbbf24',
-	'#f472b6',
-] as const;
-
+import ProjectList from './ProjectList.vue';
 import ProjectRow from './ProjectRow.vue';
+import RepoActionCards from './RepoActionCards.vue';
+import RepoActionForm from './RepoActionForm.vue';
+import type {TManagerPanel, TRepoActionKind} from './managerPanel';
 
-const emit = defineEmits<{
-	'project-opened': []
-}>();
+const {projects, groups, currentProject} = useProject();
+const {opening, openFromManager, leaveManager, confirmLeave} = useProjectManager();
+const {paletteOpen} = useCommands();
+const {recentCount} = useProjectSettings();
 
-const dialog = useDialog();
-const {projects, groups, openProject, removeProject, addGroup, updateGroup, removeGroup, selectedGroupFilter} = useProject();
-
-const activeTab = ref<'projects' | 'groups'>('projects');
+const panel = ref<TManagerPanel>({kind: 'empty'});
 const filterText = ref('');
-const showProjectForm = ref(false);
-const editableProject = ref<IProject | null>(null);
-const showGroupForm = ref(false);
-const editableGroup = ref<Partial<IProjectGroup> & {name: string} | null>(null);
+const showGroups = ref(false);
 
-const groupFilterOptions = computed(() => [
-	...groups.value.map(g => ({
-		label: g.name,
-		value: g.id,
-	})),
-	{label: 'Ungrouped', value: '__ungrouped__'},
-]);
+const recent = computed(() => recentProjects(projects.value, recentCount.value));
 
 const filteredProjects = computed(() => {
-	const q = filterText.value.toLowerCase();
-	const groupFilter = selectedGroupFilter.value;
+	const q = filterText.value.trim().toLowerCase();
 
-	return projects.value.filter(p => {
-		if (q && !p.alias.toLowerCase().includes(q) && !p.path.toLowerCase().includes(q)) {
-			return false;
-		}
-		if (groupFilter === '__ungrouped__') {
-			return !p.groupId;
-		}
-		if (groupFilter !== null) {
-			return p.groupId === groupFilter;
-		}
-		return true;
-	});
+	if (!q) return projects.value;
+
+	return projects.value.filter(p => p.alias.toLowerCase().includes(q)
+		|| p.path.toLowerCase().includes(q)
+		|| connectionLabel(p).toLowerCase().includes(q));
 });
 
-const projectsByGroup = computed(() => {
-	const map: Record<string, IProject[]> = {};
-	for (const p of filteredProjects.value) {
-		if (p.groupId) {
-			if (!map[p.groupId]) map[p.groupId] = [];
-			map[p.groupId]!.push(p);
-		}
-	}
-	return map;
+const selectedId = computed(() => panel.value.kind === 'project' ? panel.value.id : null);
+
+const selectedProject = computed(() => {
+	const id = selectedId.value;
+
+	return id ? projects.value.find(p => p.id === id) ?? null : null;
 });
 
-const ungrouped = computed(() =>
-	filteredProjects.value.filter(p => !p.groupId),
-);
+const actionKind = computed<TRepoActionKind | null>(() => {
+	const kind = panel.value.kind;
 
-// ── Project actions ──────────────────────────────────────────────────────────
+	return kind === 'open' || kind === 'clone' || kind === 'create' ? kind : null;
+});
 
-function handleOpenProject(project: IProject): void {
-	openProject(project);
-	emit('project-opened');
+// A clone running in the action form asks before its panel is replaced (see `confirmLeave`);
+// choosing the action already shown keeps that form as it is.
+async function setPanel(next: TManagerPanel): Promise<void> {
+	if (next.kind !== actionKind.value && !await confirmLeave()) return;
+
+	panel.value = next;
 }
 
-function openAdd(): void {
-	editableProject.value = null;
-	showProjectForm.value = true;
+function select(project: IProject): void {
+	void setPanel({kind: 'project', id: project.id});
 }
 
-function openEdit(project: IProject): void {
-	editableProject.value = {...project};
-	showProjectForm.value = true;
+// One open at a time: a second double-click while the first project is still connecting is
+// ignored rather than starting a second connect.
+function open(project: IProject): void {
+	void openFromManager(project);
 }
 
-function openDuplicate(project: IProject): void {
-	editableProject.value = {
-		...project,
-		id: '',
-		alias: project.alias + ' (copy)',
-	};
-	showProjectForm.value = true;
+// Back to the open project. After a failed open of another one, that project is still
+// connected - the failed connect never replaced it - so its error is cleared, not shown again.
+function close(): void {
+	void leaveManager();
 }
 
-function onProjectSaved(): void {
-	showProjectForm.value = false;
+function isTypingTarget(target: EventTarget | null): boolean {
+	const el = target as HTMLElement | null;
+
+	if (!el || typeof el.tagName !== 'string') return false;
+
+	return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable;
 }
 
-function confirmDelete(project: IProject): void {
-	dialog.warning({
-		title: 'Delete Project',
-		content: `Remove "${project.alias}" from the list? The repository will not be deleted from disk.`,
-		positiveText: 'Remove',
-		negativeText: 'Cancel',
-		onPositiveClick: () => removeProject(project.id),
-	});
+// Esc goes back to the open project - unless it belongs to a dialog, the palette or a field
+// above the manager, which handle it themselves.
+function onKeydown(event: KeyboardEvent): void {
+	if (event.key !== 'Escape' || !currentProject.value || paletteOpen.value) return;
+	// Naive UI keeps a modal's container after it closes; its body is there only while open.
+	if (isTypingTarget(event.target) || document.querySelector('.n-modal-container .n-modal')) return;
+
+	close();
 }
 
-// ── Group actions ────────────────────────────────────────────────────────────
-
-function openAddGroup(): void {
-	editableGroup.value = {name: '', color: GROUP_COLORS[0]};
-	showGroupForm.value = true;
-}
-
-function openEditGroup(group: IProjectGroup): void {
-	editableGroup.value = {...group};
-	showGroupForm.value = true;
-}
-
-function handleSaveGroup(): void {
-	if (!editableGroup.value?.name) return;
-
-	if (editableGroup.value.id) {
-		updateGroup(editableGroup.value.id, {
-			name: editableGroup.value.name,
-			color: editableGroup.value.color,
-		});
-	}
-	else {
-		addGroup({
-			name: editableGroup.value.name,
-			color: editableGroup.value.color,
-		});
-	}
-
-	showGroupForm.value = false;
-}
-
-function confirmDeleteGroup(group: IProjectGroup): void {
-	dialog.warning({
-		title: 'Delete Group',
-		content: `Delete group "${group.name}"? Projects in this group will become ungrouped.`,
-		positiveText: 'Delete',
-		negativeText: 'Cancel',
-		onPositiveClick: () => removeGroup(group.id),
-	});
-}
+onMounted(() => document.addEventListener('keydown', onKeydown));
+onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown));
 </script>
 
 <style scoped lang="scss">
 .project-manager {
-	width: 680px;
-	min-height: 480px;
-}
-
-.tab-content {
 	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	padding-top: 12px;
-}
-
-.toolbar {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-/* ── Projects ─────────────────────────────────── */
-
-.project-list {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	max-height: 400px;
-	overflow-y: auto;
-}
-
-.group-section {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-}
-
-.group-header {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding: 6px 4px 2px;
-}
-
-.group-dot {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	flex-shrink: 0;
-}
-
-.group-name {
-	font-size: 0.78em;
-	font-weight: 600;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: #aaa;
-
-	&--dim { color: #555; }
-}
-
-// The project row owns its own appearance; see ProjectRow.vue.
-
-/* ── Groups ────────────────────────────────────── */
-
-.group-list {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-
-.group-item {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 10px;
-	border-radius: 6px;
-	background: $bg-section;
-}
-
-.group-item-name {
 	flex: 1;
-	font-size: 0.9em;
-}
+	min-height: 0;
+	background: $bg-app;
 
-.group-actions {
-	display: flex;
-	gap: 6px;
-}
+	&--opening {
+		cursor: progress;
+	}
 
-/* ── Shared ─────────────────────────────────────── */
+	&__left {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		width: 45%;
+		min-width: 380px;
+		max-width: 640px;
+		min-height: 0;
+		padding: 18px 20px 0;
+		border-right: 1px solid $border;
+		background: $bg-panel;
+	}
 
-.empty {
-	padding: 24px;
-	text-align: center;
-	color: #555;
-	font-size: 0.9em;
-}
+	&__right {
+		flex: 1;
+		min-width: 0;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+	}
 
-.form-actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: 8px;
-}
+	&__header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		min-height: 28px;
+	}
 
-.color-picker {
-	display: flex;
-	gap: 8px;
-	flex-wrap: wrap;
-}
+	&__title {
+		margin: 0;
+		font-size: 16px;
+		font-weight: 600;
+		color: $text-primary;
+	}
 
-.color-dot {
-	width: 24px;
-	height: 24px;
-	border-radius: 50%;
-	border: 2px solid transparent;
-	cursor: pointer;
-	transition: transform 0.15s, border-color 0.15s;
+	&__lists {
+		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+		padding-bottom: 18px;
+	}
 
-	&:hover { transform: scale(1.2); }
-	&--active { border-color: $text-white; transform: scale(1.15); }
+	&__section {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	&__heading {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		min-height: 24px;
+		padding: 0 4px 4px;
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: $text-muted;
+	}
+
+	&__search {
+		margin-bottom: 4px;
+	}
+
+	&__placeholder {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		padding: 24px;
+		text-align: center;
+		color: $text-dim;
+
+		p {
+			margin: 0;
+		}
+	}
+
+	&__placeholder-icon {
+		width: 40px;
+		height: 40px;
+		fill: $text-faint;
+	}
 }
 </style>
