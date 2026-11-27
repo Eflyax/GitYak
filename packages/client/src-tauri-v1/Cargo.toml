@@ -3,7 +3,7 @@
 # shares its commands with the Tauri 2 shell through src-tauri/src/shared_commands.rs.
 [package]
 name = "git-yak"
-version = "2.1.2"
+version = "2.2.0"
 edition = "2021"
 # authors become the Maintainer and homepage the Homepage of the Linux .deb
 authors = ["Jakub Záruba"]
